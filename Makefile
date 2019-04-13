@@ -3,7 +3,7 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := bleadvreceiver
+PROJECT_NAME := blemqttproxy
 
 COMPONENT_ADD_INCLUDEDIRS := components/include
 
