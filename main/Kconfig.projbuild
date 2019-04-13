@@ -1,0 +1,61 @@
+menu "BLE-MQTT Proxy"
+
+    menu "Wifi Configuration"
+
+        config WIFI_SSID
+            string "WiFi SSID"
+            default "myssid"
+            help
+                SSID (network name) for the example to connect to.
+
+        config WIFI_PASSWORD
+            string "WiFi Password"
+            default "mypassword"
+            help
+                WiFi password (WPA or WPA2) for the example to use.
+
+
+    endmenu
+
+    menu "MQTT Configuration"
+
+        config USE_MQTT
+            bool "MQTT"
+            default y
+
+        config MQTT_HOST
+            string "MQTT Broker Host"
+            default "iot.eclipse.org"
+            help
+                MQTT Host to connect to
+
+        config MQTT_BROKER_URL
+            string "MQTT Broker URL"
+            default "mqtt://iot.eclipse.org"
+            help
+                URL of the broker to connect to
+
+        config MQTT_PORT
+            int "MQTT port"
+            default 1883
+            help
+                TCP port to connect to
+
+        config MQTT_USERNAME
+            string "MQTT username"
+            help
+                MQTT USERNAME
+
+        config MQTT_PASSWORD
+            string "MQTT password"
+            help
+                MQTT password
+    endmenu
+
+    config MQTT_FORMAT
+        string
+        default "\/%s\/0x%04\/x%04x\/%s"
+        help
+            identifier, maj, min, sensor -> data
+
+endmenu

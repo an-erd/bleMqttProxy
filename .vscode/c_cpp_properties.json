@@ -1,0 +1,69 @@
+{
+    "configurations": [
+        {
+            "name": "ESP32-Win",
+            "includePath": [
+                "${workspaceRoot}",
+                "C:/msys32/opt/xtensa-esp32-elf/lib/gcc/xtensa-esp32-elf/5.2.0/include",
+                "C:/msys32/opt/xtensa-esp32-elf/lib/gcc/xtensa-esp32-elf/5.2.0/include-fixed",
+                "C:/msys32/opt/xtensa-esp32-elf/xtensa-esp32-elf/include",
+                "C:/msys32/opt/xtensa-esp32-elf/xtensa-esp32-elf/sysroot/usr/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/spi_flash/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/esp32/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/spi_flash/sim",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/soc/esp32/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/heap/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/soc/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/nvs_flash/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/bt/bluedroid/api/include/api",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/bt/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/log/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/driver/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/spi_flash/sim/sdkconfig",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/esp_event/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/lwip/lwip/src",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/lwip/lwip/src/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/lwip/lwip/src/include/lwip",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/lwip/port/esp32/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/lwip/port/esp32/include/arch",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/tcpip_adapter/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/lwip/lwip/test/unit",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/lwip/lwip/test/unit/esp",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/spiffs/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/sdmmc/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/fatfs/src",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/wear_levelling/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/vfs/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/newlib/platform_include",
+                "${workspaceFolder}/components/m5stack/src",
+                "${workspaceFolder}/components/arduino/cores/esp32",
+                "${workspaceFolder}/components/arduino/libraries/FS/src",
+                "${workspaceFolder}/components",
+                "${workspaceFolder}/components/arduino/libraries/Update/src",
+                "${workspaceFolder}/components/ota/include",
+                "${workspaceFolder}/components/NeoPixelBus/src",
+                "${workspaceFolder}/components/arduino/libraries/SPI/src",
+                "${workspaceFolder}/components/arduino/variants/m5stack_fire"
+            ],
+            "intelliSenseMode": "clang-x64",
+            "browse": {
+                "path": [
+                    "${workspaceRoot}",
+                    "C:/msys32/opt/xtensa-esp32-elf/lib/gcc/xtensa-esp32-elf/5.2.0/include",
+                    "C:/msys32/opt/xtensa-esp32-elf/lib/gcc/xtensa-esp32-elf/5.2.0/include-fixed",
+                    "C:/msys32/opt/xtensa-esp32-elf/xtensa-esp32-elf/include",
+                    "C:/msys32/opt/xtensa-esp32-elf/xtensa-esp32-elf/sysroot/usr/include",
+                    "C:/msys32/home/AKAEM/esp/esp-idf/components"
+                ],
+                "limitSymbolsToIncludedHeaders": true,
+                "databaseFilename": "${workspaceRoot}/.vscode/browse.vc.db"
+            },
+            "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Tools/MSVC/14.16.27023/bin/Hostx64/x64/cl.exe",
+            "cStandard": "c11",
+            "cppStandard": "c++17"
+        }
+    ],
+    "version": 4
+}
