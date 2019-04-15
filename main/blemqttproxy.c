@@ -23,16 +23,118 @@
 #include "lwip/dns.h"
 #include "lwip/netdb.h"
 #include "mqtt_client.h"
-
+#include "iot_i2c_bus.h"
+#include "iot_ssd1306.h"
+#include "ssd1306_fonts.h"
 
 static const char* TAG = "BLEMQTTPROXY";
-#define ENDIAN_CHANGE_U16(x) ((((x)&0xFF00)>>8) + (((x)&0xFF)<<8))
-const uint8_t uuid_zeros[ESP_UUID_LEN_32] = {0x00, 0x00, 0x00, 0x00};
 
+#define ENDIAN_CHANGE_U16(x) ((((x)&0xFF00)>>8) + (((x)&0xFF)<<8))
+#define UNUSED(expr) do { (void)(expr); } while (0)
+
+// BLE
+const uint8_t uuid_zeros[ESP_UUID_LEN_32] = {0x00, 0x00, 0x00, 0x00};
+uint8_t beacon_maj_min_to_idx(uint16_t maj, uint16_t min);
+typedef struct  {
+    uint8_t     proximity_uuid[4];
+    uint16_t    major;
+    uint16_t    minor;
+    char        name[8];
+} ble_beacon_data_t;
+
+typedef struct  {
+    int8_t      measured_power;
+    float       temp;
+    uint16_t    humidity;
+    uint16_t    battery;
+} ble_adv_data_t;
+
+ble_beacon_data_t ble_beacon_data[CONFIG_BLE_DEVICE_COUNT] = {
+    { {0x01, 0x12, 0x23, 0x34}, CONFIG_BLE_DEVICE_1_MAJ, CONFIG_BLE_DEVICE_1_MIN, CONFIG_BLE_DEVICE_1_NAME},
+    { {0x01, 0x12, 0x23, 0x34}, CONFIG_BLE_DEVICE_2_MAJ, CONFIG_BLE_DEVICE_2_MIN, CONFIG_BLE_DEVICE_2_NAME},
+    { {0x01, 0x12, 0x23, 0x34}, CONFIG_BLE_DEVICE_3_MAJ, CONFIG_BLE_DEVICE_3_MIN, CONFIG_BLE_DEVICE_3_NAME},
+    { {0x01, 0x12, 0x23, 0x34}, CONFIG_BLE_DEVICE_4_MAJ, CONFIG_BLE_DEVICE_4_MIN, CONFIG_BLE_DEVICE_4_NAME},
+};
+ble_adv_data_t    ble_adv_data[CONFIG_BLE_DEVICE_COUNT];
+
+#define UPDATE_BEAC0     (BIT0)
+#define UPDATE_BEAC1     (BIT1)
+#define UPDATE_BEAC2     (BIT2)
+#define UPDATE_BEAC3     (BIT3)
+EventGroupHandle_t s_values_evg;
+
+// Wifi
 static EventGroupHandle_t wifi_event_group;
 const static int CONNECTED_BIT = BIT0;
+
+// MQTT
 static esp_mqtt_client_handle_t s_client;
 
+// I2C
+static i2c_bus_handle_t i2c_bus = NULL;
+static ssd1306_handle_t dev = NULL;
+
+/******** Test Function ****************/
+
+esp_err_t ssd1306_update(ssd1306_handle_t dev)
+{
+    esp_err_t ret;
+    char buffer[128];
+    ret = iot_ssd1306_clear_screen(dev, 0x00);
+    if (ret == ESP_FAIL) {
+        return ret;
+    }
+    int idx = 1;
+    snprintf(buffer, 128, "%s:", ble_beacon_data[idx].name);
+    iot_ssd1306_draw_string(dev, 0, 0, (const uint8_t*) buffer, 12, 1);
+    snprintf(buffer, 128, "%5.1fC, %3d%%H", ble_adv_data[idx].temp, ble_adv_data[idx].humidity);
+    iot_ssd1306_draw_string(dev, 0, 16, (const uint8_t*) buffer, 12, 1);
+    snprintf(buffer, 128, "Batt %4d mV", ble_adv_data[idx].battery);
+    iot_ssd1306_draw_string(dev, 0, 32, (const uint8_t*) buffer, 12, 1);
+    snprintf(buffer, 128, "RSSI %3d dBm", ble_adv_data[idx].measured_power);
+    iot_ssd1306_draw_string(dev, 0, 48, (const uint8_t*) buffer, 12, 1);
+
+    return iot_ssd1306_refresh_gram(dev);
+}
+
+/**
+ * @brief i2c master initialization
+ */
+static void i2c_bus_init(void)
+{
+    i2c_config_t conf;
+    conf.mode = I2C_MODE_MASTER;
+    conf.sda_io_num = OLED_IIC_SDA_NUM;
+    conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
+    conf.scl_io_num = OLED_IIC_SCL_NUM;
+    conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
+    conf.master.clk_speed = OLED_IIC_FREQ_HZ;
+    i2c_bus = iot_i2c_bus_create(OLED_IIC_NUM, &conf);
+}
+
+static void dev_ssd1306_initialization(void)
+{
+    ESP_LOGI(TAG, "oled task start!");
+    i2c_bus_init();
+    dev = iot_ssd1306_create(i2c_bus, 0x3C);
+    iot_ssd1306_refresh_gram(dev);
+    // ssd1306_show_signs(dev);
+    ESP_LOGI(TAG, "oled finish!");
+}
+
+static void ssd1306_task(void* pvParameters)
+{
+    EventBits_t uxBits;
+    UNUSED(uxBits);
+    dev_ssd1306_initialization();
+    while (1) {
+        uxBits = xEventGroupWaitBits(s_values_evg,
+            UPDATE_BEAC0 | UPDATE_BEAC1 | UPDATE_BEAC2 | UPDATE_BEAC3, pdTRUE, pdFALSE, 0);
+        ssd1306_update(dev);
+    }
+    iot_ssd1306_delete(dev, true);
+    vTaskDelete(NULL);
+}
 
 static esp_err_t wifi_event_handler(void *ctx, system_event_t *event)
 {
@@ -42,7 +144,6 @@ static esp_err_t wifi_event_handler(void *ctx, system_event_t *event)
             break;
         case SYSTEM_EVENT_STA_GOT_IP:
             xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
-
             break;
         case SYSTEM_EVENT_STA_DISCONNECTED:
             esp_wifi_connect();
@@ -76,11 +177,10 @@ static void wifi_init(void)
     xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, false, true, portMAX_DELAY);
 }
 
-
-
 static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
 {
     esp_mqtt_client_handle_t client = event->client;
+    UNUSED(client);
     int msg_id = 0;
 
     // your_context_t *context = event->context;
@@ -179,6 +279,36 @@ esp_ble_mybeacon_vendor_t vendor_config = {
     .measured_power = 0xC5
 };
 
+uint8_t beacon_maj_min_to_idx(uint16_t maj, uint16_t min)
+{
+    if( (maj == CONFIG_BLE_DEVICE_1_MAJ) && (min == CONFIG_BLE_DEVICE_1_MIN) ) return 0;
+    if( (maj == CONFIG_BLE_DEVICE_2_MAJ) && (min == CONFIG_BLE_DEVICE_2_MIN) ) return 1;
+    if( (maj == CONFIG_BLE_DEVICE_3_MAJ) && (min == CONFIG_BLE_DEVICE_3_MIN) ) return 2;
+    if( (maj == CONFIG_BLE_DEVICE_4_MAJ) && (min == CONFIG_BLE_DEVICE_4_MIN) ) return 3;
+
+    ESP_LOGE(TAG, "beacon_maj_min_to_idx: unknown maj %d min %d", maj, min);
+
+    return 0;
+}
+
+void values_initialize()
+{
+    s_values_evg = xEventGroupCreate();
+}
+
+void values_update_element(uint16_t maj, uint16_t min, int8_t measured_power,
+    float temp, uint16_t humidity, uint16_t battery)
+{
+    uint8_t  idx = beacon_maj_min_to_idx(maj, min);
+
+    ble_adv_data[idx].measured_power = measured_power;
+    ble_adv_data[idx].temp           = temp;
+    ble_adv_data[idx].humidity       = humidity;
+    ble_adv_data[idx].battery        = battery;
+
+    xEventGroupSetBits(s_values_evg, (EventBits_t) (1 << idx));
+}
+
 bool esp_ble_is_mybeacon_packet (uint8_t *adv_data, uint8_t adv_data_len){
     bool result = false;
 
@@ -201,9 +331,6 @@ esp_err_t esp_ble_config_mybeacon_data (esp_ble_mybeacon_vendor_t *vendor_config
 
     return ESP_OK;
 }
-
-
-
 
 ///Declare static functions
 static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
@@ -280,32 +407,35 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     (int16_t)ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.z),
                     ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.battery) );
 
-                    // send via MQTT here:
-                    uint16_t maj = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.major);
-                    uint16_t min = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.minor);
+                // send via MQTT here:
+                uint16_t maj        = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.major);
+                uint16_t min        = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.minor);
+                float    temp       = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.temp)/10.;
+                uint16_t humidity   = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.humidity);
+                uint16_t battery    = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.battery);
+                // "/%s/0x%04/x%04x/%s"
+                // identifier, maj, min, sensor -> data
+                snprintf(buffer_topic, 128,  "/%s/0x%04x/x%04x/%s", "beac", maj, min, "temp");
+                snprintf(buffer_payload, 128, "%+5.1f", temp);
+                msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
+                ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
 
-                    // "/%s/0x%04/x%04x/%s"
-                    // identifier, maj, min, sensor -> data
-                    snprintf(buffer_topic, 128,  "/%s/0x%04x/x%04x/%s", "beac", maj, min, "temp");
-                    snprintf(buffer_payload, 128, "%+5.1f", ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.temp)/10.);
-                    msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
-                    ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
+                snprintf(buffer_topic, 128, "/%s/0x%04x/x%04x/%s", "beac", maj, min, "humidity");
+                snprintf(buffer_payload, 128, "%d", humidity);
+                msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
+                ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
 
-                    snprintf(buffer_topic, 128, "/%s/0x%04x/x%04x/%s", "beac", maj, min, "humidity");
-                    snprintf(buffer_payload, 128, "%d", ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.humidity));
-                    msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
-                    ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
+                snprintf(buffer_topic, 128, "/%s/0x%04x/x%04x/%s", "beac", maj, min, "rssi");
+                snprintf(buffer_payload, 128, "%d", scan_result->scan_rst.rssi);
+                msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
+                ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
 
-                    snprintf(buffer_topic, 128, "/%s/0x%04x/x%04x/%s", "beac", maj, min, "rssi");
-                    snprintf(buffer_payload, 128, "%d", scan_result->scan_rst.rssi);
-                    msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
-                    ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
+                snprintf(buffer_topic, 128, "/%s/0x%04x/x%04x/%s", "beac", maj, min, "battery");
+                snprintf(buffer_payload, 128, "%d", battery);
+                msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
+                ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
 
-                    snprintf(buffer_topic, 128, "/%s/0x%04x/x%04x/%s", "beac", maj, min, "battery");
-                    snprintf(buffer_payload, 128, "%d", ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.battery));
-                    msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
-                    ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
-
+                values_update_element(maj, min, scan_result->scan_rst.rssi, temp, humidity, battery);
             } else {
 //                ESP_LOGI(TAG, "mybeacon not found");
             }
@@ -369,12 +499,15 @@ void app_main()
     ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
     wifi_init();
     mqtt_init();
+    values_initialize();
 
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
     esp_bt_controller_init(&bt_cfg);
     esp_bt_controller_enable(ESP_BT_MODE_BLE);
 
     ble_beacon_init();
+
+    xTaskCreate(&ssd1306_task, "ssd1306_task", 2048 * 2, NULL, 5, NULL);
 
     esp_ble_gap_set_scan_params(&ble_scan_params);
 }

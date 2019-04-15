@@ -37,15 +37,11 @@
                 "C:/msys32/home/AKAEM/esp/esp-idf/components/wear_levelling/include",
                 "C:/msys32/home/AKAEM/esp/esp-idf/components/vfs/include",
                 "C:/msys32/home/AKAEM/esp/esp-idf/components/newlib/platform_include",
-                "${workspaceFolder}/components/m5stack/src",
-                "${workspaceFolder}/components/arduino/cores/esp32",
-                "${workspaceFolder}/components/arduino/libraries/FS/src",
-                "${workspaceFolder}/components",
-                "${workspaceFolder}/components/arduino/libraries/Update/src",
-                "${workspaceFolder}/components/ota/include",
-                "${workspaceFolder}/components/NeoPixelBus/src",
-                "${workspaceFolder}/components/arduino/libraries/SPI/src",
-                "${workspaceFolder}/components/arduino/variants/m5stack_fire"
+                "${workspaceFolder}/components/ssd1306/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/esp_ringbuf/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/esp_ringbuf/include",
+                "${workspaceFolder}/components/i2c_bus/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/mqtt/esp-mqtt/include"
             ],
             "intelliSenseMode": "clang-x64",
             "browse": {
