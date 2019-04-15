@@ -70,7 +70,7 @@ menu "BLE-MQTT Proxy"
 
     config MQTT_FORMAT
         string
-        default "\/%s\/0x%04\/x%04x\/%s"
+        default "/%s/0x%04x/x%04x/%s"
         help
             identifier, maj, min, sensor -> data
 

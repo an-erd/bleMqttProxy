@@ -407,22 +407,23 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 uint16_t battery    = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.battery);
 
                 // identifier, maj, min, sensor -> data
-                snprintf(buffer_topic, 128,  "/%s/0x%04x/x%04x/%s", "beac", maj, min, "temp");
+                // snprintf(buffer_topic, 128,  "/%s/0x%04x/x%04x/%s", "beac", maj, min, "temp");
+                snprintf(buffer_topic, 128,  CONFIG_MQTT_FORMAT, "beac", maj, min, "temp");
                 snprintf(buffer_payload, 128, "%+5.1f", temp);
                 msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
                 ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
 
-                snprintf(buffer_topic, 128, "/%s/0x%04x/x%04x/%s", "beac", maj, min, "humidity");
+                snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "humidity");
                 snprintf(buffer_payload, 128, "%d", humidity);
                 msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
                 ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
 
-                snprintf(buffer_topic, 128, "/%s/0x%04x/x%04x/%s", "beac", maj, min, "rssi");
+                snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "rssi");
                 snprintf(buffer_payload, 128, "%d", scan_result->scan_rst.rssi);
                 msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
                 ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
 
-                snprintf(buffer_topic, 128, "/%s/0x%04x/x%04x/%s", "beac", maj, min, "battery");
+                snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "battery");
                 snprintf(buffer_payload, 128, "%d", battery);
                 msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
                 ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
