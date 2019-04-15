@@ -37,15 +37,13 @@
                 "C:/msys32/home/AKAEM/esp/esp-idf/components/wear_levelling/include",
                 "C:/msys32/home/AKAEM/esp/esp-idf/components/vfs/include",
                 "C:/msys32/home/AKAEM/esp/esp-idf/components/newlib/platform_include",
-                "${workspaceFolder}/components/m5stack/src",
-                "${workspaceFolder}/components/arduino/cores/esp32",
-                "${workspaceFolder}/components/arduino/libraries/FS/src",
-                "${workspaceFolder}/components",
-                "${workspaceFolder}/components/arduino/libraries/Update/src",
-                "${workspaceFolder}/components/ota/include",
-                "${workspaceFolder}/components/NeoPixelBus/src",
-                "${workspaceFolder}/components/arduino/libraries/SPI/src",
-                "${workspaceFolder}/components/arduino/variants/m5stack_fire"
+                "${workspaceFolder}/components/ssd1306/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/esp_ringbuf/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/esp_ringbuf/include",
+                "${workspaceFolder}/components/i2c_bus/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/mqtt/esp-mqtt/include",
+                "${workspaceFolder}/components/button/button/include",
+                "${workspaceFolder}/build/include"
             ],
             "intelliSenseMode": "clang-x64",
             "browse": {
@@ -55,7 +53,8 @@
                     "C:/msys32/opt/xtensa-esp32-elf/lib/gcc/xtensa-esp32-elf/5.2.0/include-fixed",
                     "C:/msys32/opt/xtensa-esp32-elf/xtensa-esp32-elf/include",
                     "C:/msys32/opt/xtensa-esp32-elf/xtensa-esp32-elf/sysroot/usr/include",
-                    "C:/msys32/home/AKAEM/esp/esp-idf/components"
+                    "C:/msys32/home/AKAEM/esp/esp-idf/components",
+                    "${workspaceFolder}/build/include"
                 ],
                 "limitSymbolsToIncludedHeaders": true,
                 "databaseFilename": "${workspaceRoot}/.vscode/browse.vc.db"

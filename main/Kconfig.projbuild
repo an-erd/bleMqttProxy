@@ -13,7 +13,23 @@ menu "BLE-MQTT Proxy"
             default "mypassword"
             help
                 WiFi password (WPA or WPA2) for the example to use.
+    endmenu
 
+    menu "Display"
+
+        config DISPLAY_SSD1306
+            bool "SSD1306 Display"
+            default y
+            help
+                Activate SSD1306 display to show stats.
+
+#        config DISPLAY_PIN_SDA
+#            int "SDA Pin"
+#            default 5
+#
+#        config DISPLAY_PIN_SCL
+#            int "SCL Pin"
+#            default 4
 
     endmenu
 
@@ -58,4 +74,73 @@ menu "BLE-MQTT Proxy"
         help
             identifier, maj, min, sensor -> data
 
+    menu "BLE Devices"
+        config BLE_DEVICE_1
+            bool "Set BLE Device 1"
+            default y
+        config BLE_DEVICE_1_MAJ
+            int "Major value of BLE device 1" if BLE_DEVICE_1
+            default 7
+        config BLE_DEVICE_1_MIN
+            int "Minor value of BLE device 1" if BLE_DEVICE_1
+            default 1
+        config BLE_DEVICE_1_NAME
+            string "Name of BLE device 1" if BLE_DEVICE_1
+            default "beac1"
+
+        config BLE_DEVICE_2
+            bool "Set BLE Device 2"
+            default y
+        config BLE_DEVICE_2_MAJ
+            int "Major value of BLE device 2" if BLE_DEVICE_2
+            default 7
+        config BLE_DEVICE_2_MIN
+            int "Minor value of BLE device 2" if BLE_DEVICE_2
+            default 2
+        config BLE_DEVICE_2_NAME
+            string "Name of BLE device 2" if BLE_DEVICE_2
+            default "beac2"
+
+        config BLE_DEVICE_3
+            bool "Set BLE device 3"
+            default y
+        config BLE_DEVICE_3_MAJ
+            int "Major value of BLE device 3" if BLE_DEVICE_3
+            default 7
+        config BLE_DEVICE_3_MIN
+            int "Minor value of BLE device 3" if BLE_DEVICE_3
+            default 3
+        config BLE_DEVICE_3_NAME
+            string "Name of BLE device 3" if BLE_DEVICE_3
+            default "beac3"
+
+        config BLE_DEVICE_4
+            bool "Set BLE Device 4"
+            default y
+        config BLE_DEVICE_4_MAJ
+            int "Major value of BLE device 4" if BLE_DEVICE_4
+            default 7
+        config BLE_DEVICE_4_MIN
+            int "Minor value of BLE device 4" if BLE_DEVICE_4
+            default 4
+        config BLE_DEVICE_4_NAME
+            string "Name of BLE device 4" if BLE_DEVICE_4
+            default "beac4"
+
+        config BLE_DEVICE_COUNT
+            int "Number of BLE devices configured"
+            range 0 5
+            default 4 if BLE_DEVICE_4
+            default 3 if BLE_DEVICE_3
+            default 2 if BLE_DEVICE_2
+            default 1 if BLE_DEVICE_1
+            default 0
+    endmenu
+
+    menu "Button"
+    config IO_GLITCH_FILTER_TIME_MS
+        int "IO glitch filter timer ms (10~100)"
+        range 10 100
+        default 50
+    endmenu
 endmenu

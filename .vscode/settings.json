@@ -97,7 +97,11 @@
         "esp32-hal-ledc.h": "c",
         "arduino.h": "c",
         "deque": "cpp",
-        "unordered_map": "cpp"
+        "unordered_map": "cpp",
+        "iot_ssd1306.h": "c",
+        "iot_i2c_bus.h": "c",
+        "i2c.h": "c",
+        "ssd1306_fonts.h": "c"
     },
 	"files.exclude": {
 		"**/.git": true,
