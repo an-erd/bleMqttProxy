@@ -41,7 +41,9 @@
                 "C:/msys32/home/AKAEM/esp/esp-idf/components/esp_ringbuf/include",
                 "C:/msys32/home/AKAEM/esp/esp-idf/components/esp_ringbuf/include",
                 "${workspaceFolder}/components/i2c_bus/include",
-                "C:/msys32/home/AKAEM/esp/esp-idf/components/mqtt/esp-mqtt/include"
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/mqtt/esp-mqtt/include",
+                "${workspaceFolder}/components/button/button/include",
+                "${workspaceFolder}/build/include"
             ],
             "intelliSenseMode": "clang-x64",
             "browse": {
@@ -51,7 +53,8 @@
                     "C:/msys32/opt/xtensa-esp32-elf/lib/gcc/xtensa-esp32-elf/5.2.0/include-fixed",
                     "C:/msys32/opt/xtensa-esp32-elf/xtensa-esp32-elf/include",
                     "C:/msys32/opt/xtensa-esp32-elf/xtensa-esp32-elf/sysroot/usr/include",
-                    "C:/msys32/home/AKAEM/esp/esp-idf/components"
+                    "C:/msys32/home/AKAEM/esp/esp-idf/components",
+                    "${workspaceFolder}/build/include"
                 ],
                 "limitSymbolsToIncludedHeaders": true,
                 "databaseFilename": "${workspaceRoot}/.vscode/browse.vc.db"

@@ -1,0 +1,813 @@
+AKAEM@PC MINGW32 ~/esp/bleMqttProxy
+$ make monitor
+Toolchain path: /opt/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc
+Toolchain version: crosstool-ng-1.22.0-80-g6c4433a5
+Compiler version: 5.2.0
+Python requirements from C:/msys32/home/AKAEM/esp/esp-idf/requirements.txt are satisfied.
+MONITOR
+--- idf_monitor on C:/msys32/dev/COM3 115200 ---
+--- Quit: Ctrl+] | Menu: Ctrl+T | Help: Ctrl+T followed by Ctrl+H ---
+ets Jun  8 2016 00:22:57
+
+rst:0x1 (POWERON_RESET),boot:0x17 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0018,len:4
+load:0x3fff001c,len:6356
+load:0x40078000,len:11308
+load:0x40080400,len:6680
+entry 0x40080760
+I (28) boot: ESP-IDF v3.3-beta2-dirty 2nd stage bootloader
+I (28) boot: compile time 14:20:36
+I (28) boot: Enabling RNG early entropy source...
+I (34) boot: SPI Speed      : 40MHz
+I (38) boot: SPI Mode       : DIO
+I (42) boot: SPI Flash Size : 4MB
+I (46) boot: Partition Table:
+I (49) boot: ## Label            Usage          Type ST Offset   Length
+I (57) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+I (64) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (72) boot:  2 factory          factory app      00 00 00010000 00200000
+I (79) boot: End of partition table
+I (83) esp_image: segment 0: paddr=0x00010020 vaddr=0x3f400020 size=0x43cc0 (277696) map
+I (190) esp_image: segment 1: paddr=0x00053ce8 vaddr=0x3ffbdb60 size=0x0328c ( 12940) load
+I (195) esp_image: segment 2: paddr=0x00056f7c vaddr=0x40080000 size=0x00400 (  1024) load
+0x40080000: _WindowOverflow4 at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:1779
+
+I (197) esp_image: segment 3: paddr=0x00057384 vaddr=0x40080400 size=0x08c8c ( 35980) load
+I (220) esp_image: segment 4: paddr=0x00060018 vaddr=0x400d0018 size=0xd5668 (874088) map
+0x400d0018: _flash_cache_start at ??:?
+
+I (526) esp_image: segment 5: paddr=0x00135688 vaddr=0x4008908c size=0x0d54c ( 54604) load
+0x4008908c: esp_random at C:/msys32/home/AKAEM/esp/esp-idf/components/esp32/hw_random.c:54 (discriminator 1)
+
+I (562) boot: Loaded app from partition at offset 0x10000
+I (562) boot: Disabling RNG early entropy source...
+I (563) cpu_start: Pro cpu up.
+I (566) cpu_start: Application information:
+I (571) cpu_start: Project name:     blemqttproxy
+I (577) cpu_start: App version:      0.1-1-ga19e6a1-dirty
+I (583) cpu_start: Compile time:     Apr 15 2019 13:08:09
+I (589) cpu_start: ELF file SHA256:  ec64a3a02df9fc6e...
+I (595) cpu_start: ESP-IDF:          v3.3-beta2-dirty
+I (601) cpu_start: Starting app cpu, entry point is 0x40081138
+0x40081138: call_start_cpu1 at C:/msys32/home/AKAEM/esp/esp-idf/components/esp32/cpu_start.c:267
+
+I (0) cpu_start: App cpu up.
+V (611) memory_layout: reserved range is 0x3f443c98 - 0x3f443ce0
+D (617) memory_layout: Checking 11 reserved memory ranges:
+D (622) memory_layout: Reserved memory range 0x3ffae000 - 0x3ffae6e0
+D (629) memory_layout: Reserved memory range 0x3ffae6e0 - 0x3ffaff10
+D (635) memory_layout: Reserved memory range 0x3ffb0000 - 0x3ffb6388
+D (642) memory_layout: Reserved memory range 0x3ffb8000 - 0x3ffb9a20
+D (648) memory_layout: Reserved memory range 0x3ffbdb28 - 0x3ffbdb5c
+D (654) memory_layout: Reserved memory range 0x3ffbdb60 - 0x3ffce258
+D (661) memory_layout: Reserved memory range 0x3ffe0000 - 0x3ffe0440
+D (667) memory_layout: Reserved memory range 0x3ffe3f20 - 0x3ffe4350
+D (674) memory_layout: Reserved memory range 0x40070000 - 0x40078000
+D (680) memory_layout: Reserved memory range 0x40078000 - 0x40080000
+0x40080000: _WindowOverflow4 at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:1779
+
+D (686) memory_layout: Reserved memory range 0x40080000 - 0x400965d6
+0x40080000: _WindowOverflow4 at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:1779
+
+D (693) memory_layout: Building list of available memory regions:
+V (699) memory_layout: Examining memory region 0x3ffae000 - 0x3ffb0000
+V (706) memory_layout: Start of region 0x3ffae000 - 0x3ffb0000 overlaps reserved 0x3ffae000 - 0x3ffae6e0
+V (715) memory_layout: Start of region 0x3ffae6e0 - 0x3ffb0000 overlaps reserved 0x3ffae6e0 - 0x3ffaff10
+D (725) memory_layout: Available memory region 0x3ffaff10 - 0x3ffb0000
+V (731) memory_layout: Examining memory region 0x3ffb0000 - 0x3ffb8000
+V (738) memory_layout: Start of region 0x3ffb0000 - 0x3ffb8000 overlaps reserved 0x3ffb0000 - 0x3ffb6388
+D (747) memory_layout: Available memory region 0x3ffb6388 - 0x3ffb8000
+V (754) memory_layout: Examining memory region 0x3ffb8000 - 0x3ffc0000
+V (761) memory_layout: Start of region 0x3ffb8000 - 0x3ffc0000 overlaps reserved 0x3ffb8000 - 0x3ffb9a20
+V (770) memory_layout: Region 0x3ffb9a20 - 0x3ffc0000 contains reserved 0x3ffbdb28 - 0x3ffbdb5c
+D (779) memory_layout: Available memory region 0x3ffb9a20 - 0x3ffbdb28
+V (786) memory_layout: Examining memory region 0x3ffbdb5c - 0x3ffc0000
+V (792) memory_layout: End of region 0x3ffbdb5c - 0x3ffc0000 overlaps reserved 0x3ffbdb60 - 0x3ffce258
+D (802) memory_layout: Available memory region 0x3ffbdb5c - 0x3ffbdb60
+V (808) memory_layout: Examining memory region 0x3ffc0000 - 0x3ffc2000
+V (815) memory_layout: Region 0x3ffc0000 - 0x3ffc2000 inside of reserved 0x3ffbdb60 - 0x3ffce258
+V (824) memory_layout: Examining memory region 0x3ffc2000 - 0x3ffc4000
+V (830) memory_layout: Region 0x3ffc2000 - 0x3ffc4000 inside of reserved 0x3ffbdb60 - 0x3ffce258
+V (839) memory_layout: Examining memory region 0x3ffc4000 - 0x3ffc6000
+V (846) memory_layout: Region 0x3ffc4000 - 0x3ffc6000 inside of reserved 0x3ffbdb60 - 0x3ffce258
+V (855) memory_layout: Examining memory region 0x3ffc6000 - 0x3ffc8000
+V (861) memory_layout: Region 0x3ffc6000 - 0x3ffc8000 inside of reserved 0x3ffbdb60 - 0x3ffce258
+V (870) memory_layout: Examining memory region 0x3ffc8000 - 0x3ffca000
+V (877) memory_layout: Region 0x3ffc8000 - 0x3ffca000 inside of reserved 0x3ffbdb60 - 0x3ffce258
+V (885) memory_layout: Examining memory region 0x3ffca000 - 0x3ffcc000
+V (892) memory_layout: Region 0x3ffca000 - 0x3ffcc000 inside of reserved 0x3ffbdb60 - 0x3ffce258
+V (901) memory_layout: Examining memory region 0x3ffcc000 - 0x3ffce000
+V (907) memory_layout: Region 0x3ffcc000 - 0x3ffce000 inside of reserved 0x3ffbdb60 - 0x3ffce258
+V (916) memory_layout: Examining memory region 0x3ffce000 - 0x3ffd0000
+V (923) memory_layout: Start of region 0x3ffce000 - 0x3ffd0000 overlaps reserved 0x3ffbdb60 - 0x3ffce258
+D (932) memory_layout: Available memory region 0x3ffce258 - 0x3ffd0000
+V (939) memory_layout: Examining memory region 0x3ffd0000 - 0x3ffd2000
+D (946) memory_layout: Available memory region 0x3ffd0000 - 0x3ffd2000
+V (952) memory_layout: Examining memory region 0x3ffd2000 - 0x3ffd4000
+D (959) memory_layout: Available memory region 0x3ffd2000 - 0x3ffd4000
+V (965) memory_layout: Examining memory region 0x3ffd4000 - 0x3ffd6000
+D (972) memory_layout: Available memory region 0x3ffd4000 - 0x3ffd6000
+V (979) memory_layout: Examining memory region 0x3ffd6000 - 0x3ffd8000
+D (985) memory_layout: Available memory region 0x3ffd6000 - 0x3ffd8000
+V (992) memory_layout: Examining memory region 0x3ffd8000 - 0x3ffda000
+D (998) memory_layout: Available memory region 0x3ffd8000 - 0x3ffda000
+V (1005) memory_layout: Examining memory region 0x3ffda000 - 0x3ffdc000
+D (1012) memory_layout: Available memory region 0x3ffda000 - 0x3ffdc000
+V (1018) memory_layout: Examining memory region 0x3ffdc000 - 0x3ffde000
+D (1025) memory_layout: Available memory region 0x3ffdc000 - 0x3ffde000
+V (1032) memory_layout: Examining memory region 0x3ffde000 - 0x3ffe0000
+D (1038) memory_layout: Available memory region 0x3ffde000 - 0x3ffe0000
+V (1045) memory_layout: Examining memory region 0x3ffe0000 - 0x3ffe4000
+V (1052) memory_layout: Start of region 0x3ffe0000 - 0x3ffe4000 overlaps reserved 0x3ffe0000 - 0x3ffe0440
+V (1061) memory_layout: End of region 0x3ffe0440 - 0x3ffe4000 overlaps reserved 0x3ffe3f20 - 0x3ffe4350
+D (1071) memory_layout: Available memory region 0x3ffe0440 - 0x3ffe3f20
+V (1078) memory_layout: Examining memory region 0x3ffe4000 - 0x3ffe8000
+V (1084) memory_layout: Start of region 0x3ffe4000 - 0x3ffe8000 overlaps reserved 0x3ffe3f20 - 0x3ffe4350
+D (1094) memory_layout: Available memory region 0x3ffe4350 - 0x3ffe8000
+V (1101) memory_layout: Examining memory region 0x3ffe8000 - 0x3fff0000
+D (1107) memory_layout: Available memory region 0x3ffe8000 - 0x3fff0000
+V (1114) memory_layout: Examining memory region 0x3fff0000 - 0x3fff8000
+D (1121) memory_layout: Available memory region 0x3fff0000 - 0x3fff8000
+V (1127) memory_layout: Examining memory region 0x3fff8000 - 0x3fffc000
+D (1134) memory_layout: Available memory region 0x3fff8000 - 0x3fffc000
+V (1141) memory_layout: Examining memory region 0x3fffc000 - 0x40000000
+D (1147) memory_layout: Available memory region 0x3fffc000 - 0x40000000
+V (1154) memory_layout: Examining memory region 0x40070000 - 0x40078000
+V (1161) memory_layout: Region 0x40070000 - 0x40078000 inside of reserved 0x40070000 - 0x40078000
+V (1170) memory_layout: Examining memory region 0x40078000 - 0x40080000
+0x40080000: _WindowOverflow4 at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:1779
+
+V (1176) memory_layout: Region 0x40078000 - 0x40080000 inside of reserved 0x40078000 - 0x40080000
+0x40080000: _WindowOverflow4 at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:1779
+
+0x40080000: _WindowOverflow4 at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:1779
+
+V (1185) memory_layout: Examining memory region 0x40080000 - 0x40082000
+0x40080000: _WindowOverflow4 at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:1779
+
+0x40082000: _xt_to_syscall_exc at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:626
+
+V (1192) memory_layout: Region 0x40080000 - 0x40082000 inside of reserved 0x40080000 - 0x400965d8
+0x40080000: _WindowOverflow4 at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:1779
+
+0x40082000: _xt_to_syscall_exc at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:626
+
+0x40080000: _WindowOverflow4 at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:1779
+
+V (1201) memory_layout: Examining memory region 0x40082000 - 0x40084000
+0x40082000: _xt_to_syscall_exc at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:626
+
+0x40084000: r_ea_alarm_set at ??:?
+
+V (1208) memory_layout: Region 0x40082000 - 0x40084000 inside of reserved 0x40080000 - 0x400965d8
+0x40082000: _xt_to_syscall_exc at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:626
+
+0x40084000: r_ea_alarm_set at ??:?
+
+0x40080000: _WindowOverflow4 at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:1779
+
+V (1217) memory_layout: Examining memory region 0x40084000 - 0x40086000
+0x40084000: r_ea_alarm_set at ??:?
+
+0x40086000: r_lld_evt_restart at ??:?
+
+V (1223) memory_layout: Region 0x40084000 - 0x40086000 inside of reserved 0x40080000 - 0x400965d8
+0x40084000: r_ea_alarm_set at ??:?
+
+0x40086000: r_lld_evt_restart at ??:?
+
+0x40080000: _WindowOverflow4 at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:1779
+
+V (1232) memory_layout: Examining memory region 0x40086000 - 0x40088000
+0x40086000: r_lld_evt_restart at ??:?
+
+0x40088000: r_rwbt_isr at ??:?
+
+V (1239) memory_layout: Region 0x40086000 - 0x40088000 inside of reserved 0x40080000 - 0x400965d8
+0x40086000: r_lld_evt_restart at ??:?
+
+0x40088000: r_rwbt_isr at ??:?
+
+0x40080000: _WindowOverflow4 at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:1779
+
+V (1248) memory_layout: Examining memory region 0x40088000 - 0x4008a000
+0x40088000: r_rwbt_isr at ??:?
+
+0x4008a000: coex_core_release at ??:?
+
+V (1255) memory_layout: Region 0x40088000 - 0x4008a000 inside of reserved 0x40080000 - 0x400965d8
+0x40088000: r_rwbt_isr at ??:?
+
+0x4008a000: coex_core_release at ??:?
+
+0x40080000: _WindowOverflow4 at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:1779
+
+V (1263) memory_layout: Examining memory region 0x4008a000 - 0x4008c000
+0x4008a000: coex_core_release at ??:?
+
+0x4008c000: tx_pwctrl_cal at ??:?
+
+V (1270) memory_layout: Region 0x4008a000 - 0x4008c000 inside of reserved 0x40080000 - 0x400965d8
+0x4008a000: coex_core_release at ??:?
+
+0x4008c000: tx_pwctrl_cal at ??:?
+
+0x40080000: _WindowOverflow4 at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:1779
+
+V (1279) memory_layout: Examining memory region 0x4008c000 - 0x4008e000
+0x4008c000: tx_pwctrl_cal at ??:?
+
+0x4008e000: BT_tx_if_init at /home/qgu/git_tree/chip7.1_rtc/board_code/app_test/pp/rtc/bt_bb.c:288
+
+V (1286) memory_layout: Region 0x4008c000 - 0x4008e000 inside of reserved 0x40080000 - 0x400965d8
+0x4008c000: tx_pwctrl_cal at ??:?
+
+0x4008e000: BT_tx_if_init at /home/qgu/git_tree/chip7.1_rtc/board_code/app_test/pp/rtc/bt_bb.c:288
+
+0x40080000: _WindowOverflow4 at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:1779
+
+V (1295) memory_layout: Examining memory region 0x4008e000 - 0x40090000
+0x4008e000: BT_tx_if_init at /home/qgu/git_tree/chip7.1_rtc/board_code/app_test/pp/rtc/bt_bb.c:288
+
+0x40090000: ieee80211_output_process at ??:?
+
+V (1301) memory_layout: Region 0x4008e000 - 0x40090000 inside of reserved 0x40080000 - 0x400965d8
+0x4008e000: BT_tx_if_init at /home/qgu/git_tree/chip7.1_rtc/board_code/app_test/pp/rtc/bt_bb.c:288
+
+0x40090000: ieee80211_output_process at ??:?
+
+0x40080000: _WindowOverflow4 at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:1779
+
+V (1310) memory_layout: Examining memory region 0x40090000 - 0x40092000
+0x40090000: ieee80211_output_process at ??:?
+
+0x40092000: ppResortTxAMPDU at ??:?
+
+V (1317) memory_layout: Region 0x40090000 - 0x40092000 inside of reserved 0x40080000 - 0x400965d8
+0x40090000: ieee80211_output_process at ??:?
+
+0x40092000: ppResortTxAMPDU at ??:?
+
+0x40080000: _WindowOverflow4 at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:1779
+
+V (1326) memory_layout: Examining memory region 0x40092000 - 0x40094000
+0x40092000: ppResortTxAMPDU at ??:?
+
+0x40094000: uxTaskPriorityGetFromISR at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/tasks.c:3537
+
+V (1333) memory_layout: Region 0x40092000 - 0x40094000 inside of reserved 0x40080000 - 0x400965d8
+0x40092000: ppResortTxAMPDU at ??:?
+
+0x40094000: uxTaskPriorityGetFromISR at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/tasks.c:3537
+
+0x40080000: _WindowOverflow4 at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:1779
+
+V (1342) memory_layout: Examining memory region 0x40094000 - 0x40096000
+0x40094000: uxTaskPriorityGetFromISR at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/tasks.c:3537
+
+0x40096000: split_if_necessary at C:/msys32/home/AKAEM/esp/esp-idf/components/heap/multi_heap.c:699
+
+V (1348) memory_layout: Region 0x40094000 - 0x40096000 inside of reserved 0x40080000 - 0x400965d8
+0x40094000: uxTaskPriorityGetFromISR at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/tasks.c:3537
+
+0x40096000: split_if_necessary at C:/msys32/home/AKAEM/esp/esp-idf/components/heap/multi_heap.c:699
+
+0x40080000: _WindowOverflow4 at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:1779
+
+V (1357) memory_layout: Examining memory region 0x40096000 - 0x40098000
+0x40096000: split_if_necessary at C:/msys32/home/AKAEM/esp/esp-idf/components/heap/multi_heap.c:699
+
+V (1364) memory_layout: Start of region 0x40096000 - 0x40098000 overlaps reserved 0x40080000 - 0x400965d8
+0x40096000: split_if_necessary at C:/msys32/home/AKAEM/esp/esp-idf/components/heap/multi_heap.c:699
+
+0x40080000: _WindowOverflow4 at C:/msys32/home/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:1779
+
+D (1374) memory_layout: Available memory region 0x400965d8 - 0x40098000
+V (1380) memory_layout: Examining memory region 0x40098000 - 0x4009a000
+D (1387) memory_layout: Available memory region 0x40098000 - 0x4009a000
+V (1394) memory_layout: Examining memory region 0x4009a000 - 0x4009c000
+D (1400) memory_layout: Available memory region 0x4009a000 - 0x4009c000
+V (1407) memory_layout: Examining memory region 0x4009c000 - 0x4009e000
+D (1414) memory_layout: Available memory region 0x4009c000 - 0x4009e000
+V (1420) memory_layout: Examining memory region 0x4009e000 - 0x400a0000
+D (1427) memory_layout: Available memory region 0x4009e000 - 0x400a0000
+I (1434) heap_init: Initializing. RAM available for dynamic allocation:
+D (1441) heap_init: New heap initialised at 0x3ffaff10
+I (1446) heap_init: At 3FFAFF10 len 000000F0 (0 KiB): DRAM
+D (1452) heap_init: New heap initialised at 0x3ffb6388
+I (1458) heap_init: At 3FFB6388 len 00001C78 (7 KiB): DRAM
+D (1464) heap_init: New heap initialised at 0x3ffb9a20
+I (1469) heap_init: At 3FFB9A20 len 00004108 (16 KiB): DRAM
+I (1475) heap_init: At 3FFBDB5C len 00000004 (0 KiB): DRAM
+D (1481) heap_init: New heap initialised at 0x3ffce258
+I (1487) heap_init: At 3FFCE258 len 00011DA8 (71 KiB): DRAM
+I (1493) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM
+I (1499) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM
+D (1506) heap_init: New heap initialised at 0x400965d8
+I (1511) heap_init: At 400965D8 len 00009A28 (38 KiB): IRAM
+I (1517) cpu_start: Pro cpu start user code
+D (1529) clk: RTC_SLOW_CLK calibration value: 3298944
+V (197) intr_alloc: esp_intr_alloc_intrstatus (cpu 0): checking args
+V (197) intr_alloc: esp_intr_alloc_intrstatus (cpu 0): Args okay. Resulting flags 0xE
+D (202) intr_alloc: Connected src 46 to int 2 (cpu 0)
+V (207) intr_alloc: esp_intr_alloc_intrstatus (cpu 0): checking args
+V (213) intr_alloc: esp_intr_alloc_intrstatus (cpu 0): Args okay. Resulting flags 0xC0E
+D (221) intr_alloc: Connected src 57 to int 3 (cpu 0)
+V (226) esp_dbg_stubs: esp_dbg_stubs_init stubs 3ffc8834
+V (233) intr_alloc: esp_intr_alloc_intrstatus (cpu 0): checking args
+V (238) intr_alloc: esp_intr_alloc_intrstatus (cpu 0): Args okay. Resulting flags 0x40E
+D (246) intr_alloc: Connected src 24 to int 9 (cpu 0)
+I (251) cpu_start: Starting scheduler on PRO CPU.
+V (0) intr_alloc: esp_intr_alloc_intrstatus (cpu 1): checking args
+V (0) intr_alloc: esp_intr_alloc_intrstatus (cpu 1): Args okay. Resulting flags 0x40E
+D (10) intr_alloc: Connected src 25 to int 2 (cpu 1)
+I (10) cpu_start: Starting scheduler on APP CPU.
+D (301) heap_init: New heap initialised at 0x3ffe0440
+D (301) heap_init: New heap initialised at 0x3ffe4350
+V (311) intr_alloc: esp_intr_alloc_intrstatus (cpu 0): checking args
+V (311) intr_alloc: esp_intr_alloc_intrstatus (cpu 0): Args okay. Resulting flags 0xE
+D (311) intr_alloc: Connected src 16 to int 12 (cpu 0)
+D (331) nvs: nvs_flash_init_custom partition=nvs start=9 count=6
+D (361) BTDM_INIT: Release DRAM [0x3ffb2730] - [0x3ffb6388]
+D (371) nvs: nvs_open_from_partition misc 1
+D (371) nvs: nvs_get_str_or_blob log
+I (371) wifi: wifi driver task: 3ffbd844, prio:23, stack:3584, core=0
+I (371) wifi: wifi firmware version: 955b7af
+I (381) wifi: config NVS flash: enabled
+I (381) wifi: config nano formating: disabled
+I (381) system_api: Base MAC address is not set, read default base MAC address from BLK0 of EFUSE
+D (391) efuse: coding scheme 0
+D (401) efuse: In EFUSE_BLK0__DATA2_REG is used 8 bits starting with 8 bit
+D (401) efuse: coding scheme 0
+D (411) efuse: In EFUSE_BLK0__DATA2_REG is used 8 bits starting with 0 bit
+D (411) efuse: coding scheme 0
+D (421) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 24 bit
+D (421) efuse: coding scheme 0
+D (431) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 16 bit
+D (431) efuse: coding scheme 0
+D (441) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 8 bit
+D (441) efuse: coding scheme 0
+D (451) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 0 bit
+D (451) efuse: coding scheme 0
+D (461) efuse: In EFUSE_BLK0__DATA2_REG is used 8 bits starting with 16 bit
+I (461) system_api: Base MAC address is not set, read default base MAC address from BLK0 of EFUSE
+D (471) efuse: coding scheme 0
+D (481) efuse: In EFUSE_BLK0__DATA2_REG is used 8 bits starting with 8 bit
+D (481) efuse: coding scheme 0
+D (491) efuse: In EFUSE_BLK0__DATA2_REG is used 8 bits starting with 0 bit
+D (491) efuse: coding scheme 0
+D (501) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 24 bit
+D (501) efuse: coding scheme 0
+D (511) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 16 bit
+D (511) efuse: coding scheme 0
+D (521) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 8 bit
+D (521) efuse: coding scheme 0
+D (531) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 0 bit
+D (531) efuse: coding scheme 0
+D (541) efuse: In EFUSE_BLK0__DATA2_REG is used 8 bits starting with 16 bit
+D (551) nvs: nvs_open_from_partition nvs.net80211 1
+D (551) nvs: nvs_get opmode 1
+D (551) nvs: nvs_get_str_or_blob sta.ssid
+D (561) nvs: nvs_get_str_or_blob sta.mac
+D (561) nvs: nvs_get sta.authmode 1
+D (561) nvs: nvs_get_str_or_blob sta.pswd
+D (571) nvs: nvs_get_str_or_blob sta.pmk
+D (571) nvs: nvs_get sta.chan 1
+D (581) nvs: nvs_get auto.conn 1
+D (581) nvs: nvs_get bssid.set 1
+D (581) nvs: nvs_get_str_or_blob sta.bssid
+D (591) nvs: nvs_get sta.lis_intval 2
+D (591) nvs: nvs_get sta.phym 1
+D (591) nvs: nvs_get sta.phybw 1
+D (601) nvs: nvs_get_str_or_blob sta.apsw
+D (601) nvs: nvs_get_str_or_blob sta.apinfo
+D (611) nvs: nvs_get sta.scan_method 1
+D (611) nvs: nvs_get sta.sort_method 1
+D (611) nvs: nvs_get sta.minrssi 1
+D (621) nvs: nvs_get sta.minauth 1
+D (621) nvs: nvs_get_str_or_blob ap.ssid
+D (621) nvs: nvs_get_str_or_blob ap.mac
+D (631) nvs: nvs_get_str_or_blob ap.passwd
+D (631) nvs: nvs_get_str_or_blob ap.pmk
+D (641) nvs: nvs_get ap.chan 1
+D (641) nvs: nvs_get ap.authmode 1
+D (641) nvs: nvs_get ap.hidden 1
+D (651) nvs: nvs_get ap.max.conn 1
+D (651) nvs: nvs_get bcn.interval 2
+D (651) nvs: nvs_get ap.phym 1
+D (661) nvs: nvs_get ap.phybw 1
+D (661) nvs: nvs_get ap.sndchan 1
+D (661) nvs: nvs_get lorate 1
+D (671) nvs: nvs_set_blob sta.mac 6
+D (671) nvs: nvs_set_blob ap.mac 6
+I (711) wifi: Init dynamic tx buffer num: 32
+I (711) wifi: Init data frame dynamic rx buffer num: 32
+I (711) wifi: Init management frame dynamic rx buffer num: 32
+I (721) wifi: Init management short buffer num: 32
+I (721) wifi: Init static rx buffer size: 1600
+I (731) wifi: Init static rx buffer num: 10
+I (731) wifi: Init dynamic rx buffer num: 32
+I (741) BLEMQTTPROXY: start the WIFI SSID:[W12]
+D (741) RTC_MODULE: Wi-Fi takes adc2 lock.
+D (741) phy_init: loading PHY init data from application binary
+D (751) nvs: nvs_open_from_partition phy 0
+D (751) nvs: nvs_get cal_version 4
+V (761) phy_init: phy_get_rf_cal_version: 4100
+
+D (761) nvs: nvs_get_str_or_blob cal_mac
+D (771) efuse: coding scheme 0
+D (771) efuse: In EFUSE_BLK0__DATA2_REG is used 8 bits starting with 8 bit
+D (781) efuse: coding scheme 0
+D (781) efuse: In EFUSE_BLK0__DATA2_REG is used 8 bits starting with 0 bit
+D (791) efuse: coding scheme 0
+D (791) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 24 bit
+D (801) efuse: coding scheme 0
+D (801) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 16 bit
+D (811) efuse: coding scheme 0
+D (811) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 8 bit
+D (821) efuse: coding scheme 0
+D (821) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 0 bit
+D (831) efuse: coding scheme 0
+D (831) efuse: In EFUSE_BLK0__DATA2_REG is used 8 bits starting with 16 bit
+D (841) nvs: nvs_get_str_or_blob cal_data
+D (851) nvs: nvs_close 3
+D (851) efuse: coding scheme 0
+D (851) efuse: In EFUSE_BLK0__DATA2_REG is used 8 bits starting with 8 bit
+D (851) efuse: coding scheme 0
+D (861) efuse: In EFUSE_BLK0__DATA2_REG is used 8 bits starting with 0 bit
+D (861) efuse: coding scheme 0
+D (871) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 24 bit
+D (871) efuse: coding scheme 0
+D (881) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 16 bit
+D (881) efuse: coding scheme 0
+D (891) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 8 bit
+D (891) efuse: coding scheme 0
+D (901) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 0 bit
+D (901) efuse: coding scheme 0
+D (911) efuse: In EFUSE_BLK0__DATA2_REG is used 8 bits starting with 16 bit
+I (1001) phy: phy_version: 4100, 6fa5e27, Jan 25 2019, 17:02:06, 0, 0
+I (1001) wifi: mode : sta (30:ae:a4:27:6c:48)
+D (1001) event: SYSTEM_EVENT_STA_START
+V (1001) event: enter default callback
+I (1001) BLEMQTTPROXY: Waiting for wifi
+V (1001) tcpip_adapter: check: local, if=0 fn=0x400e9860
+0x400e9860: tcpip_adapter_start_api at C:/msys32/home/AKAEM/esp/esp-idf/components/tcpip_adapter/tcpip_adapter_lwip.c:1092
+
+
+V (1011) tcpip_adapter: call api in lwip: ret=0x0, give sem
+V (1021) tcpip_adapter: check: remote, if=0 fn=0x400e9860
+0x400e9860: tcpip_adapter_start_api at C:/msys32/home/AKAEM/esp/esp-idf/components/tcpip_adapter/tcpip_adapter_lwip.c:1092
+
+
+V (1031) event: exit default callback
+I (1151) wifi: new:<1,0>, old:<1,0>, ap:<255,255>, sta:<1,0>, prof:1
+I (2001) wifi: state: init -> auth (b0)
+I (2011) wifi: state: auth -> assoc (0)
+I (2011) wifi: state: assoc -> run (10)
+I (2031) wifi: connected with W12, channel 1, bssid = ec:08:6b:8a:ae:3a
+I (2031) wifi: pm start, type: 1
+
+D (2031) event: SYSTEM_EVENT_STA_CONNECTED, ssid:W12, ssid_len:3, bssid:ec:08:6b:8a:ae:3a, channel:1, authmode:3
+V (2041) event: enter default callback
+V (2041) tcpip_adapter: check: local, if=0 fn=0x400e9af0
+0x400e9af0: tcpip_adapter_up_api at C:/msys32/home/AKAEM/esp/esp-idf/components/tcpip_adapter/tcpip_adapter_lwip.c:1092
+
+
+V (2051) tcpip_adapter: call api in lwip: ret=0x0, give sem
+V (2061) tcpip_adapter: check: remote, if=0 fn=0x400e9af0
+0x400e9af0: tcpip_adapter_up_api at C:/msys32/home/AKAEM/esp/esp-idf/components/tcpip_adapter/tcpip_adapter_lwip.c:1092
+
+
+V (2061) tcpip_adapter: check: local, if=0 fn=0x400e9eb8
+0x400e9eb8: tcpip_adapter_dhcpc_start_api at C:/msys32/home/AKAEM/esp/esp-idf/components/tcpip_adapter/tcpip_adapter_lwip.c:1092
+
+
+D (2071) tcpip_adapter: dhcp client init ip/mask/gw to all-0
+D (2071) tcpip_adapter: if0 start ip lost tmr: enter
+D (2081) tcpip_adapter: if0 start ip lost tmr: no need start because netif=0x3ffd2e1c interval=120 ip=0
+D (2091) tcpip_adapter: dhcp client start successfully
+D (2091) phy_init: wifi mac time delta: 4307
+V (2091) tcpip_adapter: call api in lwip: ret=0x0, give sem
+V (2101) tcpip_adapter: check: remote, if=0 fn=0x400e9eb8
+0x400e9eb8: tcpip_adapter_dhcpc_start_api at C:/msys32/home/AKAEM/esp/esp-idf/components/tcpip_adapter/tcpip_adapter_lwip.c:1092
+
+
+V (2111) event: exit default callback
+D (2241) phy_init: wifi mac time delta: 70814
+D (2421) phy_init: wifi mac time delta: 67832
+D (2651) phy_init: wifi mac time delta: 175754
+D (2851) phy_init: wifi mac time delta: 197204
+D (2921) phy_init: wifi mac time delta: 55804
+D (2921) tcpip_adapter: if0 dhcpc cb
+D (2921) tcpip_adapter: if0 ip changed=1
+D (2921) event: SYSTEM_EVENT_STA_GOT_IP, ip:192.168.2.154, mask:255.255.255.0, gw:192.168.2.1
+V (2931) event: enter default callback
+I (2931) event: sta ip: 192.168.2.154, mask: 255.255.255.0, gw: 192.168.2.1
+V (2941) event: exit default callback
+I (2941) system_api: Base MAC address is not set, read default base MAC address from BLK0 of EFUSE
+D (2951) efuse: coding scheme 0
+D (2951) efuse: In EFUSE_BLK0__DATA2_REG is used 8 bits starting with 8 bit
+D (2961) efuse: coding scheme 0
+D (2961) efuse: In EFUSE_BLK0__DATA2_REG is used 8 bits starting with 0 bit
+D (2971) efuse: coding scheme 0
+D (2971) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 24 bit
+D (2981) efuse: coding scheme 0
+D (2981) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 16 bit
+D (2991) efuse: coding scheme 0
+D (3001) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 8 bit
+D (3001) efuse: coding scheme 0
+D (3011) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 0 bit
+D (3011) efuse: coding scheme 0
+D (3021) efuse: In EFUSE_BLK0__DATA2_REG is used 8 bits starting with 16 bit
+D (3021) MQTT_CLIENT: MQTT client_id=ESP32_276C48
+D (3031) MQTT_CLIENT: Core selection disabled
+V (3031) intr_alloc: esp_intr_alloc_intrstatus (cpu 0): checking args
+V (3031) intr_alloc: esp_intr_alloc_intrstatus (cpu 0): Args okay. Resulting flags 0xE
+D D (3031) intr_alloc: Connected src 22 to int 13 (cpu 0)
+(3031) BLEMQTTPROXY: MQTT_EVENT_BEFORE_CONNECT
+I (3051) gpio: GPIO[0]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:3
+D (3061) phy_init: wifi mac time delta: 86791
+D (3061) TRANS_TCP: [sock=54],connecting to server IP:192.168.2.137,Port:1883...
+I (3071) BTDM_INIT: BT controller compile version [d4658dd]
+D (3081) BTDM_INIT: .data initialise [0x3ffae6e0] <== [0x4000d890]
+D (3091) MQTT_CLIENT: Transport connected to mqtt://192.168.2.137:1883
+I (3101) MQTT_CLIENT: Sending MQTT CONNECT message, type: 1, id: 0000
+D (3111) BTDM_INIT: .bss initialise [0x3ffb0000] - [0x3ffb09a8]
+D (3111) BTDM_INIT: .bss initialise [0x3ffb09a8] - [0x3ffb1ddc]
+D (3111) MQTT_CLIENT: Connected
+D (3121) BLEMQTTPROXY: MQTT_EVENT_CONNECTED
+D (3121) BTDM_INIT: .bss initialise [0x3ffb1ddc] - [0x3ffb2730]
+D (3131) BTDM_INIT: .bss initialise [0x3ffb8000] - [0x3ffb9a20]
+D (3141) BTDM_INIT: .bss initialise [0x3ffbdb28] - [0x3ffbdb5c]
+I (3141) system_api: Base MAC address is not set, read default base MAC address from BLK0 of EFUSE
+D (3151) efuse: coding scheme 0
+D (3151) efuse: In EFUSE_BLK0__DATA2_REG is used 8 bits starting with 8 bit
+D (3161) efuse: coding scheme 0
+D (3161) efuse: In EFUSE_BLK0__DATA2_REG is used 8 bits starting with 0 bit
+D (3171) efuse: coding scheme 0
+D (3171) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 24 bit
+D (3181) efuse: coding scheme 0
+D (3181) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 16 bit
+D (3191) efuse: coding scheme 0
+D (3201) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 8 bit
+D (3201) efuse: coding scheme 0
+D (3211) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 0 bit
+D (3211) efuse: coding scheme 0
+D (3221) efuse: In EFUSE_BLK0__DATA2_REG is used 8 bits starting with 16 bit
+D (3231) phy_init: loading PHY init data from application binary
+D (3231) nvs: nvs_open_from_partition phy 0
+D (3231) nvs: nvs_get cal_version 4
+V (3241) phy_init: phy_get_rf_cal_version: 4100
+
+D (3241) nvs: nvs_get_str_or_blob cal_mac
+D (3251) efuse: coding scheme 0
+D (3251) efuse: In EFUSE_BLK0__DATA2_REG is used 8 bits starting with 8 bit
+D (3261) efuse: coding scheme 0
+D (3261) efuse: In EFUSE_BLK0__DATA2_REG is used 8 bits starting with 0 bit
+D (3261) phy_init: wifi mac time delta: 36083
+D (3271) efuse: coding scheme 0
+D (3271) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 24 bit
+D (3281) efuse: coding scheme 0
+D (3281) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 16 bit
+D (3291) efuse: coding scheme 0
+D (3291) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 8 bit
+D (3301) efuse: coding scheme 0
+D (3301) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 0 bit
+D (3311) efuse: coding scheme 0
+D (3311) efuse: In EFUSE_BLK0__DATA2_REG is used 8 bits starting with 16 bit
+D (3321) nvs: nvs_get_str_or_blob cal_data
+D (3341) nvs: nvs_close 4
+D (3341) efuse: coding scheme 0
+D (3341) efuse: In EFUSE_BLK0__DATA2_REG is used 8 bits starting with 8 bit
+D (3341) efuse: coding scheme 0
+D (3341) efuse: In EFUSE_BLK0__DATA2_REG is used 8 bits starting with 0 bit
+D (3351) efuse: coding scheme 0
+D (3351) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 24 bit
+D (3361) efuse: coding scheme 0
+D (3371) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 16 bit
+D (3371) efuse: coding scheme 0
+D (3381) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 8 bit
+D (3381) efuse: coding scheme 0
+D (3391) efuse: In EFUSE_BLK0__DATA1_REG is used 8 bits starting with 0 bit
+D (3391) efuse: coding scheme 0
+D (3401) efuse: In EFUSE_BLK0__DATA2_REG is used 8 bits starting with 16 bit
+D (3431) phy_init: wifi mac time delta: 42466
+D (3641) nvs: nvs_open_from_partition bt_config.conf 1
+D (3641) nvs: nvs_get_str_or_blob bt_cfg_key0
+D (3651) nvs: nvs_get_str_or_blob bt_cfg_key0
+D (3651) nvs: nvs_close 5
+D (3651) nvs: nvs_open_from_partition bt_config.conf 1
+D (3651) nvs: nvs_set_blob bt_cfg_key0 216
+D (3661) nvs: nvs_close 6
+D (3671) phy_init: wifi mac time delta: 26914
+D (3671) phy_init: wifi mac time delta: 1642
+D (3681) phy_init: wifi mac time delta: 2554
+D (3691) phy_init: wifi mac time delta: 1704
+D (3691) phy_init: wifi mac time delta: 1779
+D (3701) phy_init: wifi mac time delta: 1796
+D (3701) phy_init: wifi mac time delta: 1795
+D (3701) phy_init: wifi mac time delta: 1795
+D (3711) phy_init: wifi mac time delta: 1789
+D (3711) phy_init: wifi mac time delta: 1797
+D (3711) phy_init: wifi mac time delta: 1787
+D (3721) phy_init: wifi mac time delta: 1803
+D (3721) phy_init: wifi mac time delta: 1797
+D (3731) phy_init: wifi mac time delta: 1804
+D (3731) phy_init: wifi mac time delta: 1779
+D (3731) phy_init: wifi mac time delta: 1802
+D (3741) phy_init: wifi mac time delta: 1795
+D (3741) phy_init: wifi mac time delta: 1836
+D (3751) phy_init: wifi mac time delta: 1129
+D (3751) phy_init: wifi mac time delta: 1114
+D (3761) phy_init: wifi mac time delta: 1144
+D (3761) phy_init: wifi mac time delta: 1150
+D (3771) phy_init: wifi mac time delta: 1153
+D (3771) phy_init: wifi mac time delta: 1152
+D (3781) phy_init: wifi mac time delta: 1145
+I (3781) BLEMQTTPROXY: oled task start!
+D (3781) phV (3781) intr_alloc: esp_intr_alloc_intrstatus (cpu 1): checking args
+V (3791) intr_alloc: esp_intr_alloc_intrstatus (cpu 1): Args okay. Resulting flags 0xE
+y_D (3801) intr_alloc: Connected src 49 to int 3 (cpu 1)
+init: wifi mac time delta: 2401
+D (3811) phy_init: wifi mac time delta: 1067
+D (3811) phy_init: wifi mac time delta: 1172
+D (3821) BLEMQTTPROXY: ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT
+D (3821) phy_init: wifi mac time delta: 5565
+D (3831) BLEMQTTPROXY: ESP_GAP_BLE_SCAN_START_COMPLETE_EVT
+D (3881) BLEMQTTPROXY: ESP_GAP_BLE_SCAN_RESULT_EVT
+D (3881) BLEMQTTPROXY: ESP_GAP_SEARCH_INQ_RES_EVT
+D (3881) BLEMQTTPROXY: mybeacon found
+D (3881) BLEMQTTPROXY: (0x00070002) rssi -66 | temp  21.0 | hum  35 | x  +1456 | y   -862 | z -16497 | batt 3066
+D (3891) MQTT_CLIENT: mqtt_enqueue id: 0, type=1 successful
+D (3901) BLEMQTTPROXY: sent publish successful, msg_id=58435
+D (3901) MQTT_CLIENT: mqtt_enqueue id: 58435, type=3 successful
+D (3911) OUTBOX: ENQUEUE msgid=58435, msg_type=3, len=35, size=35
+D (3921) BLEMQTTPROXY: sent publish successful, msg_id=26434
+D (3921) MQTT_CLIENT: mqtt_enqueue id: 26434, type=3 successful
+D (3931) OUTBOX: ENQUEUE msgid=26434, msg_type=3, len=32, size=67
+D (3931) MQTT_CLIENT: msg_type=4, msg_id=58435
+D (3941) MQTT_CLIENT: msg_type=4, msg_id=58435, msg_id=14891
+D (3941) MQTT_CLIENT: mqtt_enqueue id: 14891, type=3 successful
+D (3951) MQTT_CLIENT: pending_id=14891, pending_msg_count = 3
+D (3951) OUTBOX: ENQUEUE msgid=14891, msg_type=3, len=36, size=103
+D (3961) OUTBOX: DELETED msgid=58435, msg_type=3, remain size=68
+D (3971) BLEMQTTPROXY: sent publish successful, msg_id=62904
+D (3971) MQTT_CLIENT: received MQTT_MSG_TYPE_PUBACK, finish QoS1 publish
+D (3981) BLEMQTTPROXY: MQTT_EVENT_PUBLISHED, msg_id=58435
+D (4041) BLEMQTTPROXY: ESP_GAP_BLE_SCAN_RESULT_EVT
+D (4041) BLEMQTTPROXY: ESP_GAP_SEARCH_INQ_RES_EVT
+D (4041) BLEMQTTPROXY: mybeacon not found
+D (4131) MQTT_CLIENT: msg_type=4, msg_id=26434
+D (4131) MQTT_CLIENT: msg_type=4, msg_id=26434
+D (4131) MQTT_CLIENT: pending_id=62904, pending_msg_count = 3
+D (4131) OUTBOX: DELETED msgid=26434, msg_type=3, remain size=36
+D (4141) MQTT_CLIENT: received MQTT_MSG_TYPE_PUBACK, finish QoS1 publish
+D (4151) BLEMQTTPROXY: MQTT_EVENT_PUBLISHED, msg_id=26434
+D (4151) MQTT_CLIENT: msg_type=4, msg_id=14891
+D (4161) BLEMQTTPROXY: ESP_GAP_BLE_SCAN_RESULT_EVT
+D (4161) BLEMQTTPROXY: ESP_GAP_SEARCH_INQ_RES_EVT
+D (4171) BLEMQTTPROXY: mybeacon not found
+D (4161) MQTT_CLIENT: msg_type=4, msg_id=14891
+D (4181) MQTT_CLIENT: pending_id=62904, pending_msg_count = 2
+D (4181) OUTBOX: DELETED msgid=14891, msg_type=3, remain size=0
+D (4191) MQTT_CLIENT: received MQTT_MSG_TYPE_PUBACK, finish QoS1 publish
+D (4191) BLEMQTTPROXY: MQTT_EVENT_PUBLISHED, msg_id=14891
+D (4311) BLEMQTTPROXY: ESP_GAP_BLE_SCAN_RESULT_EVT
+D (4311) BLEMQTTPROXY: ESP_GAP_SEARCH_INQ_RES_EVT
+D (4311) BLEMQTTPROXY: mybeacon not found
+I (4381) BLEMQTTPROXY: oled finish!
+D (4531) MQTT_CLIENT: msg_type=4, msg_id=62904
+D (4531) MQTT_CLIENT: msg_type=4, msg_id=62904
+D (4531) MQTT_CLIENT: pending_id=62904, pending_msg_count = 1
+D (4541) MQTT_CLIENT: received MQTT_MSG_TYPE_PUBACK, finish QoS1 publish
+D (4551) BLEMQTTPROXY: MQTT_EVENT_PUBLISHED, msg_id=62904
+D (4581) BLEMQTTPROXY: ESP_GAP_BLE_SCAN_RESULT_EVT
+D (4581) BLEMQTTPROXY: ESP_GAP_SEARCH_INQ_RES_EVT
+D (4581) BLEMQTTPROXY: mybeacon not found
+D (4851) BLEMQTTPROXY: ESP_GAP_BLE_SCAN_RESULT_EVT
+D (4851) BLEMQTTPROXY: ESP_GAP_SEARCH_INQ_RES_EVT
+D (4851) BLEMQTTPROXY: mybeacon not found
+D (4901) BLEMQTTPROXY: ESP_GAP_BLE_SCAN_RESULT_EVT
+D (4901) BLEMQTTPROXY: ESP_GAP_SEARCH_INQ_RES_EVT
+D (4901) BLEMQTTPROXY: mybeacon found
+D (4901) BLEMQTTPROXY: (0x00070002) rssi -54 | temp  21.0 | hum  35 | x  +1456 | y   -862 | z -16497 | batt 3066
+D (4921) MQTT_CLIENT: mqtt_enqueue id: 62904, type=3 successful
+D (4921) BLEMQTTPROXY: sent publish successful, msg_id=6484
+D (4931) MQTT_CLIENT: mqtt_enqueue id: 6484, type=3 successful
+D (4931) MQTT_CLIENT: msg_type=4, msg_id=6484
+D (4931) OUTBOX: ENQUEUE msgid=6484, msg_type=3, len=35, size=35
+D (4941) MQTT_CLIENT: msg_type=4, msg_id=6484
+D (4941) BLEMQTTPROXY: sent publish successful, msg_id=10497
+D (4951) MQTT_CLIENT: pending_id=10497, pending_msg_count = 2
+D (4951) MQTT_CLIENT: mqtt_enqueue id: 10497, type=3 successful
+D (4961) OUTBOX: DELETED msgid=6484, msg_type=3, remain size=0
+D (4961) OUTBOX: ENQUEUE msgid=10497, msg_type=3, len=32, size=32
+D (4971) MQTT_CLIENT: received MQTT_MSG_TYPE_PUBACK, finish QoS1 publish
+D (4981) BLEMQTTPROXY: sent publish successful, msg_id=7733
+D (4981) BLEMQTTPROXY: MQTT_EVENT_PUBLISHED, msg_id=6484
+D (4991) MQTT_CLIENT: mqtt_enqueue id: 7733, type=3 successful
+D (5001) OUTBOX: ENQUEUE msgid=7733, msg_type=3, len=36, size=68
+D (5011) BLEMQTTPROXY: sent publish successful, msg_id=12968
+D (5121) MQTT_CLIENT: msg_type=4, msg_id=10497
+D (5121) MQTT_CLIENT: msg_type=4, msg_id=10497
+D (5121) MQTT_CLIENT: pending_id=12968, pending_msg_count = 3
+D (5121) OUTBOX: DELETED msgid=10497, msg_type=3, remain size=36
+D (5131) MQTT_CLIENT: received MQTT_MSG_TYPE_PUBACK, finish QoS1 publish
+D (5131) BLEMQTTPROXY: MQTT_EVENT_PUBLISHED, msg_id=10497
+D (5141) MQTT_CLIENT: msg_type=4, msg_id=7733
+D (5141) MQTT_CLIENT: msg_type=4, msg_id=7733
+D (5151) MQTT_CLIENT: pending_id=12968, pending_msg_count = 2
+D (5151) OUTBOX: DELETED msgid=7733, msg_type=3, remain size=0
+D (5161) MQTT_CLIENT: received MQTT_MSG_TYPE_PUBACK, finish QoS1 publish
+D (5171) BLEMQTTPROXY: MQTT_EVENT_PUBLISHED, msg_id=7733
+D (5251) BLEMQTTPROXY: ESP_GAP_BLE_SCAN_RESULT_EVT
+D (5251) BLEMQTTPROXY: ESP_GAP_SEARCH_INQ_RES_EVT
+D (5251) BLEMQTTPROXY: mybeacon not found
+D (5331) MQTT_CLIENT: msg_type=4, msg_id=12968
+D (5331) MQTT_CLIENT: msg_type=4, msg_id=12968
+D (5331) MQTT_CLIENT: pending_id=12968, pending_msg_count = 1
+D (5341) MQTT_CLIENT: received MQTT_MSG_TYPE_PUBACK, finish QoS1 publish
+D (5341) BLEMQTTPROXY: MQTT_EVENT_PUBLISHED, msg_id=12968
+D (5391) BLEMQTTPROXY: ESP_GAP_BLE_SCAN_RESULT_EVT
+D (5391) BLEMQTTPROXY: ESP_GAP_SEARCH_INQ_RES_EVT
+D (5391) BLEMQTTPROXY: mybeacon not found
+D (5661) BLEMQTTPROXY: ESP_GAP_BLE_SCAN_RESULT_EVT
+D (5661) BLEMQTTPROXY: ESP_GAP_SEARCH_INQ_RES_EVT
+D (5661) BLEMQTTPROXY: mybeacon not found
+D (5791) BLEMQTTPROXY: ESP_GAP_BLE_SCAN_RESULT_EVT
+D (5801) BLEMQTTPROXY: ESP_GAP_SEARCH_INQ_RES_EVT
+D (5801) BLEMQTTPROXY: mybeacon not found
+D (5931) BLEMQTTPROXY: ESP_GAP_BLE_SCAN_RESULT_EVT
+D (5931) BLEMQTTPROXY: ESP_GAP_SEARCH_INQ_RES_EVT
+D (5931) BLEMQTTPROXY: mybeacon found
+D (5931) BLEMQTTPROXY: (0x00070002) rssi -53 | temp  21.0 | hum  35 | x  +1456 | y   -862 | z -16497 | batt 3066
+D (5941) MQTT_CLIENT: mqtt_enqueue id: 12968, type=3 successful
+D (5951) BLEMQTTPROXY: sent publish successful, msg_id=4637
+D (5951) MQTT_CLIENT: mqtt_enqueue id: 4637, type=3 successful
+D (5961) OUTBOX: ENQUEUE msgid=4637, msg_type=3, len=35, size=35
+D (5961) BLEMQTTPROXY: sent publish successful, msg_id=4589
+D (5971) MQTT_CLIENT: mqtt_enqueue id: 4589, type=3 successful
+D (5971) OUTBOX: ENQUEUE msgid=4589, msg_type=3, len=32, size=67
+D (5981) BLEMQTTPROXY: sent publish successful, msg_id=22054
+D (5991) MQTT_CLIENT: mqtt_enqueue id: 22054, type=3 successful
+D (6001) BLEMQTTPROXY: sent publish successful, msg_id=18498ze=103
+D (6071) BLEMQTTPROXY: ESP_GAP_BLE_SCAN_RESULT_EVT
+D (6071) BLEMQTTPROXY: ESP_GAP_SEARCH_INQ_RES_EVT
+D (6071) BLEMQTTPROXY: mybeacon not found
+D (6141) MQTT_CLIENT: msg_type=4, msg_id=4637
+D (6141) MQTT_CLIENT: msg_type=4, msg_id=4637
+D (6141) MQTT_CLIENT: pending_id=18498, pending_msg_count = 4
+D (6151) OUTBOX: DELETED msgid=4637, msg_type=3, remain size=68
+D (6151) MQTT_CLIENT: received MQTT_MSG_TYPE_PUBACK, finish QoS1 publish
+D (6161) BLEMQTTPROXY: MQTT_EVENT_PUBLISHED, msg_id=4637
+D (6171) MQTT_CLIENT: msg_type=4, msg_id=4589
+D (6171) MQTT_CLIENT: msg_type=4, msg_id=4589
+D (6171) MQTT_CLIENT: pending_id=18498, pending_msg_count = 3
+D (6181) OUTBOX: DELETED msgid=4589, msg_type=3, remain size=36
+D (6191) MQTT_CLIENT: received MQTT_MSG_TYPE_PUBACK, finish QoS1 publish
+D (6191) BLEMQTTPROXY: MQTT_EVENT_PUBLISHED, msg_id=4589
+D (6201) BLEMQTTPROXY: ESP_GAP_BLE_SCAN_RESULT_EVT
+D (6201) BLEMQTTPROXY: ESP_GAP_SEARCH_INQ_RES_EVT
+D (6211) BLEMQTTPROXY: mybeacon not found
+D (6381) MQTT_CLIENT: msg_type=4, msg_id=22054
+D (6381) MQTT_CLIENT: msg_type=4, msg_id=22054
+D (6381) MQTT_CLIENT: pending_id=18498, pending_msg_count = 2
+D (6381) OUTBOX: DELETED msgid=22054, msg_type=3, remain size=0
+D (6391) MQTT_CLIENT: received MQTT_MSG_TYPE_PUBACK, finish QoS1 publish
+D (6401) BLEMQTTPROXY: MQTT_EVENT_PUBLISHED, msg_id=22054
+D (6401) MQTT_CLIENT: msg_type=4, msg_id=18498
+D (6411) MQTT_CLIENT: msg_type=4, msg_id=18498
+D (6411) MQTT_CLIENT: pending_id=18498, pending_msg_count = 1
+D (6421) MQTT_CLIENT: received MQTT_MSG_TYPE_PUBACK, finish QoS1 publish
+D (6421) BLEMQTTPROXY: MQTT_EVENT_PUBLISHED, msg_id=22054
+D (6471) BLEMQTTPROXY: ESP_GAP_BLE_SCAN_RESULT_EVT
+D (6471) BLEMQTTPROXY: ESP_GAP_SEARCH_INQ_RES_EVT
+D (6471) BLEMQTTPROXY: mybeacon not found
+D (6611) BLEMQTTPROXY: ESP_GAP_BLE_SCAN_RESULT_EVT
+D (6611) BLEMQTTPROXY: ESP_GAP_SEARCH_INQ_RES_EVT
+D (6611) BLEMQTTPROXY: mybeacon not found
+D (6741) BLEMQTTPROXY: ESP_GAP_BLE_SCAN_RESULT_EVT
+D (6741) BLEMQTTPROXY: ESP_GAP_SEARCH_INQ_RES_EVT
+D (6741) BLEMQTTPROXY: mybeacon not found
+D (6881) BLEMQTTPROXY: ESP_GAP_BLE_SCAN_RESULT_EVT
+D (6881) BLEMQTTPROXY: ESP_GAP_SEARCH_INQ_RES_EVT
+D (6881) BLEMQTTPROXY: mybeacon not found
+D (6931) BLEMQTTPROXY: ESP_GAP_BLE_SCAN_RESULT_EVT
+D (6931) BLEMQTTPROXY: ESP_GAP_SEARCH_INQ_RES_EVT
+D (6931) BLEMQTTPROXY: mybeacon found
+D (6931) BLEMQTTPROXY: (0x00070002) rssi -56 | temp  21.0 | hum  35 | x  +1456 | y   -862 | z -16497 | batt 3066
+D (6941) MQTT_CLIENT: mqtt_enqueue id: 18498, type=3 successful
+D (6951) BLEMQTTPROXY: sent publish successful, msg_id=40065
+D (6951) MQTT_CLIENT: mqtt_enqueue id: 40065, type=3 successful
+D (6961) OUTBOX: ENQUEUE msgid=40065, msg_type=3, len=35, size=35
+D (6961) BLEMQTTPROXY: sent publish successful, msg_id=1890
+D (6971) MQTT_CLIENT: mqtt_enqueue id: 1890, type=3 successful
+D (6981) OUTBOX: ENQUEUE msgid=1890, msg_type=3, len=32, size=67
+D (6981) BLEMQTTPROXY: sent publish successful, msg_id=53199
+D (6991) MQTT_CLIENT: mqtt_enqueue id: 53199, type=3 successful
+D (6991) OUTBOX: ENQUEUE msgid=53199, msg_type=3, len=36, size=103
+D (7001) MQTT_CLIENT: msg_type=4, msg_id=40065
+D (7001) BLEMQTTPROXY: sent publish successful, msg_id=5856

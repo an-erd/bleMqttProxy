@@ -136,4 +136,11 @@ menu "BLE-MQTT Proxy"
             default 1 if BLE_DEVICE_1
             default 0
     endmenu
+
+    menu "Button"
+    config IO_GLITCH_FILTER_TIME_MS
+        int "IO glitch filter timer ms (10~100)"
+        range 10 100
+        default 50
+    endmenu
 endmenu
