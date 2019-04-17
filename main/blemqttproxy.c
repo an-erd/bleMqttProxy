@@ -55,13 +55,13 @@ typedef struct  {
     uint16_t    battery;
 } ble_adv_data_t;
 
-ble_beacon_data_t ble_beacon_data[CONFIG_BLE_DEVICE_COUNT] = {
+ble_beacon_data_t ble_beacon_data[CONFIG_BLE_DEVICE_COUNT_CONFIGURED] = {
     { {0x01, 0x12, 0x23, 0x34}, CONFIG_BLE_DEVICE_1_MAJ, CONFIG_BLE_DEVICE_1_MIN, CONFIG_BLE_DEVICE_1_NAME},
     { {0x01, 0x12, 0x23, 0x34}, CONFIG_BLE_DEVICE_2_MAJ, CONFIG_BLE_DEVICE_2_MIN, CONFIG_BLE_DEVICE_2_NAME},
     { {0x01, 0x12, 0x23, 0x34}, CONFIG_BLE_DEVICE_3_MAJ, CONFIG_BLE_DEVICE_3_MIN, CONFIG_BLE_DEVICE_3_NAME},
     { {0x01, 0x12, 0x23, 0x34}, CONFIG_BLE_DEVICE_4_MAJ, CONFIG_BLE_DEVICE_4_MIN, CONFIG_BLE_DEVICE_4_NAME},
 };
-ble_adv_data_t    ble_adv_data[CONFIG_BLE_DEVICE_COUNT];
+ble_adv_data_t    ble_adv_data[CONFIG_BLE_DEVICE_COUNT_CONFIGURED];
 
 // Beacon
 typedef struct {
@@ -109,7 +109,7 @@ esp_ble_mybeacon_head_t mybeacon_common_head = {
 #define UPDATE_BEAC3     (BIT3)
 #define UPDATE_DISPLAY   (BIT4)
 EventGroupHandle_t s_values_evg;
-static bool s_display_show = true;
+static uint8_t s_display_show = 0;  // 0 = off, 1.. beac to show, for array minus 1
 
 // Wifi
 static EventGroupHandle_t wifi_event_group;
@@ -133,10 +133,9 @@ void button_tap_cb(void* arg)
 {
     char* pstr = (char*) arg;
     UNUSED(pstr);
-    if(s_display_show)
-        s_display_show= false;
-    else
-        s_display_show = true;
+
+    s_display_show++;
+    s_display_show %= CONFIG_BLE_DEVICE_COUNT_USE+1;
 
     ESP_LOGI(TAG, "button_tap_cb: %d", s_display_show);
 }
@@ -155,7 +154,7 @@ esp_err_t ssd1306_update(ssd1306_handle_t dev)
         return iot_ssd1306_refresh_gram(dev);
     }
 
-    int idx = 1;
+    int idx = s_display_show - 1;
     snprintf(buffer, 128, "%s:", ble_beacon_data[idx].name);
     iot_ssd1306_draw_string(dev, 0, 0, (const uint8_t*) buffer, 12, 1);
     snprintf(buffer, 128, "%5.1fC, %3d%%H", ble_adv_data[idx].temp, ble_adv_data[idx].humidity);

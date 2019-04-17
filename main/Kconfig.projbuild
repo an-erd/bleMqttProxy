@@ -15,23 +15,16 @@ menu "BLE-MQTT Proxy"
                 WiFi password (WPA or WPA2) for the example to use.
     endmenu
 
-    menu "Display"
-
+    choice DISPLAY_MODE
+        prompt "Display to used"
+        default DISPLAY_SSD1306
+        help
+            Choose which display to use or compile as a headless device.
+        config DISPLAY_HEADLESS
+            bool "Headless mode"
         config DISPLAY_SSD1306
             bool "SSD1306 Display"
-            default y
-            help
-                Activate SSD1306 display to show stats.
-
-#        config DISPLAY_PIN_SDA
-#            int "SDA Pin"
-#            default 5
-#
-#        config DISPLAY_PIN_SCL
-#            int "SCL Pin"
-#            default 4
-
-    endmenu
+    endchoice #DISPLAY_MODE
 
     menu "MQTT Configuration"
 
@@ -127,7 +120,7 @@ menu "BLE-MQTT Proxy"
             string "Name of BLE device 4" if BLE_DEVICE_4
             default "beac4"
 
-        config BLE_DEVICE_COUNT
+        config BLE_DEVICE_COUNT_CONFIGURED
             int "Number of BLE devices configured"
             range 0 5
             default 4 if BLE_DEVICE_4
@@ -135,6 +128,11 @@ menu "BLE-MQTT Proxy"
             default 2 if BLE_DEVICE_2
             default 1 if BLE_DEVICE_1
             default 0
+        config BLE_DEVICE_COUNT_USE
+            int "Number of BLE devices to use"
+            help
+                Number of BLE devices to use, must by >= number of BLE devices configured
+            range 0 5
     endmenu
 
     menu "Button"
