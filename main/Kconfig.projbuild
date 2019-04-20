@@ -120,9 +120,93 @@ menu "BLE-MQTT Proxy"
             string "Name of BLE device 4" if BLE_DEVICE_4
             default "beac4"
 
+        config BLE_DEVICE_5
+            bool "Set BLE Device 5"
+            default y
+        config BLE_DEVICE_5_MAJ
+            int "Major value of BLE device 5" if BLE_DEVICE_5
+            default 7
+        config BLE_DEVICE_5_MIN
+            int "Minor value of BLE device 5" if BLE_DEVICE_5
+            default 5
+        config BLE_DEVICE_5_NAME
+            string "Name of BLE device 5" if BLE_DEVICE_5
+            default "beac5"
+
+        config BLE_DEVICE_6
+            bool "Set BLE Device 6"
+            default y
+        config BLE_DEVICE_6_MAJ
+            int "Major value of BLE device 6" if BLE_DEVICE_6
+            default 7
+        config BLE_DEVICE_6_MIN
+            int "Minor value of BLE device 6" if BLE_DEVICE_6
+            default 6
+        config BLE_DEVICE_6_NAME
+            string "Name of BLE device 6" if BLE_DEVICE_6
+            default "beac6"
+
+        config BLE_DEVICE_7
+            bool "Set BLE Device 7"
+            default y
+        config BLE_DEVICE_7_MAJ
+            int "Major value of BLE device 7" if BLE_DEVICE_7
+            default 7
+        config BLE_DEVICE_7_MIN
+            int "Minor value of BLE device 7" if BLE_DEVICE_7
+            default 7
+        config BLE_DEVICE_7_NAME
+            string "Name of BLE device 7" if BLE_DEVICE_7
+            default "beac7"
+
+        config BLE_DEVICE_8
+            bool "Set BLE Device 8"
+            default y
+        config BLE_DEVICE_8_MAJ
+            int "Major value of BLE device 8" if BLE_DEVICE_8
+            default 7
+        config BLE_DEVICE_8_MIN
+            int "Minor value of BLE device 8" if BLE_DEVICE_8
+            default 8
+        config BLE_DEVICE_8_NAME
+            string "Name of BLE device 8" if BLE_DEVICE_8
+            default "beac8"
+
+        config BLE_DEVICE_9
+            bool "Set BLE Device 9"
+            default y
+        config BLE_DEVICE_9_MAJ
+            int "Major value of BLE device 9" if BLE_DEVICE_9
+            default 7
+        config BLE_DEVICE_9_MIN
+            int "Minor value of BLE device 9" if BLE_DEVICE_9
+            default 9
+        config BLE_DEVICE_9_NAME
+            string "Name of BLE device 9" if BLE_DEVICE_9
+            default "beac9"
+
+        config BLE_DEVICE_10
+            bool "Set BLE Device 10"
+            default y
+        config BLE_DEVICE_10_MAJ
+            int "Major value of BLE device 10" if BLE_DEVICE_10
+            default 7
+        config BLE_DEVICE_10_MIN
+            int "Minor value of BLE device 10" if BLE_DEVICE_10
+            default 10
+        config BLE_DEVICE_10_NAME
+            string "Name of BLE device 10" if BLE_DEVICE_10
+            default "beac10"
+
         config BLE_DEVICE_COUNT_CONFIGURED
             int "Number of BLE devices configured"
-            range 0 5
+            range 0 10
+            default 10 if BLE_DEVICE_10
+            default 9 if BLE_DEVICE_9
+            default 8 if BLE_DEVICE_8
+            default 7 if BLE_DEVICE_7
+            default 6 if BLE_DEVICE_6
+            default 5 if BLE_DEVICE_5
             default 4 if BLE_DEVICE_4
             default 3 if BLE_DEVICE_3
             default 2 if BLE_DEVICE_2
@@ -132,7 +216,7 @@ menu "BLE-MQTT Proxy"
             int "Number of BLE devices to use"
             help
                 Number of BLE devices to use, must by >= number of BLE devices configured
-            range 0 5
+            range 0 10
     endmenu
 
     menu "Button"
