@@ -34,7 +34,15 @@
 
 static const char* TAG = "BLEMQTTPROXY";
 #define ENDIAN_CHANGE_U16(x) ((((x)&0xFF00)>>8) + (((x)&0xFF)<<8))
+#define MSB_16(a) (((a) & 0xFF00) >> 8)
+#define LSB_16(a) ((a) & 0x00FF)
 #define UNUSED(expr) do { (void)(expr); } while (0)
+
+#define SHT3_GET_TEMPERATURE_VALUE(temp_msb, temp_lsb) \
+    (-45+(((int16_t)temp_msb << 8) | ((int16_t)temp_lsb ))*175/(float)0xFFFF)
+
+#define SHT3_GET_HUMIDITY_VALUE(humidity_msb, humidity_lsb) \
+    ((((int16_t)humidity_msb << 8) | ((int16_t)humidity_lsb))*100/(float)0xFFFF)
 
 // BLE
 const uint8_t uuid_zeros[ESP_UUID_LEN_32] = {0x00, 0x00, 0x00, 0x00};
@@ -79,14 +87,14 @@ typedef struct {
 }__attribute__((packed)) esp_ble_mybeacon_head_t;
 
 typedef struct {
-    uint8_t proximity_uuid[4];
+    uint8_t  proximity_uuid[4];
     uint16_t major;
     uint16_t minor;
-    int8_t measured_power;
+    int8_t   measured_power;
 }__attribute__((packed)) esp_ble_mybeacon_vendor_t;
 
 typedef struct {
-    int16_t  temp;
+    uint16_t temp;
     uint16_t humidity;
     uint16_t x;
     uint16_t y;
@@ -407,23 +415,22 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
             if(esp_ble_is_mybeacon_packet (scan_result->scan_rst.ble_adv, scan_result->scan_rst.adv_data_len)){
                 ESP_LOGD(TAG, "mybeacon found");
                 esp_ble_mybeacon_t *mybeacon_data = (esp_ble_mybeacon_t*)(scan_result->scan_rst.ble_adv);
-                ESP_LOGD(TAG, "(0x%04x%04x) rssi %3d | temp %5.1f | hum %5.1f | x %+6d | y %+6d | z %+6d | batt %4d",
-                    ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.major),
-                    ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.minor),
-                    scan_result->scan_rst.rssi,
-                    ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.temp)/10.,
-                    ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.humidity)/10.,
-                    (int16_t)ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.x),
-                    (int16_t)ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.y),
-                    (int16_t)ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.z),
-                    ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.battery) );
 
-                // send via MQTT here:
-                uint16_t maj        = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.major);
-                uint16_t min        = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.minor);
-                float    temp       = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.temp)/10.;
-                float    humidity   = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.humidity)/10.;
-                uint16_t battery    = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.battery);
+                uint16_t maj      = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.major);
+                uint16_t min      = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.minor);
+                float    temp     = SHT3_GET_TEMPERATURE_VALUE(
+                                      LSB_16(mybeacon_data->mybeacon_payload.temp),
+                                      MSB_16(mybeacon_data->mybeacon_payload.temp) );
+                float    humidity = SHT3_GET_HUMIDITY_VALUE(
+                                      LSB_16(mybeacon_data->mybeacon_payload.humidity),
+                                      MSB_16(mybeacon_data->mybeacon_payload.humidity) );
+                uint16_t battery  = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.battery);
+                int16_t x         = (int16_t)ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.x);
+                int16_t y         = (int16_t)ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.y);
+                int16_t z         = (int16_t)ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.z);
+
+                ESP_LOGI(TAG, "(0x%04x%04x) rssi %3d | temp %5.1f | hum %5.1f | x %+6d | y %+6d | z %+6d | batt %4d",
+                    maj, min, scan_result->scan_rst.rssi, temp, humidity, x, y, z, battery );
 
                 // identifier, maj, min, sensor -> data
                 // snprintf(buffer_topic, 128,  "/%s/0x%04x/x%04x/%s", "beac", maj, min, "temp");
@@ -437,7 +444,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 }
 
                 if( (humidity < CONFIG_HUMIDITY_LOW) || (humidity > CONFIG_HUMIDITY_HIGH) ){
-                    ESP_LOGE(TAG, "huidity out of range, not send");
+                    ESP_LOGE(TAG, "humidity out of range, not send");
                 } else {
                     snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "humidity");
                     snprintf(buffer_payload, 128, "%5.1f", humidity);
@@ -450,11 +457,14 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
                 ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
 
-                snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "battery");
-                snprintf(buffer_payload, 128, "%d", battery);
-                msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
-                ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
-
+                if( (battery < CONFIG_BATTERY_LOW) || (battery > CONFIG_BATTERY_HIGH) ){
+                    ESP_LOGE(TAG, "battery out of range, not send");
+                } else {
+                    snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "battery");
+                    snprintf(buffer_payload, 128, "%d", battery);
+                    msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
+                    ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+                }
                 update_adv_data(maj, min, scan_result->scan_rst.rssi, temp, humidity, battery);
             } else {
                 ESP_LOGD(TAG, "mybeacon not found");
