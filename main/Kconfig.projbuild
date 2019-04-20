@@ -66,6 +66,20 @@ menu "BLE-MQTT Proxy"
         default "/%s/0x%04x/x%04x/%s"
         help
             identifier, maj, min, sensor -> data
+    menu "Range of values"
+        config TEMP_LOW
+            int "Temperature low range"
+            default -45
+        config TEMP_HIGH
+            int "Temperature high range"
+            default 120
+        config HUMIDITY_LOW
+            int "Humidity low range"
+            default 0
+        config HUMIDITY_HIGH
+            int "Humidity high range"
+            default 100
+    endmenu
 
     menu "BLE Devices"
         config BLE_DEVICE_1

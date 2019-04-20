@@ -86,7 +86,7 @@ typedef struct {
 }__attribute__((packed)) esp_ble_mybeacon_vendor_t;
 
 typedef struct {
-    uint16_t temp;
+    int16_t  temp;
     uint16_t humidity;
     uint16_t x;
     uint16_t y;
@@ -427,15 +427,23 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
 
                 // identifier, maj, min, sensor -> data
                 // snprintf(buffer_topic, 128,  "/%s/0x%04x/x%04x/%s", "beac", maj, min, "temp");
-                snprintf(buffer_topic, 128,  CONFIG_MQTT_FORMAT, "beac", maj, min, "temp");
-                snprintf(buffer_payload, 128, "%+5.1f", temp);
-                msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
-                ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+                if( (temp < CONFIG_TEMP_LOW) || (temp > CONFIG_TEMP_HIGH) ){
+                    ESP_LOGE(TAG, "temperature out of range, not send");
+                } else {
+                    snprintf(buffer_topic, 128,  CONFIG_MQTT_FORMAT, "beac", maj, min, "temp");
+                    snprintf(buffer_payload, 128, "%+5.1f", temp);
+                    msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
+                    ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+                }
 
-                snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "humidity");
-                snprintf(buffer_payload, 128, "%5.1f", humidity);
-                msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
-                ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+                if( (humidity < CONFIG_HUMIDITY_LOW) || (humidity > CONFIG_HUMIDITY_HIGH) ){
+                    ESP_LOGE(TAG, "huidity out of range, not send");
+                } else {
+                    snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "humidity");
+                    snprintf(buffer_payload, 128, "%5.1f", humidity);
+                    msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
+                    ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+                }
 
                 snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "rssi");
                 snprintf(buffer_payload, 128, "%d", scan_result->scan_rst.rssi);
