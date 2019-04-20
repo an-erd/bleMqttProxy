@@ -15,23 +15,16 @@ menu "BLE-MQTT Proxy"
                 WiFi password (WPA or WPA2) for the example to use.
     endmenu
 
-    menu "Display"
-
+    choice DISPLAY_MODE
+        prompt "Display to used"
+        default DISPLAY_SSD1306
+        help
+            Choose which display to use or compile as a headless device.
+        config DISPLAY_HEADLESS
+            bool "Headless mode"
         config DISPLAY_SSD1306
             bool "SSD1306 Display"
-            default y
-            help
-                Activate SSD1306 display to show stats.
-
-#        config DISPLAY_PIN_SDA
-#            int "SDA Pin"
-#            default 5
-#
-#        config DISPLAY_PIN_SCL
-#            int "SCL Pin"
-#            default 4
-
-    endmenu
+    endchoice #DISPLAY_MODE
 
     menu "MQTT Configuration"
 
@@ -70,9 +63,29 @@ menu "BLE-MQTT Proxy"
 
     config MQTT_FORMAT
         string
-        default "\/%s\/0x%04\/x%04x\/%s"
+        default "/%s/0x%04x/x%04x/%s"
         help
             identifier, maj, min, sensor -> data
+    menu "Range of values"
+        config TEMP_LOW
+            int "Temperature low range"
+            default -45
+        config TEMP_HIGH
+            int "Temperature high range"
+            default 120
+        config HUMIDITY_LOW
+            int "Humidity low range"
+            default 0
+        config HUMIDITY_HIGH
+            int "Humidity high range"
+            default 100
+        config BATTERY_LOW
+            int "Battery low range"
+            default 0
+        config BATTERY_HIGH
+            int "Battery high range"
+            default 3300
+    endmenu
 
     menu "BLE Devices"
         config BLE_DEVICE_1
@@ -127,14 +140,103 @@ menu "BLE-MQTT Proxy"
             string "Name of BLE device 4" if BLE_DEVICE_4
             default "beac4"
 
-        config BLE_DEVICE_COUNT
+        config BLE_DEVICE_5
+            bool "Set BLE Device 5"
+            default y
+        config BLE_DEVICE_5_MAJ
+            int "Major value of BLE device 5" if BLE_DEVICE_5
+            default 7
+        config BLE_DEVICE_5_MIN
+            int "Minor value of BLE device 5" if BLE_DEVICE_5
+            default 5
+        config BLE_DEVICE_5_NAME
+            string "Name of BLE device 5" if BLE_DEVICE_5
+            default "beac5"
+
+        config BLE_DEVICE_6
+            bool "Set BLE Device 6"
+            default y
+        config BLE_DEVICE_6_MAJ
+            int "Major value of BLE device 6" if BLE_DEVICE_6
+            default 7
+        config BLE_DEVICE_6_MIN
+            int "Minor value of BLE device 6" if BLE_DEVICE_6
+            default 6
+        config BLE_DEVICE_6_NAME
+            string "Name of BLE device 6" if BLE_DEVICE_6
+            default "beac6"
+
+        config BLE_DEVICE_7
+            bool "Set BLE Device 7"
+            default y
+        config BLE_DEVICE_7_MAJ
+            int "Major value of BLE device 7" if BLE_DEVICE_7
+            default 7
+        config BLE_DEVICE_7_MIN
+            int "Minor value of BLE device 7" if BLE_DEVICE_7
+            default 7
+        config BLE_DEVICE_7_NAME
+            string "Name of BLE device 7" if BLE_DEVICE_7
+            default "beac7"
+
+        config BLE_DEVICE_8
+            bool "Set BLE Device 8"
+            default y
+        config BLE_DEVICE_8_MAJ
+            int "Major value of BLE device 8" if BLE_DEVICE_8
+            default 7
+        config BLE_DEVICE_8_MIN
+            int "Minor value of BLE device 8" if BLE_DEVICE_8
+            default 8
+        config BLE_DEVICE_8_NAME
+            string "Name of BLE device 8" if BLE_DEVICE_8
+            default "beac8"
+
+        config BLE_DEVICE_9
+            bool "Set BLE Device 9"
+            default y
+        config BLE_DEVICE_9_MAJ
+            int "Major value of BLE device 9" if BLE_DEVICE_9
+            default 7
+        config BLE_DEVICE_9_MIN
+            int "Minor value of BLE device 9" if BLE_DEVICE_9
+            default 9
+        config BLE_DEVICE_9_NAME
+            string "Name of BLE device 9" if BLE_DEVICE_9
+            default "beac9"
+
+        config BLE_DEVICE_10
+            bool "Set BLE Device 10"
+            default y
+        config BLE_DEVICE_10_MAJ
+            int "Major value of BLE device 10" if BLE_DEVICE_10
+            default 7
+        config BLE_DEVICE_10_MIN
+            int "Minor value of BLE device 10" if BLE_DEVICE_10
+            default 10
+        config BLE_DEVICE_10_NAME
+            string "Name of BLE device 10" if BLE_DEVICE_10
+            default "beac10"
+
+        config BLE_DEVICE_COUNT_CONFIGURED
             int "Number of BLE devices configured"
-            range 0 5
+            range 0 10
+            default 10 if BLE_DEVICE_10
+            default 9 if BLE_DEVICE_9
+            default 8 if BLE_DEVICE_8
+            default 7 if BLE_DEVICE_7
+            default 6 if BLE_DEVICE_6
+            default 5 if BLE_DEVICE_5
             default 4 if BLE_DEVICE_4
             default 3 if BLE_DEVICE_3
             default 2 if BLE_DEVICE_2
             default 1 if BLE_DEVICE_1
             default 0
+        config BLE_DEVICE_COUNT_USE
+            int "Number of BLE devices to use"
+            help
+                Number of BLE devices to use, must by >= number of BLE devices configured
+            range 0 10
     endmenu
 
     menu "Button"

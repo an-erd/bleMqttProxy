@@ -34,7 +34,15 @@
 
 static const char* TAG = "BLEMQTTPROXY";
 #define ENDIAN_CHANGE_U16(x) ((((x)&0xFF00)>>8) + (((x)&0xFF)<<8))
+#define MSB_16(a) (((a) & 0xFF00) >> 8)
+#define LSB_16(a) ((a) & 0x00FF)
 #define UNUSED(expr) do { (void)(expr); } while (0)
+
+#define SHT3_GET_TEMPERATURE_VALUE(temp_msb, temp_lsb) \
+    (-45+(((int16_t)temp_msb << 8) | ((int16_t)temp_lsb ))*175/(float)0xFFFF)
+
+#define SHT3_GET_HUMIDITY_VALUE(humidity_msb, humidity_lsb) \
+    ((((int16_t)humidity_msb << 8) | ((int16_t)humidity_lsb))*100/(float)0xFFFF)
 
 // BLE
 const uint8_t uuid_zeros[ESP_UUID_LEN_32] = {0x00, 0x00, 0x00, 0x00};
@@ -51,17 +59,23 @@ typedef struct  {
 typedef struct  {
     int8_t      measured_power;
     float       temp;
-    uint16_t    humidity;
+    float       humidity;
     uint16_t    battery;
 } ble_adv_data_t;
 
-ble_beacon_data_t ble_beacon_data[CONFIG_BLE_DEVICE_COUNT] = {
-    { {0x01, 0x12, 0x23, 0x34}, CONFIG_BLE_DEVICE_1_MAJ, CONFIG_BLE_DEVICE_1_MIN, CONFIG_BLE_DEVICE_1_NAME},
-    { {0x01, 0x12, 0x23, 0x34}, CONFIG_BLE_DEVICE_2_MAJ, CONFIG_BLE_DEVICE_2_MIN, CONFIG_BLE_DEVICE_2_NAME},
-    { {0x01, 0x12, 0x23, 0x34}, CONFIG_BLE_DEVICE_3_MAJ, CONFIG_BLE_DEVICE_3_MIN, CONFIG_BLE_DEVICE_3_NAME},
-    { {0x01, 0x12, 0x23, 0x34}, CONFIG_BLE_DEVICE_4_MAJ, CONFIG_BLE_DEVICE_4_MIN, CONFIG_BLE_DEVICE_4_NAME},
+ble_beacon_data_t ble_beacon_data[CONFIG_BLE_DEVICE_COUNT_CONFIGURED] = {
+    { {0x01, 0x12, 0x23, 0x34}, CONFIG_BLE_DEVICE_1_MAJ,  CONFIG_BLE_DEVICE_1_MIN,  CONFIG_BLE_DEVICE_1_NAME},
+    { {0x01, 0x12, 0x23, 0x34}, CONFIG_BLE_DEVICE_2_MAJ,  CONFIG_BLE_DEVICE_2_MIN,  CONFIG_BLE_DEVICE_2_NAME},
+    { {0x01, 0x12, 0x23, 0x34}, CONFIG_BLE_DEVICE_3_MAJ,  CONFIG_BLE_DEVICE_3_MIN,  CONFIG_BLE_DEVICE_3_NAME},
+    { {0x01, 0x12, 0x23, 0x34}, CONFIG_BLE_DEVICE_4_MAJ,  CONFIG_BLE_DEVICE_4_MIN,  CONFIG_BLE_DEVICE_4_NAME},
+    { {0x01, 0x12, 0x23, 0x34}, CONFIG_BLE_DEVICE_5_MAJ,  CONFIG_BLE_DEVICE_5_MIN,  CONFIG_BLE_DEVICE_5_NAME},
+    { {0x01, 0x12, 0x23, 0x34}, CONFIG_BLE_DEVICE_6_MAJ,  CONFIG_BLE_DEVICE_6_MIN,  CONFIG_BLE_DEVICE_6_NAME},
+    { {0x01, 0x12, 0x23, 0x34}, CONFIG_BLE_DEVICE_7_MAJ,  CONFIG_BLE_DEVICE_7_MIN,  CONFIG_BLE_DEVICE_7_NAME},
+    { {0x01, 0x12, 0x23, 0x34}, CONFIG_BLE_DEVICE_8_MAJ,  CONFIG_BLE_DEVICE_8_MIN,  CONFIG_BLE_DEVICE_8_NAME},
+    { {0x01, 0x12, 0x23, 0x34}, CONFIG_BLE_DEVICE_9_MAJ,  CONFIG_BLE_DEVICE_9_MIN,  CONFIG_BLE_DEVICE_9_NAME},
+    { {0x01, 0x12, 0x23, 0x34}, CONFIG_BLE_DEVICE_10_MAJ, CONFIG_BLE_DEVICE_10_MIN, CONFIG_BLE_DEVICE_10_NAME},
 };
-ble_adv_data_t    ble_adv_data[CONFIG_BLE_DEVICE_COUNT];
+ble_adv_data_t    ble_adv_data[CONFIG_BLE_DEVICE_COUNT_CONFIGURED];
 
 // Beacon
 typedef struct {
@@ -73,10 +87,10 @@ typedef struct {
 }__attribute__((packed)) esp_ble_mybeacon_head_t;
 
 typedef struct {
-    uint8_t proximity_uuid[4];
+    uint8_t  proximity_uuid[4];
     uint16_t major;
     uint16_t minor;
-    int8_t measured_power;
+    int8_t   measured_power;
 }__attribute__((packed)) esp_ble_mybeacon_vendor_t;
 
 typedef struct {
@@ -107,9 +121,15 @@ esp_ble_mybeacon_head_t mybeacon_common_head = {
 #define UPDATE_BEAC1     (BIT1)
 #define UPDATE_BEAC2     (BIT2)
 #define UPDATE_BEAC3     (BIT3)
-#define UPDATE_DISPLAY   (BIT4)
+#define UPDATE_BEAC4     (BIT4)
+#define UPDATE_BEAC5     (BIT5)
+#define UPDATE_BEAC6     (BIT6)
+#define UPDATE_BEAC7     (BIT7)
+#define UPDATE_BEAC8     (BIT8)
+#define UPDATE_BEAC9     (BIT9)
+#define UPDATE_DISPLAY   (BIT10)
 EventGroupHandle_t s_values_evg;
-static bool s_display_show = true;
+static uint8_t s_display_show = 0;  // 0 = off, 1.. beac to show, for array minus 1
 
 // Wifi
 static EventGroupHandle_t wifi_event_group;
@@ -133,10 +153,9 @@ void button_tap_cb(void* arg)
 {
     char* pstr = (char*) arg;
     UNUSED(pstr);
-    if(s_display_show)
-        s_display_show= false;
-    else
-        s_display_show = true;
+
+    s_display_show++;
+    s_display_show %= CONFIG_BLE_DEVICE_COUNT_USE+1;
 
     ESP_LOGI(TAG, "button_tap_cb: %d", s_display_show);
 }
@@ -155,10 +174,10 @@ esp_err_t ssd1306_update(ssd1306_handle_t dev)
         return iot_ssd1306_refresh_gram(dev);
     }
 
-    int idx = 1;
+    int idx = s_display_show - 1;
     snprintf(buffer, 128, "%s:", ble_beacon_data[idx].name);
     iot_ssd1306_draw_string(dev, 0, 0, (const uint8_t*) buffer, 12, 1);
-    snprintf(buffer, 128, "%5.1fC, %3d%%H", ble_adv_data[idx].temp, ble_adv_data[idx].humidity);
+    snprintf(buffer, 128, "%5.1fC, %5.1f%%H", ble_adv_data[idx].temp, ble_adv_data[idx].humidity);
     iot_ssd1306_draw_string(dev, 0, 16, (const uint8_t*) buffer, 12, 1);
     snprintf(buffer, 128, "Batt %4d mV", ble_adv_data[idx].battery);
     iot_ssd1306_draw_string(dev, 0, 32, (const uint8_t*) buffer, 12, 1);
@@ -197,7 +216,9 @@ static void ssd1306_task(void* pvParameters)
     dev_ssd1306_initialization();
     while (1) {
         uxBits = xEventGroupWaitBits(s_values_evg,
-            UPDATE_BEAC0 | UPDATE_BEAC1 | UPDATE_BEAC2 | UPDATE_BEAC3 | UPDATE_DISPLAY, pdTRUE, pdFALSE, 0);
+            UPDATE_BEAC0 | UPDATE_BEAC1 | UPDATE_BEAC2 | UPDATE_BEAC3 |
+            UPDATE_BEAC4 | UPDATE_BEAC5 | UPDATE_BEAC6 | UPDATE_BEAC7 |
+            UPDATE_BEAC8 | UPDATE_BEAC9 | UPDATE_DISPLAY, pdTRUE, pdFALSE, 0);
         ssd1306_update(dev);
     }
     iot_ssd1306_delete(dev, true);
@@ -302,10 +323,16 @@ void mqtt_init(void)
 
 uint8_t beacon_maj_min_to_idx(uint16_t maj, uint16_t min)
 {
-    if( (maj == CONFIG_BLE_DEVICE_1_MAJ) && (min == CONFIG_BLE_DEVICE_1_MIN) ) return 0;
-    if( (maj == CONFIG_BLE_DEVICE_2_MAJ) && (min == CONFIG_BLE_DEVICE_2_MIN) ) return 1;
-    if( (maj == CONFIG_BLE_DEVICE_3_MAJ) && (min == CONFIG_BLE_DEVICE_3_MIN) ) return 2;
-    if( (maj == CONFIG_BLE_DEVICE_4_MAJ) && (min == CONFIG_BLE_DEVICE_4_MIN) ) return 3;
+    if( (maj == CONFIG_BLE_DEVICE_1_MAJ ) && (min == CONFIG_BLE_DEVICE_1_MIN ) ) return 0;
+    if( (maj == CONFIG_BLE_DEVICE_2_MAJ ) && (min == CONFIG_BLE_DEVICE_2_MIN ) ) return 1;
+    if( (maj == CONFIG_BLE_DEVICE_3_MAJ ) && (min == CONFIG_BLE_DEVICE_3_MIN ) ) return 2;
+    if( (maj == CONFIG_BLE_DEVICE_4_MAJ ) && (min == CONFIG_BLE_DEVICE_4_MIN ) ) return 3;
+    if( (maj == CONFIG_BLE_DEVICE_5_MAJ ) && (min == CONFIG_BLE_DEVICE_5_MIN ) ) return 4;
+    if( (maj == CONFIG_BLE_DEVICE_6_MAJ ) && (min == CONFIG_BLE_DEVICE_6_MIN ) ) return 5;
+    if( (maj == CONFIG_BLE_DEVICE_7_MAJ ) && (min == CONFIG_BLE_DEVICE_7_MIN ) ) return 6;
+    if( (maj == CONFIG_BLE_DEVICE_8_MAJ ) && (min == CONFIG_BLE_DEVICE_8_MIN ) ) return 7;
+    if( (maj == CONFIG_BLE_DEVICE_9_MAJ ) && (min == CONFIG_BLE_DEVICE_9_MIN ) ) return 8;
+    if( (maj == CONFIG_BLE_DEVICE_10_MAJ) && (min == CONFIG_BLE_DEVICE_10_MIN) ) return 9;
 
     ESP_LOGE(TAG, "beacon_maj_min_to_idx: unknown maj %d min %d", maj, min);
 
@@ -313,7 +340,7 @@ uint8_t beacon_maj_min_to_idx(uint16_t maj, uint16_t min)
 }
 
 void update_adv_data(uint16_t maj, uint16_t min, int8_t measured_power,
-    float temp, uint16_t humidity, uint16_t battery)
+    float temp, float humidity, uint16_t battery)
 {
     uint8_t  idx = beacon_maj_min_to_idx(maj, min);
 
@@ -388,45 +415,56 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
             if(esp_ble_is_mybeacon_packet (scan_result->scan_rst.ble_adv, scan_result->scan_rst.adv_data_len)){
                 ESP_LOGD(TAG, "mybeacon found");
                 esp_ble_mybeacon_t *mybeacon_data = (esp_ble_mybeacon_t*)(scan_result->scan_rst.ble_adv);
-                ESP_LOGD(TAG, "(0x%04x%04x) rssi %3d | temp %5.1f | hum %3d | x %+6d | y %+6d | z %+6d | batt %4d",
-                    ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.major),
-                    ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.minor),
-                    scan_result->scan_rst.rssi,
-                    ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.temp)/10.,
-                    ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.humidity),
-                    (int16_t)ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.x),
-                    (int16_t)ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.y),
-                    (int16_t)ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.z),
-                    ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.battery) );
 
-                // send via MQTT here:
-                uint16_t maj        = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.major);
-                uint16_t min        = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.minor);
-                float    temp       = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.temp)/10.;
-                uint16_t humidity   = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.humidity);
-                uint16_t battery    = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.battery);
+                uint16_t maj      = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.major);
+                uint16_t min      = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.minor);
+                float    temp     = SHT3_GET_TEMPERATURE_VALUE(
+                                      LSB_16(mybeacon_data->mybeacon_payload.temp),
+                                      MSB_16(mybeacon_data->mybeacon_payload.temp) );
+                float    humidity = SHT3_GET_HUMIDITY_VALUE(
+                                      LSB_16(mybeacon_data->mybeacon_payload.humidity),
+                                      MSB_16(mybeacon_data->mybeacon_payload.humidity) );
+                uint16_t battery  = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.battery);
+                int16_t x         = (int16_t)ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.x);
+                int16_t y         = (int16_t)ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.y);
+                int16_t z         = (int16_t)ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.z);
+
+                ESP_LOGI(TAG, "(0x%04x%04x) rssi %3d | temp %5.1f | hum %5.1f | x %+6d | y %+6d | z %+6d | batt %4d",
+                    maj, min, scan_result->scan_rst.rssi, temp, humidity, x, y, z, battery );
 
                 // identifier, maj, min, sensor -> data
-                snprintf(buffer_topic, 128,  "/%s/0x%04x/x%04x/%s", "beac", maj, min, "temp");
-                snprintf(buffer_payload, 128, "%+5.1f", temp);
-                msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
-                ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+                // snprintf(buffer_topic, 128,  "/%s/0x%04x/x%04x/%s", "beac", maj, min, "temp");
+                if( (temp < CONFIG_TEMP_LOW) || (temp > CONFIG_TEMP_HIGH) ){
+                    ESP_LOGE(TAG, "temperature out of range, not send");
+                } else {
+                    snprintf(buffer_topic, 128,  CONFIG_MQTT_FORMAT, "beac", maj, min, "temp");
+                    snprintf(buffer_payload, 128, "%+5.1f", temp);
+                    msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
+                    ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+                }
 
-                snprintf(buffer_topic, 128, "/%s/0x%04x/x%04x/%s", "beac", maj, min, "humidity");
-                snprintf(buffer_payload, 128, "%d", humidity);
-                msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
-                ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+                if( (humidity < CONFIG_HUMIDITY_LOW) || (humidity > CONFIG_HUMIDITY_HIGH) ){
+                    ESP_LOGE(TAG, "humidity out of range, not send");
+                } else {
+                    snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "humidity");
+                    snprintf(buffer_payload, 128, "%5.1f", humidity);
+                    msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
+                    ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+                }
 
-                snprintf(buffer_topic, 128, "/%s/0x%04x/x%04x/%s", "beac", maj, min, "rssi");
+                snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "rssi");
                 snprintf(buffer_payload, 128, "%d", scan_result->scan_rst.rssi);
                 msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
                 ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
 
-                snprintf(buffer_topic, 128, "/%s/0x%04x/x%04x/%s", "beac", maj, min, "battery");
-                snprintf(buffer_payload, 128, "%d", battery);
-                msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
-                ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
-
+                if( (battery < CONFIG_BATTERY_LOW) || (battery > CONFIG_BATTERY_HIGH) ){
+                    ESP_LOGE(TAG, "battery out of range, not send");
+                } else {
+                    snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "battery");
+                    snprintf(buffer_payload, 128, "%d", battery);
+                    msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
+                    ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+                }
                 update_adv_data(maj, min, scan_result->scan_rst.rssi, temp, humidity, battery);
             } else {
                 ESP_LOGD(TAG, "mybeacon not found");
