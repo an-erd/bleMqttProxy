@@ -20,6 +20,7 @@
 #include "esp_bt_main.h"
 #include "esp_bt_defs.h"
 #include "esp_log.h"
+#include "esp_ota_ops.h"
 #include "lwip/sockets.h"
 #include "lwip/dns.h"
 #include "lwip/netdb.h"
@@ -155,7 +156,7 @@ void button_tap_cb(void* arg)
     UNUSED(pstr);
 
     s_display_show++;
-    s_display_show %= CONFIG_BLE_DEVICE_COUNT_USE+1;
+    s_display_show %= CONFIG_BLE_DEVICE_COUNT_USE+2;
 
     ESP_LOGI(TAG, "button_tap_cb: %d", s_display_show);
 }
@@ -170,19 +171,30 @@ esp_err_t ssd1306_update(ssd1306_handle_t dev)
         return ret;
     }
 
+    // s_display_show = 0:                  empty screen
+    // 1..CONFIG_BLE_DEVICE_COUNT_USE:      beac with number X
+    // CONFIG_BLE_DEVICE_COUNT_USE+1:       app version
     if (!s_display_show){
-        return iot_ssd1306_refresh_gram(dev);
+        ;
+    } else if (s_display_show == (CONFIG_BLE_DEVICE_COUNT_USE+1)){
+        const esp_app_desc_t *app_desc = esp_ota_get_app_description();
+        snprintf(buffer, 128, "%s", app_desc->version);
+        iot_ssd1306_draw_string(dev, 0, 0, (const uint8_t*) buffer, 12, 1);
+        snprintf(buffer, 128, "%s", app_desc->project_name);
+        iot_ssd1306_draw_string(dev, 0, 16, (const uint8_t*) buffer, 12, 1);
+        snprintf(buffer, 128, "%s", app_desc->idf_ver);
+        iot_ssd1306_draw_string(dev, 0, 32, (const uint8_t*) buffer, 12, 1);
+    } else {
+        int idx = s_display_show - 1;
+        snprintf(buffer, 128, "%s:", ble_beacon_data[idx].name);
+        iot_ssd1306_draw_string(dev, 0, 0, (const uint8_t*) buffer, 12, 1);
+        snprintf(buffer, 128, "%5.2fC, %5.2f%%H", ble_adv_data[idx].temp, ble_adv_data[idx].humidity);
+        iot_ssd1306_draw_string(dev, 0, 16, (const uint8_t*) buffer, 12, 1);
+        snprintf(buffer, 128, "Batt %4d mV", ble_adv_data[idx].battery);
+        iot_ssd1306_draw_string(dev, 0, 32, (const uint8_t*) buffer, 12, 1);
+        snprintf(buffer, 128, "RSSI %3d dBm", ble_adv_data[idx].measured_power);
+        iot_ssd1306_draw_string(dev, 0, 48, (const uint8_t*) buffer, 12, 1);
     }
-
-    int idx = s_display_show - 1;
-    snprintf(buffer, 128, "%s:", ble_beacon_data[idx].name);
-    iot_ssd1306_draw_string(dev, 0, 0, (const uint8_t*) buffer, 12, 1);
-    snprintf(buffer, 128, "%5.2fC, %5.2f%%H", ble_adv_data[idx].temp, ble_adv_data[idx].humidity);
-    iot_ssd1306_draw_string(dev, 0, 16, (const uint8_t*) buffer, 12, 1);
-    snprintf(buffer, 128, "Batt %4d mV", ble_adv_data[idx].battery);
-    iot_ssd1306_draw_string(dev, 0, 32, (const uint8_t*) buffer, 12, 1);
-    snprintf(buffer, 128, "RSSI %3d dBm", ble_adv_data[idx].measured_power);
-    iot_ssd1306_draw_string(dev, 0, 48, (const uint8_t*) buffer, 12, 1);
 
     return iot_ssd1306_refresh_gram(dev);
 }

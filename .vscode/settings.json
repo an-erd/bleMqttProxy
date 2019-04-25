@@ -101,7 +101,8 @@
         "iot_ssd1306.h": "c",
         "iot_i2c_bus.h": "c",
         "i2c.h": "c",
-        "ssd1306_fonts.h": "c"
+        "ssd1306_fonts.h": "c",
+        "esp_ota_ops.h": "c"
     },
 	"files.exclude": {
 		"**/.git": true,
@@ -115,5 +116,6 @@
 		"**/.DS_Store": true
 	  },
 	"C_Cpp.intelliSenseEngine": "Default",
-	"C_Cpp.errorSquiggles": "Disabled"
+    "C_Cpp.errorSquiggles": "Disabled",
+    "C_Cpp.dimInactiveRegions": false
 }
