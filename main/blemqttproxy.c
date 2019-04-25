@@ -177,7 +177,7 @@ esp_err_t ssd1306_update(ssd1306_handle_t dev)
     int idx = s_display_show - 1;
     snprintf(buffer, 128, "%s:", ble_beacon_data[idx].name);
     iot_ssd1306_draw_string(dev, 0, 0, (const uint8_t*) buffer, 12, 1);
-    snprintf(buffer, 128, "%5.1fC, %5.1f%%H", ble_adv_data[idx].temp, ble_adv_data[idx].humidity);
+    snprintf(buffer, 128, "%5.2fC, %5.2f%%H", ble_adv_data[idx].temp, ble_adv_data[idx].humidity);
     iot_ssd1306_draw_string(dev, 0, 16, (const uint8_t*) buffer, 12, 1);
     snprintf(buffer, 128, "Batt %4d mV", ble_adv_data[idx].battery);
     iot_ssd1306_draw_string(dev, 0, 32, (const uint8_t*) buffer, 12, 1);
@@ -438,7 +438,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     ESP_LOGE(TAG, "temperature out of range, not send");
                 } else {
                     snprintf(buffer_topic, 128,  CONFIG_MQTT_FORMAT, "beac", maj, min, "temp");
-                    snprintf(buffer_payload, 128, "%+5.1f", temp);
+                    snprintf(buffer_payload, 128, "%.2f", temp);
                     msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
                     ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
                 }
@@ -447,7 +447,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     ESP_LOGE(TAG, "humidity out of range, not send");
                 } else {
                     snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "humidity");
-                    snprintf(buffer_payload, 128, "%5.1f", humidity);
+                    snprintf(buffer_payload, 128, "%.2f", humidity);
                     msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
                     ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
                 }
@@ -457,7 +457,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
                 ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
 
-                if( (battery < CONFIG_BATTERY_LOW) || (battery > CONFIG_BATTERY_HIGH) ){
+                if( (battery < CONFIG_BATTERY_LOW) || (battery > CONFIG_BATTERY_HIGH )){
                     ESP_LOGE(TAG, "battery out of range, not send");
                 } else {
                     snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "battery");
