@@ -21,6 +21,7 @@
 #include "esp_bt_defs.h"
 #include "esp_log.h"
 #include "esp_ota_ops.h"
+#include "esp_timer.h"
 #include "lwip/sockets.h"
 #include "lwip/dns.h"
 #include "lwip/netdb.h"
@@ -130,7 +131,7 @@ esp_ble_mybeacon_head_t mybeacon_common_head = {
 #define UPDATE_BEAC9     (BIT9)
 #define UPDATE_DISPLAY   (BIT10)
 EventGroupHandle_t s_values_evg;
-static uint8_t s_display_show = 0;  // 0 = off, 1.. beac to show, for array minus 1
+static uint8_t s_display_show = 0;  // 0 = off, 1.. beac to show, for array minus 1, num+1 = app version
 
 // Wifi
 static EventGroupHandle_t wifi_event_group;
@@ -148,17 +149,31 @@ static ssd1306_handle_t dev = NULL;
 // Button
 #define BUTTON_IO_NUM           0
 #define BUTTON_ACTIVE_LEVEL     0
+static int64_t time_button_long_press = 0;  // long button press -> empty display
 
-
-void button_tap_cb(void* arg)
+void button_push_cb(void* arg)
 {
     char* pstr = (char*) arg;
     UNUSED(pstr);
 
-    s_display_show++;
-    s_display_show %= CONFIG_BLE_DEVICE_COUNT_USE+2;
+    time_button_long_press = esp_timer_get_time() + 2000000;
 
-    ESP_LOGI(TAG, "button_tap_cb: %d", s_display_show);
+    ESP_LOGI(TAG, "button_push_cb");
+}
+
+void button_release_cb(void* arg)
+{
+    char* pstr = (char*) arg;
+    UNUSED(pstr);
+
+    if(esp_timer_get_time() < time_button_long_press){
+        s_display_show++;
+        s_display_show %= CONFIG_BLE_DEVICE_COUNT_USE+2;
+    } else {
+        s_display_show = 0;
+    }
+
+    ESP_LOGI(TAG, "button_release_cb: %d", s_display_show);
 }
 
 #ifdef CONFIG_DISPLAY_SSD1306
@@ -519,7 +534,8 @@ void app_main()
     s_values_evg = xEventGroupCreate();
 
     button_handle_t btn_handle = iot_button_create(BUTTON_IO_NUM, BUTTON_ACTIVE_LEVEL);
-    iot_button_set_evt_cb(btn_handle, BUTTON_CB_PUSH, button_tap_cb, "PUSH");
+    iot_button_set_evt_cb(btn_handle, BUTTON_CB_PUSH, button_push_cb, "PUSH");
+    iot_button_set_evt_cb(btn_handle, BUTTON_CB_RELEASE, button_release_cb, "RELEASE");
 
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_bt_controller_init(&bt_cfg));

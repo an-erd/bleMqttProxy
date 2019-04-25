@@ -43,7 +43,9 @@
                 "${workspaceFolder}/components/i2c_bus/include",
                 "C:/msys32/home/AKAEM/esp/esp-idf/components/mqtt/esp-mqtt/include",
                 "${workspaceFolder}/components/button/button/include",
-                "${workspaceFolder}/build/include"
+                "${workspaceFolder}/build/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/app_update/include",
+                "C:/msys32/home/AKAEM/esp/esp-idf/components/bootloader_support/include"
             ],
             "intelliSenseMode": "clang-x64",
             "browse": {
