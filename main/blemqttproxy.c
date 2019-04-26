@@ -193,12 +193,18 @@ esp_err_t ssd1306_update(ssd1306_handle_t dev)
         ;
     } else if (s_display_show == (CONFIG_BLE_DEVICE_COUNT_USE+1)){
         const esp_app_desc_t *app_desc = esp_ota_get_app_description();
+        uint8_t mac[6];
+        ESP_ERROR_CHECK(esp_efuse_mac_get_default(mac));
+
         snprintf(buffer, 128, "%s", app_desc->version);
         iot_ssd1306_draw_string(dev, 0, 0, (const uint8_t*) buffer, 12, 1);
         snprintf(buffer, 128, "%s", app_desc->project_name);
         iot_ssd1306_draw_string(dev, 0, 16, (const uint8_t*) buffer, 12, 1);
         snprintf(buffer, 128, "%s", app_desc->idf_ver);
         iot_ssd1306_draw_string(dev, 0, 32, (const uint8_t*) buffer, 12, 1);
+        snprintf(buffer, 128, "%2X:%2X:%2X:%2X:%2X:%2X",
+            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+        iot_ssd1306_draw_string(dev, 0, 48, (const uint8_t*) buffer, 12, 1);
     } else {
         int idx = s_display_show - 1;
         snprintf(buffer, 128, "%s:", ble_beacon_data[idx].name);
