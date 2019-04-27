@@ -81,7 +81,7 @@ extern "C"
 #define OLED_IIC_SCL_NUM            (gpio_num_t)4       /*!< gpio number for I2C master clock IO4*/
 #define OLED_IIC_SDA_NUM            (gpio_num_t)5      /*!< gpio number for I2C master data IO5*/
 #define OLED_IIC_NUM                I2C_NUM_0           /*!< I2C number >*/
-#define OLED_IIC_FREQ_HZ            100000              /*!< I2C colock frequency >*/
+#define OLED_IIC_FREQ_HZ            400000              /*!< I2C colock frequency >*/
 #define OLED_IIC_TX_BUF_DISABLE     0                   /*!< I2C Tx buffer disable >*/
 #define OLED_IIC_RX_BUF_DISABLE     0                   /*!< I2C Rx buffer disable >*/
 
