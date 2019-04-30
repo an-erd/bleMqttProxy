@@ -16,11 +16,12 @@
 #include "ssd1306_fonts.h"
 #include <time.h>
 #include <sys/time.h>
+#include <string.h>
 
 typedef struct {
     i2c_bus_handle_t bus;
     uint16_t dev_addr;
-    uint8_t s_chDisplayBuffer[128][8];
+    uint8_t s_chDisplayBuffer[8][128];
 } ssd1306_dev_t;
 
 static uint32_t _pow(uint8_t m, uint8_t n)
@@ -178,9 +179,9 @@ void iot_ssd1306_fill_point(ssd1306_handle_t dev, uint8_t chXpos, uint8_t chYpos
     chTemp = 1 << (7 - chBx);
 
     if (chPoint) {
-        device->s_chDisplayBuffer[chXpos][chPos] |= chTemp;
+        device->s_chDisplayBuffer[chPos][chXpos] |= chTemp;
     } else {
-        device->s_chDisplayBuffer[chXpos][chPos] &= ~chTemp;
+        device->s_chDisplayBuffer[chPos][chXpos] &= ~chTemp;
     }
 }
 
@@ -319,22 +320,38 @@ esp_err_t iot_ssd1306_refresh_gram(ssd1306_handle_t dev)
     ssd1306_dev_t* device = (ssd1306_dev_t*) dev;
     uint8_t i, j;
     esp_err_t ret;
+   	i2c_cmd_handle_t cmd;
 
-    for (i = 0; i < 8; i++) {
-        ret = iot_ssd1306_write_byte(dev, SSD1306_SET_PAGE_ADDR + i, SSD1306_CMD);
-        if (ret == ESP_FAIL) {
-            return ret;
-        }
-        iot_set_column_address(dev);
-        for (j = 0; j < 128; j++) {
-            ret = iot_ssd1306_write_byte(dev, device->s_chDisplayBuffer[j][i],
-            SSD1306_DAT);
-            if (ret == ESP_FAIL) {
-                return ret;
-            }
-        }
-    }
-    return ret;
+	cmd = i2c_cmd_link_create();
+	i2c_master_start(cmd);
+	i2c_master_write_byte(cmd, (OLED_I2C_ADDRESS << 1) | I2C_MASTER_WRITE, true);
+
+	i2c_master_write_byte(cmd, OLED_CONTROL_BYTE_CMD_STREAM, true);
+	i2c_master_write_byte(cmd, OLED_CMD_SET_MEMORY_ADDR_MODE, true);
+	i2c_master_write_byte(cmd, 0x00, true);
+	i2c_master_write_byte(cmd, OLED_CMD_SET_COLUMN_RANGE, true);
+	i2c_master_write_byte(cmd, 0x00, true);
+	i2c_master_write_byte(cmd, 0x7F, true);
+	i2c_master_write_byte(cmd, OLED_CMD_SET_PAGE_RANGE, true);
+	i2c_master_write_byte(cmd, 0x00, true);
+	i2c_master_write_byte(cmd, 0x07, true);
+
+	i2c_master_stop(cmd);
+	i2c_master_cmd_begin(I2C_NUM_0, cmd, 10/portTICK_PERIOD_MS);
+	i2c_cmd_link_delete(cmd);
+
+	cmd = i2c_cmd_link_create();
+	i2c_master_start(cmd);
+	i2c_master_write_byte(cmd, (OLED_I2C_ADDRESS << 1) | I2C_MASTER_WRITE, true);
+
+	i2c_master_write_byte(cmd, OLED_CONTROL_BYTE_DATA_STREAM, true);
+	i2c_master_write(cmd, (uint8_t *)device->s_chDisplayBuffer, 128*8, true);
+
+	i2c_master_stop(cmd);
+	i2c_master_cmd_begin(I2C_NUM_0, cmd, 10/portTICK_PERIOD_MS);
+	i2c_cmd_link_delete(cmd);
+
+    return ESP_OK;  // TODO
 }
 
 esp_err_t iot_ssd1306_clear_screen(ssd1306_handle_t dev, uint8_t chFill)
@@ -342,15 +359,9 @@ esp_err_t iot_ssd1306_clear_screen(ssd1306_handle_t dev, uint8_t chFill)
     ssd1306_dev_t* device = (ssd1306_dev_t*) dev;
     uint8_t i, j;
     esp_err_t ret;
-    for (i = 0; i < 8; i++) {
-        ret = iot_ssd1306_write_byte(dev, SSD1306_SET_PAGE_ADDR + i, SSD1306_CMD);
-        if (ret == ESP_FAIL) {
-            return ret;
-        }
-        iot_set_column_address(dev);
-        for (j = 0; j < 128; j++)
-            device->s_chDisplayBuffer[j][i] = chFill;
-    }
-    return ESP_OK;
+
+    memset(device->s_chDisplayBuffer, chFill, 128*8);
+
+    return iot_ssd1306_refresh_gram(dev);
 }
 

@@ -503,7 +503,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
 
                 ESP_LOGI(TAG, "(0x%04x%04x) rssi %3d | temp %5.1f | hum %5.1f | x %+6d | y %+6d | z %+6d | batt %4d",
                     maj, min, scan_result->scan_rst.rssi, temp, humidity, x, y, z, battery );
-
+#ifdef CONFIG_USE_MQTT
                 // identifier, maj, min, sensor -> data
                 // snprintf(buffer_topic, 128,  "/%s/0x%04x/x%04x/%s", "beac", maj, min, "temp");
                 if( (temp < CONFIG_TEMP_LOW) || (temp > CONFIG_TEMP_HIGH) ){
@@ -514,7 +514,6 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
                     ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
                 }
-
                 if( (humidity < CONFIG_HUMIDITY_LOW) || (humidity > CONFIG_HUMIDITY_HIGH) ){
                     ESP_LOGE(TAG, "humidity out of range, not send");
                 } else {
@@ -523,12 +522,10 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
                     ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
                 }
-
                 snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "rssi");
                 snprintf(buffer_payload, 128, "%d", scan_result->scan_rst.rssi);
                 msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
                 ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
-
                 if( (battery < CONFIG_BATTERY_LOW) || (battery > CONFIG_BATTERY_HIGH )){
                     ESP_LOGE(TAG, "battery out of range, not send");
                 } else {
@@ -537,6 +534,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
                     ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
                 }
+#endif // CONFIG_USE_MQTT
                 update_adv_data(maj, min, scan_result->scan_rst.rssi, temp, humidity, battery);
             } else {
                 ESP_LOGD(TAG, "mybeacon not found");
