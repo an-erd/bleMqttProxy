@@ -29,8 +29,7 @@
 #include "iot_button.h"
 
 #ifdef CONFIG_DISPLAY_SSD1306
-#include "iot_i2c_bus.h"
-#include "iot_ssd1306.h"
+#include "ssd1306.h"
 #include "ssd1306_fonts.h"
 #endif // CONFIG_DISPLAY_SSD1306
 
@@ -140,12 +139,6 @@ const static int CONNECTED_BIT = BIT0;
 // MQTT
 static esp_mqtt_client_handle_t s_client;
 
-// Display
-#ifdef CONFIG_DISPLAY_SSD1306
-static i2c_bus_handle_t i2c_bus = NULL;
-static ssd1306_handle_t dev = NULL;
-#endif
-
 // Button
 #define BUTTON_IO_NUM           0
 #define BUTTON_ACTIVE_LEVEL     0
@@ -188,7 +181,7 @@ void button_release_cb(void* arg)
 }
 
 #ifdef CONFIG_DISPLAY_SSD1306
-esp_err_t ssd1306_update(ssd1306_handle_t dev, EventBits_t uxBits)
+esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
 {
     esp_err_t ret;
     char buffer[128];
@@ -198,14 +191,9 @@ esp_err_t ssd1306_update(ssd1306_handle_t dev, EventBits_t uxBits)
 
     if(s_display_show == 0){
         if((last_dislay_shown != s_display_show)){
-                ret = iot_ssd1306_clear_screen(dev, 0x00);
-                if (ret == ESP_FAIL) {
-                    return ret;
-                }
+                ssd1306_clear_canvas(canvas, 0);
                 last_dislay_shown = s_display_show;
-                ESP_LOGE(TAG, "ssd1306_update, display %d, iot_ssd1306_refresh_gram >", s_display_show);
-                ret = iot_ssd1306_refresh_gram(dev);
-                ESP_LOGE(TAG, "ssd1306_update, display %d, iot_ssd1306_refresh_gram <", s_display_show);
+                ret = ssd1306_refresh_gram(canvas);
                 return ret;
         } else {
             return ESP_OK;
@@ -216,23 +204,19 @@ esp_err_t ssd1306_update(ssd1306_handle_t dev, EventBits_t uxBits)
             uint8_t mac[6];
             ESP_ERROR_CHECK(esp_efuse_mac_get_default(mac));
 
-            ret = iot_ssd1306_clear_screen(dev, 0x00);
-            if (ret == ESP_FAIL) {
-                return ret;
-            }
-
+            ssd1306_clear_canvas(canvas, 0x00);
             snprintf(buffer, 128, "%s", app_desc->version);
-            iot_ssd1306_draw_string(dev, 0, 0, (const uint8_t*) buffer, 12, 1);
+            ssd1306_draw_string(canvas, 0, 0, (const uint8_t*) buffer, 12, 1);
             snprintf(buffer, 128, "%s", app_desc->project_name);
-            iot_ssd1306_draw_string(dev, 0, 16, (const uint8_t*) buffer, 12, 1);
+            ssd1306_draw_string(canvas, 0, 16, (const uint8_t*) buffer, 12, 1);
             snprintf(buffer, 128, "%s", app_desc->idf_ver);
-            iot_ssd1306_draw_string(dev, 0, 32, (const uint8_t*) buffer, 12, 1);
+            ssd1306_draw_string(canvas, 0, 32, (const uint8_t*) buffer, 12, 1);
             snprintf(buffer, 128, "%2X:%2X:%2X:%2X:%2X:%2X",
                 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-            iot_ssd1306_draw_string(dev, 0, 48, (const uint8_t*) buffer, 12, 1);
+            ssd1306_draw_string(canvas, 0, 48, (const uint8_t*) buffer, 12, 1);
 
             last_dislay_shown = s_display_show;
-            return iot_ssd1306_refresh_gram(dev);
+            return ssd1306_refresh_gram(canvas);
         } else {
             return ESP_OK;
         }
@@ -241,16 +225,16 @@ esp_err_t ssd1306_update(ssd1306_handle_t dev, EventBits_t uxBits)
     int idx = s_display_show - 1;
     if(uxBits & (1 << idx)){
         snprintf(buffer, 128, "%s:", ble_beacon_data[idx].name);
-        iot_ssd1306_draw_string(dev, 0, 0, (const uint8_t*) buffer, 12, 1);
+        ssd1306_draw_string(canvas, 0, 0, (const uint8_t*) buffer, 12, 1);
         snprintf(buffer, 128, "%5.2fC, %5.2f%%H", ble_adv_data[idx].temp, ble_adv_data[idx].humidity);
-        iot_ssd1306_draw_string(dev, 0, 16, (const uint8_t*) buffer, 12, 1);
+        ssd1306_draw_string(canvas, 0, 16, (const uint8_t*) buffer, 12, 1);
         snprintf(buffer, 128, "Batt %4d mV", ble_adv_data[idx].battery);
-        iot_ssd1306_draw_string(dev, 0, 32, (const uint8_t*) buffer, 12, 1);
+        ssd1306_draw_string(canvas, 0, 32, (const uint8_t*) buffer, 12, 1);
         snprintf(buffer, 128, "RSSI %3d dBm", ble_adv_data[idx].measured_power);
-        iot_ssd1306_draw_string(dev, 0, 48, (const uint8_t*) buffer, 12, 1);
+        ssd1306_draw_string(canvas, 0, 48, (const uint8_t*) buffer, 12, 1);
 
         last_dislay_shown = s_display_show;
-        return iot_ssd1306_refresh_gram(dev);
+        return ssd1306_refresh_gram(canvas);
     } else {
         ESP_LOGD(TAG, "ssd1306_update: not current screen to udate, exit");
         return ESP_OK;
@@ -259,41 +243,25 @@ esp_err_t ssd1306_update(ssd1306_handle_t dev, EventBits_t uxBits)
     ESP_LOGE(TAG, "ssd1306_update: this line should not be reached");
 }
 
-static void i2c_bus_init(void)
-{
-    i2c_config_t conf;
-    conf.mode = I2C_MODE_MASTER;
-    conf.sda_io_num = OLED_IIC_SDA_NUM;
-    conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.scl_io_num = OLED_IIC_SCL_NUM;
-    conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.master.clk_speed = OLED_IIC_FREQ_HZ;
-    i2c_bus = iot_i2c_bus_create(OLED_IIC_NUM, &conf);
-}
-
-static void dev_ssd1306_initialization(void)
-{
-    ESP_LOGD(TAG, "oled task start!");
-    i2c_bus_init();
-    dev = iot_ssd1306_create(i2c_bus, 0x3C);
-    iot_ssd1306_refresh_gram(dev);
-    ESP_LOGD(TAG, "oled finish!");
-}
-
 static void ssd1306_task(void* pvParameters)
 {
+    ssd1306_canvas_t *canvas = create_ssd1306_canvas(OLED_COLUMNS, OLED_PAGES, 0, 0, 0);
+
     EventBits_t uxBits;
     UNUSED(uxBits);
-    dev_ssd1306_initialization();
+
+	i2c_master_init();
+	ssd1306_init();
+
     while (1) {
         uxBits = xEventGroupWaitBits(s_values_evg,
             UPDATE_BEAC0 | UPDATE_BEAC1 | UPDATE_BEAC2 | UPDATE_BEAC3 |
             UPDATE_BEAC4 | UPDATE_BEAC5 | UPDATE_BEAC6 | UPDATE_BEAC7 |
             UPDATE_BEAC8 | UPDATE_BEAC9 | UPDATE_DISPLAY, pdTRUE, pdFALSE, portMAX_DELAY);
         ESP_LOGD(TAG, "ssd1306_task: uxBits = %d", uxBits);
-        ssd1306_update(dev, uxBits);
+        ssd1306_update(canvas, uxBits);
     }
-    iot_ssd1306_delete(dev, true);
+    // iot_ssd1306_delete(dev, true);
     vTaskDelete(NULL);
 }
 #endif // CONFIG_DISPLAY_SSD1306
@@ -475,9 +443,6 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         }
         break;
     case ESP_GAP_BLE_SCAN_RESULT_EVT: {
-        int msg_id = 0;
-        char buffer_topic[128];
-        char buffer_payload[128];
 
         ESP_LOGD(TAG, "ESP_GAP_BLE_SCAN_RESULT_EVT");
         esp_ble_gap_cb_param_t *scan_result = (esp_ble_gap_cb_param_t *)param;
@@ -504,6 +469,10 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 ESP_LOGI(TAG, "(0x%04x%04x) rssi %3d | temp %5.1f | hum %5.1f | x %+6d | y %+6d | z %+6d | batt %4d",
                     maj, min, scan_result->scan_rst.rssi, temp, humidity, x, y, z, battery );
 #ifdef CONFIG_USE_MQTT
+                int msg_id = 0;
+                char buffer_topic[128];
+                char buffer_payload[128];
+
                 // identifier, maj, min, sensor -> data
                 // snprintf(buffer_topic, 128,  "/%s/0x%04x/x%04x/%s", "beac", maj, min, "temp");
                 if( (temp < CONFIG_TEMP_LOW) || (temp > CONFIG_TEMP_HIGH) ){
