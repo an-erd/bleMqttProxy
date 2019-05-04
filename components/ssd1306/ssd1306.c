@@ -170,7 +170,7 @@ void ssd1306_draw_char(ssd1306_canvas_t *canvas, uint8_t chXpos, uint8_t chYpos,
             chTemp <<= 1;
             chYpos++;
 
-            if ((skipBits1 + skipBits2 + chYpos - chYpos0) == chSize) {
+            if ((chYpos - chYpos0) == chSize) {
                 chYpos = chYpos0;
                 chXpos++;
                 firstByte = true;

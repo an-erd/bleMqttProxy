@@ -274,7 +274,7 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
             snprintf(buffer, 128, "%2X:%2X:%2X:%2X:%2X:%2X",
                 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
             ssd1306_draw_string(canvas, 0, 36, (const uint8_t*) buffer, 10, 1);
-            ssd1306_fill_point(canvas, 0, 0, 1);
+
             last_dislay_shown = s_display_show;
             return ssd1306_refresh_gram(canvas);
         } else {
@@ -302,11 +302,11 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
         snprintf(buffer, 128, "%s", ble_beacon_data[idx].name);
         ssd1306_draw_string(canvas, 0, 0, (const uint8_t*) buffer, 10, 1);
         snprintf(buffer, 128, "%5.2fC, %5.2f%%H", ble_adv_data[idx].temp, ble_adv_data[idx].humidity);
-        ssd1306_draw_string(canvas, 0, 10, (const uint8_t*) buffer, 10, 1);
+        ssd1306_draw_string(canvas, 0, 12, (const uint8_t*) buffer, 10, 1);
         snprintf(buffer, 128, "Batt %4d mV", ble_adv_data[idx].battery);
-        ssd1306_draw_string(canvas, 0, 20, (const uint8_t*) buffer, 10, 1);
+        ssd1306_draw_string(canvas, 0, 24, (const uint8_t*) buffer, 10, 1);
         snprintf(buffer, 128, "RSSI %3d dBm", ble_adv_data[idx].measured_power);
-        ssd1306_draw_string(canvas, 0, 30, (const uint8_t*) buffer, 10, 1);
+        ssd1306_draw_string(canvas, 0, 36, (const uint8_t*) buffer, 10, 1);
 
         last_dislay_shown = s_display_show;
         return ssd1306_refresh_gram(canvas);
