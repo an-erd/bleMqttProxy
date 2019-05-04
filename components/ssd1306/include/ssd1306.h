@@ -46,6 +46,7 @@ typedef struct {
 #define OLED_HEIGHT                         64
 #define OLED_COLUMNS                        128
 #define OLED_PAGES                          8
+#define OLED_PIXEL_PER_PAGE                 8
 
 // Control byte
 #define OLED_CONTROL_BYTE_CMD_SINGLE        0x80
@@ -89,9 +90,9 @@ typedef struct {
 /**
  * @brief   canvas object initialization
  *
- * @param   width Specifies the with in columns
+ * @param   width Specifies the with in columns (each 1 pixel)
  * @param   height Specifies the with in pages (each 8 pixel)
- * @param   x_orig Specifies the x position in actual display columns
+ * @param   x_orig Specifies the x position in actual display columns (each 1 pixel)
  * @param   y_orig Specifies the y position in actual display pages (each 8 pixel)
  * @param   chFill Specifies the char to initialize the canvas with
  *
@@ -172,12 +173,16 @@ esp_err_t ssd1306_fill_rectangle(ssd1306_canvas_t *canvas, uint8_t chXpos1, uint
  * @param   chSize char size
  * @param   chChr draw char
  * @param   chMode display mode
+ * @param   cuTop     Specifies the # of lines to cut from top
+ * @param   cuBottom  Specifies the # of lines to cut from bottom
  *
  * @return
  *     - NULL
  */
 void ssd1306_draw_char(ssd1306_canvas_t *canvas, uint8_t chXpos,
         uint8_t chYpos, uint8_t chChr, uint8_t chSize, uint8_t chMode);
+void ssd1306_draw_char_cut(ssd1306_canvas_t *canvas, uint8_t chXpos, uint8_t chYpos,
+        uint8_t chChr, uint8_t chSize, uint8_t chMode, uint8_t cutTop, uint8_t cutBottom);
 
 /**
  * @brief   display number on (x, y),and set length, size, mode
@@ -257,6 +262,21 @@ void ssd1306_draw_bitmap(ssd1306_canvas_t *canvas, uint8_t chXpos,
 esp_err_t ssd1306_draw_string(ssd1306_canvas_t *canvas, uint8_t chXpos,
         uint8_t chYpos, const uint8_t *pchString, uint8_t chSize,
         uint8_t chMode);
+
+/**
+ * @brief   Displays a string on the screen
+ *
+ * @param   canvas Specifies the display canvas object
+ * @param   chXpos Specifies the X position
+ * @param   chYpos Specifies the page (=line) position
+ * @param   pchString Pointer to a string to display on the screen
+ *
+ * @return
+ *     -
+ *
+ **/
+void ssd1306_draw_string_8x8(ssd1306_canvas_t *canvas, uint8_t chXpos,
+        uint8_t chPage, const uint8_t *pchString);
 
 /**
  * @brief   refresh dot matrix panel

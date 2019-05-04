@@ -27,6 +27,7 @@
 #include "lwip/netdb.h"
 #include "mqtt_client.h"
 #include "iot_button.h"
+#include <inttypes.h>
 
 #ifdef CONFIG_DISPLAY_SSD1306
 #include "ssd1306.h"
@@ -62,6 +63,7 @@ typedef struct  {
     float       temp;
     float       humidity;
     uint16_t    battery;
+    int64_t     last_seen;
 } ble_adv_data_t;
 
 ble_beacon_data_t ble_beacon_data[CONFIG_BLE_DEVICE_COUNT_CONFIGURED] = {
@@ -76,7 +78,7 @@ ble_beacon_data_t ble_beacon_data[CONFIG_BLE_DEVICE_COUNT_CONFIGURED] = {
     { {0x01, 0x12, 0x23, 0x34}, CONFIG_BLE_DEVICE_9_MAJ,  CONFIG_BLE_DEVICE_9_MIN,  CONFIG_BLE_DEVICE_9_NAME},
     { {0x01, 0x12, 0x23, 0x34}, CONFIG_BLE_DEVICE_10_MAJ, CONFIG_BLE_DEVICE_10_MIN, CONFIG_BLE_DEVICE_10_NAME},
 };
-ble_adv_data_t    ble_adv_data[CONFIG_BLE_DEVICE_COUNT_CONFIGURED];
+ble_adv_data_t    ble_adv_data[CONFIG_BLE_DEVICE_COUNT_CONFIGURED] = { 0 };
 
 // Beacon
 typedef struct {
@@ -130,7 +132,9 @@ esp_ble_mybeacon_head_t mybeacon_common_head = {
 #define UPDATE_BEAC9     (BIT9)
 #define UPDATE_DISPLAY   (BIT10)
 EventGroupHandle_t s_values_evg;
-static uint8_t s_display_show = 0;  // 0 = off, 1.. beac to show, for array minus 1, num+1 = app version
+
+// 0 = off, 1.. beac to show, for array minus 1, num+1 = app version, num+2 = last seen
+static uint8_t s_display_show = 0;
 
 // Wifi
 static EventGroupHandle_t wifi_event_group;
@@ -138,6 +142,15 @@ const static int CONNECTED_BIT = BIT0;
 
 // MQTT
 static esp_mqtt_client_handle_t s_client;
+
+// Timer
+static esp_timer_handle_t periodic_timer;
+static bool periodic_timer_running = false;
+static volatile bool run_periodic_timer = false;
+static void periodic_timer_callback(void* arg);
+static void periodic_timer_start();
+static void periodic_timer_stop();
+#define UPDATE_LAST_SEEN_INTERVAL   250000
 
 // Button
 #define BUTTON_IO_NUM           0
@@ -161,7 +174,7 @@ void button_release_cb(void* arg)
 
     if(esp_timer_get_time() < time_button_long_press){
         s_display_show++;
-        s_display_show %= CONFIG_BLE_DEVICE_COUNT_USE+2;
+        s_display_show %= CONFIG_BLE_DEVICE_COUNT_USE+3;
     } else {
         s_display_show = 0;
     }
@@ -169,15 +182,50 @@ void button_release_cb(void* arg)
     if(s_display_show == 0){
         // empty screen
         xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
+        run_periodic_timer = false;
     } else if(s_display_show == CONFIG_BLE_DEVICE_COUNT_USE+1){
         // app data, version, mac addr
+        run_periodic_timer = false;
+        xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
+    } else if(s_display_show == CONFIG_BLE_DEVICE_COUNT_USE+2){
+        // last seen, update regularly
+        run_periodic_timer = true;
         xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
     } else {
         // beacon screen
+        run_periodic_timer = false;
         xEventGroupSetBits(s_values_evg, (EventBits_t) (1 << (s_display_show-1) ));
     }
 
     ESP_LOGD(TAG, "button_release_cb: s_display_show %d", s_display_show);
+}
+
+void periodic_timer_start()
+{
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, UPDATE_LAST_SEEN_INTERVAL));
+}
+
+void periodic_timer_stop()
+{
+    ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
+}
+
+void periodic_timer_callback(void* arg)
+{
+    xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
+}
+
+void convert_s_hhmmss(uint16_t sec, uint8_t *h, uint8_t *m, uint8_t *s)
+{
+    uint16_t tmp_sec = sec;
+
+    *h = sec / 3600;
+    tmp_sec -= *h*3600;
+
+    *m = tmp_sec / 60;
+    tmp_sec -= *m * 60;
+
+    *s = tmp_sec;
 }
 
 #ifdef CONFIG_DISPLAY_SSD1306
@@ -188,6 +236,18 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
     static uint8_t last_dislay_shown = 99;
 
     ESP_LOGD(TAG, "ssd1306_update, uxBits %d", uxBits);
+
+    if(run_periodic_timer){
+        if(!periodic_timer_running){
+            periodic_timer_start();
+            periodic_timer_running = true;
+        }
+    } else {
+        if(periodic_timer_running){
+            periodic_timer_stop();
+            periodic_timer_running = false;
+        }
+    }
 
     if(s_display_show == 0){
         if((last_dislay_shown != s_display_show)){
@@ -206,32 +266,47 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
 
             ssd1306_clear_canvas(canvas, 0x00);
             snprintf(buffer, 128, "%s", app_desc->version);
-            ssd1306_draw_string(canvas, 0, 0, (const uint8_t*) buffer, 12, 1);
+            ssd1306_draw_string(canvas, 0, 0, (const uint8_t*) buffer, 10, 1);
             snprintf(buffer, 128, "%s", app_desc->project_name);
-            ssd1306_draw_string(canvas, 0, 16, (const uint8_t*) buffer, 12, 1);
+            ssd1306_draw_string(canvas, 0, 12, (const uint8_t*) buffer, 10, 1);
             snprintf(buffer, 128, "%s", app_desc->idf_ver);
-            ssd1306_draw_string(canvas, 0, 32, (const uint8_t*) buffer, 12, 1);
+            ssd1306_draw_string(canvas, 0, 24, (const uint8_t*) buffer, 10, 1);
             snprintf(buffer, 128, "%2X:%2X:%2X:%2X:%2X:%2X",
                 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-            ssd1306_draw_string(canvas, 0, 48, (const uint8_t*) buffer, 12, 1);
-
+            ssd1306_draw_string(canvas, 0, 36, (const uint8_t*) buffer, 10, 1);
+            ssd1306_fill_point(canvas, 0, 0, 1);
             last_dislay_shown = s_display_show;
             return ssd1306_refresh_gram(canvas);
         } else {
             return ESP_OK;
         }
+    } else if (s_display_show == CONFIG_BLE_DEVICE_COUNT_USE+2){
+        ssd1306_clear_canvas(canvas, 0x00);
+        for(int i=0; i < CONFIG_BLE_DEVICE_COUNT_USE; i++){
+            bool never_seen = (ble_adv_data[i].last_seen == 0);
+            if(never_seen){
+                snprintf(buffer, 128, "%s: %c", ble_beacon_data[i].name, '/');
+            } else {
+                uint16_t last_seen_sec_gone = (esp_timer_get_time() - ble_adv_data[i].last_seen)/1000000;
+                uint8_t h, m, s;
+                convert_s_hhmmss(last_seen_sec_gone, &h, &m, &s);
+                snprintf(buffer, 128, "%s: %02d:%02d:%02d", ble_beacon_data[i].name, h, m, s);
+            }
+            ssd1306_draw_string(canvas, 0, i*10, (const uint8_t*) buffer, 10, 1);
+        }
+        return ssd1306_refresh_gram(canvas);
     }
 
     int idx = s_display_show - 1;
     if(uxBits & (1 << idx)){
-        snprintf(buffer, 128, "%s:", ble_beacon_data[idx].name);
-        ssd1306_draw_string(canvas, 0, 0, (const uint8_t*) buffer, 12, 1);
+        snprintf(buffer, 128, "%s", ble_beacon_data[idx].name);
+        ssd1306_draw_string(canvas, 0, 0, (const uint8_t*) buffer, 10, 1);
         snprintf(buffer, 128, "%5.2fC, %5.2f%%H", ble_adv_data[idx].temp, ble_adv_data[idx].humidity);
-        ssd1306_draw_string(canvas, 0, 16, (const uint8_t*) buffer, 12, 1);
+        ssd1306_draw_string(canvas, 0, 10, (const uint8_t*) buffer, 10, 1);
         snprintf(buffer, 128, "Batt %4d mV", ble_adv_data[idx].battery);
-        ssd1306_draw_string(canvas, 0, 32, (const uint8_t*) buffer, 12, 1);
+        ssd1306_draw_string(canvas, 0, 20, (const uint8_t*) buffer, 10, 1);
         snprintf(buffer, 128, "RSSI %3d dBm", ble_adv_data[idx].measured_power);
-        ssd1306_draw_string(canvas, 0, 48, (const uint8_t*) buffer, 12, 1);
+        ssd1306_draw_string(canvas, 0, 30, (const uint8_t*) buffer, 10, 1);
 
         last_dislay_shown = s_display_show;
         return ssd1306_refresh_gram(canvas);
@@ -388,6 +463,7 @@ void update_adv_data(uint16_t maj, uint16_t min, int8_t measured_power,
     ble_adv_data[idx].temp           = temp;
     ble_adv_data[idx].humidity       = humidity;
     ble_adv_data[idx].battery        = battery;
+    ble_adv_data[idx].last_seen      = esp_timer_get_time();
 
     xEventGroupSetBits(s_values_evg, (EventBits_t) (1 << idx));
 }
@@ -537,6 +613,16 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
     }
 }
 
+void create_timer()
+{
+    const esp_timer_create_args_t periodic_timer_args = {
+            .callback = &periodic_timer_callback,
+            .name = "periodic"
+    };
+
+    ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
+}
+
 void app_main()
 {
     ESP_ERROR_CHECK(nvs_flash_init());
@@ -556,6 +642,8 @@ void app_main()
     ESP_ERROR_CHECK(esp_bluedroid_init());
     ESP_ERROR_CHECK(esp_bluedroid_enable());
     ESP_ERROR_CHECK(esp_ble_gap_register_callback(esp_gap_cb));
+
+    create_timer();
 
 #ifdef CONFIG_DISPLAY_SSD1306
     xTaskCreate(&ssd1306_task, "ssd1306_task", 2048 * 2, NULL, 5, NULL);

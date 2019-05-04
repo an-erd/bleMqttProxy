@@ -75,7 +75,10 @@ void ssd1306_init() {
 	i2c_master_write_byte(cmd, OLED_CMD_SET_CHARGE_PUMP, true);
 	i2c_master_write_byte(cmd, 0x14, true);
     i2c_master_write_byte(cmd, OLED_CMD_SET_SEGMENT_REMAP, true);
-	i2c_master_write_byte(cmd, OLED_CMD_SET_COM_SCAN_MODE_NORMAL, true);
+	i2c_master_write_byte(cmd, OLED_CMD_SET_COM_SCAN_MODE_REMAP, true);
+	i2c_master_write_byte(cmd, OLED_CMD_SET_CONTRAST, true);
+	i2c_master_write_byte(cmd, 0xFF, true);
+
 	i2c_master_write_byte(cmd, OLED_CMD_DISPLAY_ON, true);
 	i2c_master_stop(cmd);
 
@@ -94,15 +97,14 @@ void ssd1306_fill_point(ssd1306_canvas_t *canvas, uint8_t chXpos, uint8_t chYpos
 {
     uint8_t chPos, chBx, chTemp = 0;
 
-    if (chXpos > 127 || chYpos > 63) {
+    if (chXpos > canvas->w || chYpos > (canvas->h * OLED_PIXEL_PER_PAGE)) {
         return;
     }
-    chPos = 7 - chYpos / 8; //
+    chPos = chYpos / 8;
     chBx = chYpos % 8;
-    chTemp = 1 << (7 - chBx);
+    chTemp = 1 << chBx;
 
     if (chPoint) {
-        // canvas->s_chDisplayBuffer[chPos][chXpos] |= chTemp;
         canvas->s_chDisplayBuffer[chPos*canvas->w + chXpos] |= chTemp;
     } else {
         canvas->s_chDisplayBuffer[chPos*canvas->w + chXpos] &= ~chTemp;
@@ -127,6 +129,9 @@ void ssd1306_draw_char(ssd1306_canvas_t *canvas, uint8_t chXpos, uint8_t chYpos,
 {
     uint8_t i, j;
     uint8_t chTemp, chYpos0 = chYpos;
+    bool firstByte = true;
+    uint8_t skipBits1 = 0;
+    uint8_t skipBits2 = 0;
 
     chChr = chChr - ' ';
     for (i = 0; i < chSize; i++) {
@@ -136,6 +141,18 @@ void ssd1306_draw_char(ssd1306_canvas_t *canvas, uint8_t chXpos, uint8_t chYpos,
             } else {
                 chTemp = ~c_chFont1206[chChr][i];
             }
+        } else if (chSize == 10) {
+            // take 1206 font, but skip first 2 and last 4 bits
+            if (chMode) {
+                chTemp = c_chFont1206[chChr][i];
+            } else {
+                chTemp = ~c_chFont1206[chChr][i];
+            }
+            if(firstByte){
+                skipBits1 = 2;
+                chTemp <<= 2;
+                firstByte = false;
+            }
         } else {
             if (chMode) {
                 chTemp = c_chFont1608[chChr][i];
@@ -144,7 +161,7 @@ void ssd1306_draw_char(ssd1306_canvas_t *canvas, uint8_t chXpos, uint8_t chYpos,
             }
         }
 
-        for (j = 0; j < 8; j++) {
+        for (j = skipBits1; j < 8; j++) {
             if (chTemp & 0x80) {
                 ssd1306_fill_point(canvas, chXpos, chYpos, 1);
             } else {
@@ -153,12 +170,16 @@ void ssd1306_draw_char(ssd1306_canvas_t *canvas, uint8_t chXpos, uint8_t chYpos,
             chTemp <<= 1;
             chYpos++;
 
-            if ((chYpos - chYpos0) == chSize) {
+            if ((skipBits1 + skipBits2 + chYpos - chYpos0) == chSize) {
                 chYpos = chYpos0;
                 chXpos++;
+                firstByte = true;
+                skipBits1 = skipBits2 = 0;
                 break;
             }
         }
+        // skipBits2 = skipBits1;
+        // skipBits1 = 0;
     }
 }
 
@@ -264,6 +285,23 @@ esp_err_t ssd1306_draw_string(ssd1306_canvas_t *canvas, uint8_t chXpos,
         pchString++;
     }
     return ret;
+}
+
+void ssd1306_draw_string_8x8(ssd1306_canvas_t *canvas, uint8_t chXpos,
+        uint8_t chPage, const uint8_t *pchString)
+{
+    uint8_t *pCol = (uint8_t *) &canvas->s_chDisplayBuffer[chPage * canvas->w + chXpos];
+    uint8_t cols_used = 0;
+    uint8_t cols_avail = canvas->w - chXpos;
+
+    while (*pchString != '\0') {
+        memcpy(pCol, c_font8x8_basic_tr[*pchString], (cols_used + 8 <= cols_avail ? 8 : cols_avail - cols_used));
+        pchString++;    // next char in source
+        pCol += 8;   // pCol to target starting column for next char
+        cols_used += 8;
+        if(cols_used >= cols_avail)
+            break;
+    }
 }
 
 esp_err_t ssd1306_refresh_gram(ssd1306_canvas_t *canvas)
