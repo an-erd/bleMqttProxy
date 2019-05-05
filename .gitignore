@@ -40,3 +40,5 @@ Arbeitsordner/
 sdkconfig.old
 sdkconfig
 Box/blemqttproxy_3d.skb
+make.exe.stackdump
+~*.xlsx
