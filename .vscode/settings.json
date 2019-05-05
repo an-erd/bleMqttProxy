@@ -103,7 +103,9 @@
         "i2c.h": "c",
         "ssd1306_fonts.h": "c",
         "esp_ota_ops.h": "c",
-        "string.h": "c"
+        "string.h": "c",
+        "ssd1306_convert_fonts.h": "c",
+        "inttypes.h": "c"
     },
 	"files.exclude": {
 		"**/.git": true,

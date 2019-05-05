@@ -173,16 +173,12 @@ esp_err_t ssd1306_fill_rectangle(ssd1306_canvas_t *canvas, uint8_t chXpos1, uint
  * @param   chSize char size
  * @param   chChr draw char
  * @param   chMode display mode
- * @param   cuTop     Specifies the # of lines to cut from top
- * @param   cuBottom  Specifies the # of lines to cut from bottom
  *
  * @return
  *     - NULL
  */
 void ssd1306_draw_char(ssd1306_canvas_t *canvas, uint8_t chXpos,
         uint8_t chYpos, uint8_t chChr, uint8_t chSize, uint8_t chMode);
-void ssd1306_draw_char_cut(ssd1306_canvas_t *canvas, uint8_t chXpos, uint8_t chYpos,
-        uint8_t chChr, uint8_t chSize, uint8_t chMode, uint8_t cutTop, uint8_t cutBottom);
 
 /**
  * @brief   display number on (x, y),and set length, size, mode

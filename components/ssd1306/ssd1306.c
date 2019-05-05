@@ -129,9 +129,6 @@ void ssd1306_draw_char(ssd1306_canvas_t *canvas, uint8_t chXpos, uint8_t chYpos,
 {
     uint8_t i, j;
     uint8_t chTemp, chYpos0 = chYpos;
-    bool firstByte = true;
-    uint8_t skipBits1 = 0;
-    uint8_t skipBits2 = 0;
 
     chChr = chChr - ' ';
     for (i = 0; i < chSize; i++) {
@@ -142,16 +139,10 @@ void ssd1306_draw_char(ssd1306_canvas_t *canvas, uint8_t chXpos, uint8_t chYpos,
                 chTemp = ~c_chFont1206[chChr][i];
             }
         } else if (chSize == 10) {
-            // take 1206 font, but skip first 2 and last 4 bits
             if (chMode) {
-                chTemp = c_chFont1206[chChr][i];
+                chTemp = c_chFont1006[chChr][i];
             } else {
-                chTemp = ~c_chFont1206[chChr][i];
-            }
-            if(firstByte){
-                skipBits1 = 2;
-                chTemp <<= 2;
-                firstByte = false;
+                chTemp = ~c_chFont1006[chChr][i];
             }
         } else {
             if (chMode) {
@@ -161,7 +152,7 @@ void ssd1306_draw_char(ssd1306_canvas_t *canvas, uint8_t chXpos, uint8_t chYpos,
             }
         }
 
-        for (j = skipBits1; j < 8; j++) {
+        for (j = 0; j < 8; j++) {
             if (chTemp & 0x80) {
                 ssd1306_fill_point(canvas, chXpos, chYpos, 1);
             } else {
@@ -173,13 +164,9 @@ void ssd1306_draw_char(ssd1306_canvas_t *canvas, uint8_t chXpos, uint8_t chYpos,
             if ((chYpos - chYpos0) == chSize) {
                 chYpos = chYpos0;
                 chXpos++;
-                firstByte = true;
-                skipBits1 = skipBits2 = 0;
                 break;
             }
         }
-        // skipBits2 = skipBits1;
-        // skipBits1 = 0;
     }
 }
 
