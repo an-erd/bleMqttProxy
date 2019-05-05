@@ -274,6 +274,13 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
             snprintf(buffer, 128, "%2X:%2X:%2X:%2X:%2X:%2X",
                 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
             ssd1306_draw_string(canvas, 0, 36, (const uint8_t*) buffer, 10, 1);
+#ifdef CONFIG_USE_MQTT
+            bool mqtt_avail = true;
+#else
+            bool mqtt_avail = false;
+#endif
+            snprintf(buffer, 128, "MQTT: %s",(mqtt_avail?"y":"n"));
+            ssd1306_draw_string(canvas, 0, 48, (const uint8_t*) buffer, 10, 1);
 
             last_dislay_shown = s_display_show;
             return ssd1306_refresh_gram(canvas);
