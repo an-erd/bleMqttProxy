@@ -162,7 +162,7 @@ void button_push_cb(void* arg)
     char* pstr = (char*) arg;
     UNUSED(pstr);
 
-    time_button_long_press = esp_timer_get_time() + 2000000;
+    time_button_long_press = esp_timer_get_time() + CONFIG_LONG_PRESS_TIME * 1000;
 
     ESP_LOGD(TAG, "button_push_cb");
 }
@@ -306,6 +306,7 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
 
     int idx = s_display_show - 1;
     if(uxBits & (1 << idx)){
+        ssd1306_clear_canvas(canvas, 0x00);
         snprintf(buffer, 128, "%s", ble_beacon_data[idx].name);
         ssd1306_draw_string(canvas, 0, 0, (const uint8_t*) buffer, 10, 1);
         snprintf(buffer, 128, "%5.2fC, %5.2f%%H", ble_adv_data[idx].temp, ble_adv_data[idx].humidity);
@@ -314,6 +315,16 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
         ssd1306_draw_string(canvas, 0, 24, (const uint8_t*) buffer, 10, 1);
         snprintf(buffer, 128, "RSSI %3d dBm", ble_adv_data[idx].measured_power);
         ssd1306_draw_string(canvas, 0, 36, (const uint8_t*) buffer, 10, 1);
+
+        if(idx == 1){
+            ssd1306_clear_canvas(canvas, 0x00);
+            ssd1306_fill_rectangle(canvas, 32, 0, 32,  7, 1);
+            ssd1306_fill_rectangle(canvas, 34, 0, 34,  8, 1);
+            ssd1306_fill_rectangle(canvas, 36, 0, 36,  9, 1);
+            ssd1306_fill_rectangle(canvas, 38, 6, 38, 14, 1);
+            ssd1306_fill_rectangle(canvas, 40, 6, 40, 15, 1);
+            ssd1306_fill_rectangle(canvas, 42, 6, 42, 16, 1);
+        }
 
         last_dislay_shown = s_display_show;
         return ssd1306_refresh_gram(canvas);

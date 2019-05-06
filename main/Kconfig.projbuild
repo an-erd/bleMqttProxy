@@ -245,4 +245,9 @@ menu "BLE-MQTT Proxy"
         range 10 100
         default 50
     endmenu
+
+    config LONG_PRESS_TIME
+        int "ms to press for a long button press"
+        range 0 10000
+        default 2000
 endmenu
