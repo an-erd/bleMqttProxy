@@ -112,17 +112,18 @@ void ssd1306_fill_point(ssd1306_canvas_t *canvas, uint8_t chXpos, uint8_t chYpos
 esp_err_t ssd1306_fill_rectangle(ssd1306_canvas_t *canvas, uint8_t chXpos1, uint8_t chYpos1,
     uint8_t chXpos2, uint8_t chYpos2, uint8_t chDot)
 {
-    uint8_t chXpos, chYpos;
+    uint8_t chXpos;
     uint8_t y1Page, y2Page;
     uint8_t fillpattern;
+
+    if( (chXpos1 > chXpos2) || (chYpos1 > chYpos2) )
+        return ESP_OK;
 
     y1Page = chYpos1       / OLED_PIXEL_PER_PAGE + (chYpos1 % OLED_PIXEL_PER_PAGE ? 1 : 0 );
     y2Page = (chYpos2 + 1) / OLED_PIXEL_PER_PAGE;
 
-ESP_LOGI(TAG, "ssd1306_fill_rectangle: y1 %d y2 %d y1Page %d y2Page %d", chYpos1, chYpos2, y1Page, y2Page);
     // middle block (y-wise full pages)
     for (int i = y1Page; i < y2Page; i++){
-        ESP_LOGI(TAG, "ssd1306_fill_rectangle: i %d chXpos1 %d chXpos2 %d, chXpos2 - chXpos1 + 1 %d", i, chXpos1, chXpos2, (chXpos2 - chXpos1 + 1));
         memset(&canvas->s_chDisplayBuffer[i * canvas->w + chXpos1], (chDot ? 0xFF : 0x00), chXpos2 - chXpos1 + 1);
     }
 
@@ -142,7 +143,7 @@ ESP_LOGI(TAG, "ssd1306_fill_rectangle: y1 %d y2 %d y1Page %d y2Page %d", chYpos1
 
     // bottom block (not a full page)
     if( (chYpos2 + 1) % OLED_PIXEL_PER_PAGE){
-        fillpattern = 0xFF >> ( (chYpos2 + 1) % OLED_PIXEL_PER_PAGE);
+        fillpattern = 0xFF >> ( OLED_PIXEL_PER_PAGE - (chYpos2 + 1) % OLED_PIXEL_PER_PAGE);
         if(chDot){
             for (chXpos = chXpos1; chXpos <= chXpos2; chXpos++) {
                 canvas->s_chDisplayBuffer[y2Page * canvas->w + chXpos] |= fillpattern;

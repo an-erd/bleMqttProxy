@@ -240,14 +240,22 @@ menu "BLE-MQTT Proxy"
     endmenu
 
     menu "Button"
-    config IO_GLITCH_FILTER_TIME_MS
-        int "IO glitch filter timer ms (10~100)"
-        range 10 100
-        default 50
+
+        config IO_GLITCH_FILTER_TIME_MS
+            int "IO glitch filter timer ms (10~100)"
+            range 10 100
+            default 50
+
+        config LONG_PRESS_TIME
+            int "ms to press for a long button press"
+            range 0 10000
+            default 2000
     endmenu
 
-    config LONG_PRESS_TIME
-        int "ms to press for a long button press"
-        range 0 10000
-        default 2000
+    menu "Test functions"
+
+        config DISPLAY_TIME_TEST
+            bool "Add extra display screen with tests"
+            default n
+    endmenu
 endmenu

@@ -133,7 +133,7 @@ esp_ble_mybeacon_head_t mybeacon_common_head = {
 #define UPDATE_DISPLAY   (BIT10)
 EventGroupHandle_t s_values_evg;
 
-// 0 = off, 1.. beac to show, for array minus 1, num+1 = app version, num+2 = last seen
+// 0 = off, 1.. beac to show, for array minus 1, num+1 = app version, num+2 = last seen, num+3 = display test
 static uint8_t s_display_show = 0;
 
 // Wifi
@@ -174,7 +174,11 @@ void button_release_cb(void* arg)
 
     if(esp_timer_get_time() < time_button_long_press){
         s_display_show++;
+#ifndef CONFIG_DISPLAY_TIME_TEST
         s_display_show %= CONFIG_BLE_DEVICE_COUNT_USE+3;
+#else
+        s_display_show %= CONFIG_BLE_DEVICE_COUNT_USE+4; // add extra test screen
+#endif
     } else {
         s_display_show = 0;
     }
@@ -191,6 +195,12 @@ void button_release_cb(void* arg)
         // last seen, update regularly
         run_periodic_timer = true;
         xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
+#ifdef CONFIG_DISPLAY_TIME_TEST
+    } else if(s_display_show == CONFIG_BLE_DEVICE_COUNT_USE+3){
+        // last seen, update regularly
+        run_periodic_timer = true;
+        xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
+#endif
     } else {
         // beacon screen
         run_periodic_timer = false;
@@ -234,6 +244,7 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
     esp_err_t ret;
     char buffer[128];
     static uint8_t last_dislay_shown = 99;
+    int idx = s_display_show - 1;
 
     ESP_LOGD(TAG, "ssd1306_update, uxBits %d", uxBits);
 
@@ -304,7 +315,73 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
         return ssd1306_refresh_gram(canvas);
     }
 
-    int idx = s_display_show - 1;
+#ifdef CONFIG_DISPLAY_TIME_TEST
+    if (s_display_show == CONFIG_BLE_DEVICE_COUNT_USE+3){
+        // DISPLAY TEST FUNCTIONS
+ESP_LOGE(TAG, "displaytest > 1");
+            ssd1306_clear_canvas(canvas, 0x00);
+            ssd1306_fill_point(canvas, 9, 0, 1);
+            ssd1306_fill_point(canvas, 9, 8, 1);
+            ssd1306_fill_point(canvas, 9, 16, 1);
+            ssd1306_fill_point(canvas, 9, 24, 1);
+ESP_LOGE(TAG, "displaytest > 2");
+
+            // ssd1306_fill_rectangle(canvas, 1, 0, 1,  6, 1);
+            // ssd1306_fill_rectangle(canvas, 2, 0, 2,  7, 1);
+            // ssd1306_fill_rectangle(canvas, 3, 0, 3,  8, 1);
+            // ssd1306_fill_rectangle(canvas, 4, 0, 4,  9, 1);
+            // canvas->s_chDisplayBuffer[0 * canvas->w  + 5] |= 0x01;
+            // canvas->s_chDisplayBuffer[0 * canvas->w  + 6] |= 0x0F;
+            // canvas->s_chDisplayBuffer[0 * canvas->w  + 7] |= 0x10;
+            // canvas->s_chDisplayBuffer[0 * canvas->w  + 8] |= 0xF0;
+            // canvas->s_chDisplayBuffer[0 * canvas->w  + 9] |= 0xFF;
+
+            ssd1306_fill_rectangle(canvas, 10,  0, 10,  7, 1);
+            ssd1306_fill_rectangle(canvas, 11,  1, 11,  7, 1);
+            ssd1306_fill_rectangle(canvas, 12,  2, 12,  7, 1);
+            ssd1306_fill_rectangle(canvas, 13,  3, 13,  7, 1);
+            ssd1306_fill_rectangle(canvas, 14,  4, 14,  7, 1);
+            ssd1306_fill_rectangle(canvas, 15,  5, 15,  7, 1);
+            ssd1306_fill_rectangle(canvas, 16,  6, 16,  7, 1);
+            ssd1306_fill_rectangle(canvas, 17,  7, 17,  7, 1);
+ESP_LOGE(TAG, "displaytest > 3");
+
+            ssd1306_fill_rectangle(canvas, 20,  0, 20,  8, 1);
+            ssd1306_fill_rectangle(canvas, 21,  1, 21,  9, 1);
+            ssd1306_fill_rectangle(canvas, 22,  2, 22, 10, 1);
+            ssd1306_fill_rectangle(canvas, 23,  3, 23, 11, 1);
+            ssd1306_fill_rectangle(canvas, 24,  4, 24, 12, 1);
+            ssd1306_fill_rectangle(canvas, 25,  5, 25, 13, 1);
+            ssd1306_fill_rectangle(canvas, 26,  6, 26, 14, 1);
+            ssd1306_fill_rectangle(canvas, 27,  7, 27, 15, 1);
+            ssd1306_fill_rectangle(canvas, 28,  8, 28, 16, 1);
+            ssd1306_fill_rectangle(canvas, 29,  9, 29, 17, 1);
+ESP_LOGE(TAG, "displaytest > 4");
+
+            ssd1306_fill_rectangle(canvas, 40,  0,  40, 16, 1);
+            ssd1306_fill_rectangle(canvas, 41,  1,  41, 17, 1);
+            ssd1306_fill_rectangle(canvas, 42,  2,  42, 18, 1);
+            ssd1306_fill_rectangle(canvas, 43,  3,  43, 19, 1);
+            ssd1306_fill_rectangle(canvas, 44,  4,  44, 20, 1);
+            ssd1306_fill_rectangle(canvas, 45,  5,  45, 21, 1);
+            ssd1306_fill_rectangle(canvas, 46,  6,  46, 22, 1);
+            ssd1306_fill_rectangle(canvas, 47,  7,  47, 23, 1);
+            ssd1306_fill_rectangle(canvas, 48,  8,  48, 24, 1);
+            ssd1306_fill_rectangle(canvas, 49,  9,  49, 25, 1);
+            ssd1306_fill_rectangle(canvas, 50,  10, 50, 26, 1);
+
+            ssd1306_fill_point(canvas, 52, 0, 1);
+            ssd1306_fill_point(canvas, 52, 8, 1);
+            ssd1306_fill_point(canvas, 52, 16, 1);
+            ssd1306_fill_point(canvas, 52, 24, 1);
+            ssd1306_fill_point(canvas, 52, 32, 1);
+ESP_LOGE(TAG, "displaytest > 5");
+            ret = ssd1306_refresh_gram(canvas);
+ESP_LOGE(TAG, "displaytest > 6");
+    return ret;
+        }
+#endif // CONFIG_DISPLAY_TIME_TEST
+
     if(uxBits & (1 << idx)){
         ssd1306_clear_canvas(canvas, 0x00);
         snprintf(buffer, 128, "%s", ble_beacon_data[idx].name);
@@ -315,16 +392,6 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
         ssd1306_draw_string(canvas, 0, 24, (const uint8_t*) buffer, 10, 1);
         snprintf(buffer, 128, "RSSI %3d dBm", ble_adv_data[idx].measured_power);
         ssd1306_draw_string(canvas, 0, 36, (const uint8_t*) buffer, 10, 1);
-
-        if(idx == 1){
-            ssd1306_clear_canvas(canvas, 0x00);
-            ssd1306_fill_rectangle(canvas, 32, 0, 32,  7, 1);
-            ssd1306_fill_rectangle(canvas, 34, 0, 34,  8, 1);
-            ssd1306_fill_rectangle(canvas, 36, 0, 36,  9, 1);
-            ssd1306_fill_rectangle(canvas, 38, 6, 38, 14, 1);
-            ssd1306_fill_rectangle(canvas, 40, 6, 40, 15, 1);
-            ssd1306_fill_rectangle(canvas, 42, 6, 42, 16, 1);
-        }
 
         last_dislay_shown = s_display_show;
         return ssd1306_refresh_gram(canvas);
