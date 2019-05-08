@@ -46,7 +46,7 @@
                 "C:/msys32/home/AKAEM/esp/esp-idf/components/app_update/include",
                 "C:/msys32/home/AKAEM/esp/esp-idf/components/bootloader_support/include"
             ],
-            "intelliSenseMode": "clang-x64",
+            "intelliSenseMode": "msvc-x64",
             "browse": {
                 "path": [
                     "${workspaceRoot}",
