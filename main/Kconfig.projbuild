@@ -88,15 +88,31 @@ menu "BLE-MQTT Proxy"
     endmenu
 
     menu "BLE Devices"
+        menu "Proximity UUID"
+            config BLE_UUID_1
+                hex "UUID 1"
+                default 0x01
+            config BLE_UUID_2
+                hex "UUID 2"
+                default 0x12
+            config BLE_UUID_3
+                hex "UUID 3"
+                default 0x23
+            config BLE_UUID_4
+                hex "UUID 4"
+                default 0x34
+        endmenu
+
+
         config BLE_DEVICE_1
             bool "Set BLE Device 1"
             default y
         config BLE_DEVICE_1_MAJ
-            int "Major value of BLE device 1" if BLE_DEVICE_1
-            default 7
+            hex "Major value of BLE device 1" if BLE_DEVICE_1
+            default 0x07
         config BLE_DEVICE_1_MIN
-            int "Minor value of BLE device 1" if BLE_DEVICE_1
-            default 1
+            hex "Minor value of BLE device 1" if BLE_DEVICE_1
+            default 0x01
         config BLE_DEVICE_1_NAME
             string "Name of BLE device 1" if BLE_DEVICE_1
             default "beac1"
@@ -105,11 +121,11 @@ menu "BLE-MQTT Proxy"
             bool "Set BLE Device 2"
             default y
         config BLE_DEVICE_2_MAJ
-            int "Major value of BLE device 2" if BLE_DEVICE_2
-            default 7
+            hex "Major value of BLE device 2" if BLE_DEVICE_2
+            default 0x07
         config BLE_DEVICE_2_MIN
-            int "Minor value of BLE device 2" if BLE_DEVICE_2
-            default 2
+            hex "Minor value of BLE device 2" if BLE_DEVICE_2
+            default 0x02
         config BLE_DEVICE_2_NAME
             string "Name of BLE device 2" if BLE_DEVICE_2
             default "beac2"
@@ -118,11 +134,11 @@ menu "BLE-MQTT Proxy"
             bool "Set BLE device 3"
             default y
         config BLE_DEVICE_3_MAJ
-            int "Major value of BLE device 3" if BLE_DEVICE_3
-            default 7
+            hex "Major value of BLE device 3" if BLE_DEVICE_3
+            default 0x07
         config BLE_DEVICE_3_MIN
-            int "Minor value of BLE device 3" if BLE_DEVICE_3
-            default 3
+            hex "Minor value of BLE device 3" if BLE_DEVICE_3
+            default 0x03
         config BLE_DEVICE_3_NAME
             string "Name of BLE device 3" if BLE_DEVICE_3
             default "beac3"
@@ -131,11 +147,11 @@ menu "BLE-MQTT Proxy"
             bool "Set BLE Device 4"
             default y
         config BLE_DEVICE_4_MAJ
-            int "Major value of BLE device 4" if BLE_DEVICE_4
-            default 7
+            hex "Major value of BLE device 4" if BLE_DEVICE_4
+            default 0x07
         config BLE_DEVICE_4_MIN
-            int "Minor value of BLE device 4" if BLE_DEVICE_4
-            default 4
+            hex "Minor value of BLE device 4" if BLE_DEVICE_4
+            default 0x04
         config BLE_DEVICE_4_NAME
             string "Name of BLE device 4" if BLE_DEVICE_4
             default "beac4"
@@ -144,11 +160,11 @@ menu "BLE-MQTT Proxy"
             bool "Set BLE Device 5"
             default y
         config BLE_DEVICE_5_MAJ
-            int "Major value of BLE device 5" if BLE_DEVICE_5
-            default 7
+            hex "Major value of BLE device 5" if BLE_DEVICE_5
+            default 0x07
         config BLE_DEVICE_5_MIN
-            int "Minor value of BLE device 5" if BLE_DEVICE_5
-            default 5
+            hex "Minor value of BLE device 5" if BLE_DEVICE_5
+            default 0x05
         config BLE_DEVICE_5_NAME
             string "Name of BLE device 5" if BLE_DEVICE_5
             default "beac5"
@@ -157,11 +173,11 @@ menu "BLE-MQTT Proxy"
             bool "Set BLE Device 6"
             default y
         config BLE_DEVICE_6_MAJ
-            int "Major value of BLE device 6" if BLE_DEVICE_6
-            default 7
+            hex "Major value of BLE device 6" if BLE_DEVICE_6
+            default 0x07
         config BLE_DEVICE_6_MIN
-            int "Minor value of BLE device 6" if BLE_DEVICE_6
-            default 6
+            hex "Minor value of BLE device 6" if BLE_DEVICE_6
+            default 0x06
         config BLE_DEVICE_6_NAME
             string "Name of BLE device 6" if BLE_DEVICE_6
             default "beac6"
@@ -170,11 +186,11 @@ menu "BLE-MQTT Proxy"
             bool "Set BLE Device 7"
             default y
         config BLE_DEVICE_7_MAJ
-            int "Major value of BLE device 7" if BLE_DEVICE_7
-            default 7
+            hex "Major value of BLE device 7" if BLE_DEVICE_7
+            default 0x07
         config BLE_DEVICE_7_MIN
-            int "Minor value of BLE device 7" if BLE_DEVICE_7
-            default 7
+            hex "Minor value of BLE device 7" if BLE_DEVICE_7
+            default 0x07
         config BLE_DEVICE_7_NAME
             string "Name of BLE device 7" if BLE_DEVICE_7
             default "beac7"
@@ -183,11 +199,11 @@ menu "BLE-MQTT Proxy"
             bool "Set BLE Device 8"
             default y
         config BLE_DEVICE_8_MAJ
-            int "Major value of BLE device 8" if BLE_DEVICE_8
-            default 7
+            hex "Major value of BLE device 8" if BLE_DEVICE_8
+            default 0x07
         config BLE_DEVICE_8_MIN
-            int "Minor value of BLE device 8" if BLE_DEVICE_8
-            default 8
+            hex "Minor value of BLE device 8" if BLE_DEVICE_8
+            default 0x08
         config BLE_DEVICE_8_NAME
             string "Name of BLE device 8" if BLE_DEVICE_8
             default "beac8"
@@ -196,11 +212,11 @@ menu "BLE-MQTT Proxy"
             bool "Set BLE Device 9"
             default y
         config BLE_DEVICE_9_MAJ
-            int "Major value of BLE device 9" if BLE_DEVICE_9
-            default 7
+            hex "Major value of BLE device 9" if BLE_DEVICE_9
+            default 0x07
         config BLE_DEVICE_9_MIN
-            int "Minor value of BLE device 9" if BLE_DEVICE_9
-            default 9
+            hex "Minor value of BLE device 9" if BLE_DEVICE_9
+            default 0x09
         config BLE_DEVICE_9_NAME
             string "Name of BLE device 9" if BLE_DEVICE_9
             default "beac9"
@@ -209,11 +225,11 @@ menu "BLE-MQTT Proxy"
             bool "Set BLE Device 10"
             default y
         config BLE_DEVICE_10_MAJ
-            int "Major value of BLE device 10" if BLE_DEVICE_10
-            default 7
+            hex "Major value of BLE device 10" if BLE_DEVICE_10
+            default 0x07
         config BLE_DEVICE_10_MIN
-            int "Minor value of BLE device 10" if BLE_DEVICE_10
-            default 10
+            hex "Minor value of BLE device 10" if BLE_DEVICE_10
+            default 0x0A
         config BLE_DEVICE_10_NAME
             string "Name of BLE device 10" if BLE_DEVICE_10
             default "beac10"
