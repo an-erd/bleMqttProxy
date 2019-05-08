@@ -40,7 +40,6 @@
                 "${workspaceFolder}/components/ssd1306/include",
                 "C:/msys32/home/AKAEM/esp/esp-idf/components/esp_ringbuf/include",
                 "C:/msys32/home/AKAEM/esp/esp-idf/components/esp_ringbuf/include",
-                "${workspaceFolder}/components/i2c_bus/include",
                 "C:/msys32/home/AKAEM/esp/esp-idf/components/mqtt/esp-mqtt/include",
                 "${workspaceFolder}/components/button/button/include",
                 "${workspaceFolder}/build/include",

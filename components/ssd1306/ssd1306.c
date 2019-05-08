@@ -21,8 +21,6 @@
 
 static const char* TAG = "SSD1306";
 
-// static uint8_t s_chDisplayBuffer[OLED_PAGES][OLED_COLUMNS] = { 0 };
-
 static uint32_t _pow(uint8_t m, uint8_t n)
 {
     uint32_t result = 1;
@@ -105,22 +103,58 @@ void ssd1306_fill_point(ssd1306_canvas_t *canvas, uint8_t chXpos, uint8_t chYpos
     chTemp = 1 << chBx;
 
     if (chPoint) {
-        canvas->s_chDisplayBuffer[chPos*canvas->w + chXpos] |= chTemp;
+        canvas->s_chDisplayBuffer[chPos * canvas->w + chXpos] |= chTemp;
     } else {
-        canvas->s_chDisplayBuffer[chPos*canvas->w + chXpos] &= ~chTemp;
+        canvas->s_chDisplayBuffer[chPos * canvas->w + chXpos] &= ~chTemp;
     }
 }
 
 esp_err_t ssd1306_fill_rectangle(ssd1306_canvas_t *canvas, uint8_t chXpos1, uint8_t chYpos1,
     uint8_t chXpos2, uint8_t chYpos2, uint8_t chDot)
 {
-    uint8_t chXpos, chYpos;
+    uint8_t chXpos;
+    uint8_t y1Page, y2Page;
+    uint8_t fillpattern;
 
-    for (chXpos = chXpos1; chXpos <= chXpos2; chXpos++) {
-        for (chYpos = chYpos1; chYpos <= chYpos2; chYpos++) {
-            ssd1306_fill_point(canvas, chXpos, chYpos, chDot);
+    if( (chXpos1 > chXpos2) || (chYpos1 > chYpos2) )
+        return ESP_OK;
+
+    y1Page = chYpos1       / OLED_PIXEL_PER_PAGE + (chYpos1 % OLED_PIXEL_PER_PAGE ? 1 : 0 );
+    y2Page = (chYpos2 + 1) / OLED_PIXEL_PER_PAGE;
+
+    // middle block (y-wise full pages)
+    for (int i = y1Page; i < y2Page; i++){
+        memset(&canvas->s_chDisplayBuffer[i * canvas->w + chXpos1], (chDot ? 0xFF : 0x00), chXpos2 - chXpos1 + 1);
+    }
+
+    // top block (not a full page)
+    if(chYpos1 % OLED_PIXEL_PER_PAGE){
+        fillpattern = 0xFF << (chYpos1 % OLED_PIXEL_PER_PAGE);  // 1: fill, 0: don't overwrite
+        if(chDot){
+            for (chXpos = chXpos1; chXpos <= chXpos2; chXpos++) {
+                canvas->s_chDisplayBuffer[(y1Page - 1) * canvas->w  + chXpos] |= fillpattern;
+            }
+        } else {
+            for (chXpos = chXpos1; chXpos <= chXpos2; chXpos++) {
+                canvas->s_chDisplayBuffer[(y1Page - 1) * canvas->w  + chXpos] &= ~fillpattern;
+            }
         }
     }
+
+    // bottom block (not a full page)
+    if( (chYpos2 + 1) % OLED_PIXEL_PER_PAGE){
+        fillpattern = 0xFF >> ( OLED_PIXEL_PER_PAGE - (chYpos2 + 1) % OLED_PIXEL_PER_PAGE);
+        if(chDot){
+            for (chXpos = chXpos1; chXpos <= chXpos2; chXpos++) {
+                canvas->s_chDisplayBuffer[y2Page * canvas->w + chXpos] |= fillpattern;
+            }
+        } else {
+            for (chXpos = chXpos1; chXpos <= chXpos2; chXpos++) {
+                canvas->s_chDisplayBuffer[y2Page * canvas->w + chXpos] &= ~fillpattern;
+            }
+        }
+    }
+
     return ESP_OK;
 }
 
