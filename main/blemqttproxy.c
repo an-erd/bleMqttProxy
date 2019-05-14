@@ -27,6 +27,7 @@
 #include "lwip/netdb.h"
 #include "mqtt_client.h"
 #include "iot_button.h"
+#include "iot_param.h"
 #include <inttypes.h>
 
 #ifdef CONFIG_DISPLAY_SSD1306
@@ -41,6 +42,7 @@
 #endif // CONFIG_LOCAL_SENSORS_TEMPERATURE
 
 static const char* TAG = "BLEMQTTPROXY";
+
 #define ENDIAN_CHANGE_U16(x) ((((x)&0xFF00)>>8) + (((x)&0xFF)<<8))
 #define MSB_16(a) (((a) & 0xFF00) >> 8)
 #define LSB_16(a) ((a) & 0x00FF)
@@ -51,6 +53,16 @@ static const char* TAG = "BLEMQTTPROXY";
 
 #define SHT3_GET_HUMIDITY_VALUE(humidity_msb, humidity_lsb) \
     ((((int16_t)humidity_msb << 8) | ((int16_t)humidity_lsb))*100/(float)0xFFFF)
+
+
+// IOT param
+#define PARAM_NAMESPACE "blemqttproxy"
+#define PARAM_KEY       "activebeac"
+
+typedef struct {
+    uint16_t active_beacon_mask;
+} param_t;
+param_t blemqttproxy_param = { 0 };
 
 // BLE
 const uint8_t uuid_zeros[ESP_UUID_LEN_32] = {0x00, 0x00, 0x00, 0x00};
@@ -175,7 +187,7 @@ static void periodic_timer_stop();
 // Local sensor: DS18B20 temperatur sensor
 #ifdef CONFIG_LOCAL_SENSORS_TEMPERATURE
 #define GPIO_DS18B20_0              (CONFIG_ONE_WIRE_GPIO)
-#define OWB_MAX_DEVICES             (8)
+#define OWB_MAX_DEVICES             (CONFIG_OWB_MAX_DEVICES)
 #define DS18B20_RESOLUTION          (DS18B20_RESOLUTION_12_BIT)
 #define LOCAL_SENSOR_SAMPLE_PERIOD  (1000)   // milliseconds
 static OneWireBus *s_owb = NULL;
@@ -183,6 +195,13 @@ static OneWireBus_ROMCode s_device_rom_codes[OWB_MAX_DEVICES] = {0};
 static int s_owb_num_devices = 0;
 static OneWireBus_SearchState s_owb_search_state = {0};
 static DS18B20_Info *s_owb_devices[OWB_MAX_DEVICES] = {0};
+
+typedef struct  {
+    float   temperature;
+    int64_t last_seen;
+} local_temperature_data_t;
+local_temperature_data_t local_temperature_data[OWB_MAX_DEVICES] = { 0 };
+
 #endif // CONFIG_LOCAL_SENSORS_TEMPERATURE
 
 // Button
@@ -228,12 +247,6 @@ void button_release_cb(void* arg)
 
     if(esp_timer_get_time() < time_button_long_press){
         s_display_show = set_next_display_show(s_display_show);
-//         s_display_show++;
-// #ifndef CONFIG_DISPLAY_TIME_TEST
-//         s_display_show %= CONFIG_BLE_DEVICE_COUNT_USE+3;
-// #else
-//         s_display_show %= CONFIG_BLE_DEVICE_COUNT_USE+4; // add extra test screen
-// #endif
     } else {
         s_display_show = 0;
     }
@@ -480,7 +493,6 @@ static void ssd1306_task(void* pvParameters)
         ESP_LOGD(TAG, "ssd1306_task: uxBits = %d", uxBits);
         ssd1306_update(canvas, uxBits);
     }
-    // iot_ssd1306_delete(dev, true);
     vTaskDelete(NULL);
 }
 #endif // CONFIG_DISPLAY_SSD1306
@@ -815,7 +827,7 @@ void init_owb_tempsensor(){
     }
     else
     {
-        ESP_LOGE(TAG, "init_owb_tempsensor: found more than one device");
+        ESP_LOGE(TAG, "init_owb_tempsensor: found %d devices, expected 1 device", s_owb_num_devices);
         // // Search for a known ROM code (LSB first):
         // // For example: 0x1502162ca5b2ee28
         // OneWireBus_ROMCode known_device = {
@@ -830,7 +842,7 @@ void init_owb_tempsensor(){
         // owb_status search_status = owb_verify_rom(s_owb, known_device, &is_present);
         // if (search_status == OWB_STATUS_OK)
         // {
-        //     printf("Device %s is %s\n", rom_code_s, is_present ? "present" : "not present");
+        //     printf("Device %s is %s", rom_code_s, is_present ? "present" : "not present");
         // }
         // else
         // {
@@ -846,7 +858,7 @@ void init_owb_tempsensor(){
 
         if (s_owb_num_devices == 1)
         {
-            ESP_LOGI(TAG,"Single device optimisations enabled\n");
+            ESP_LOGI(TAG,"Single device optimisations enabled");
             ds18b20_init_solo(ds18b20_info, s_owb);
         }
         else
@@ -867,25 +879,18 @@ void cleanup_owb_tempsensor(){
     owb_uninitialize(s_owb);
 }
 
-void local_sensor_read_all(){
+void update_local_temp_data(uint8_t num_devices, float *readings)
+{
+    for(int i = 0; i < num_devices; i++){
+        local_temperature_data[i].temperature = readings[i];
+        local_temperature_data[i].last_seen   = esp_timer_get_time();
+    }
 
+    xEventGroupSetBits(s_values_evg, UPDATE_TEMP);
 }
 
 static void localsensor_task(void* pvParameters)
 {
-//    // Read temperatures from all sensors sequentially
-//    while (1)
-//    {
-//        printf("\nTemperature readings (degrees C):\n");
-//        for (int i = 0; i < num_devices; ++i)
-//        {
-//            float temp = ds18b20_get_temp(devices[i]);
-//            printf("  %d: %.3f\n", i, temp);
-//        }
-//        vTaskDelay(1000 / portTICK_PERIOD_MS);
-//    }
-
-    // Read temperatures more efficiently by starting conversions on all devices at the same time
     int errors_count[OWB_MAX_DEVICES] = {0};
     int sample_count = 0;
     if (s_owb_num_devices > 0){
@@ -902,7 +907,6 @@ static void localsensor_task(void* pvParameters)
             ds18b20_wait_for_conversion(s_owb_devices[0]);
 
             // Read the results immediately after conversion otherwise it may fail
-            // (using printf before reading may take too long)
             float readings[OWB_MAX_DEVICES] = { 0 };
             DS18B20_ERROR errors[OWB_MAX_DEVICES] = { 0 };
 
@@ -911,18 +915,15 @@ static void localsensor_task(void* pvParameters)
                 errors[i] = ds18b20_read_temp(s_owb_devices[i], &readings[i]);
             }
 
-            // Print results in a separate loop, after all have been read
-            ESP_LOGI(TAG, "Temperature readings (degrees C): sample %d\n", ++sample_count);
-            for (int i = 0; i < s_owb_num_devices; ++i)
-            {
+            ESP_LOGI(TAG, "Temperature readings (degrees C): sample %d", ++sample_count);
+            for (int i = 0; i < s_owb_num_devices; ++i){
                 if (errors[i] != DS18B20_OK){
                     ++errors_count[i];
                 }
-
                 ESP_LOGI(TAG, "  %d: %.1f    %d errors", i, readings[i], errors_count[i]);
             }
 
-            xEventGroupSetBits(s_values_evg, UPDATE_TEMP);
+            update_local_temp_data(s_owb_num_devices, readings);
 
             vTaskDelayUntil(&last_wake_time, LOCAL_SENSOR_SAMPLE_PERIOD / portTICK_PERIOD_MS);
         }
@@ -933,9 +934,41 @@ static void localsensor_task(void* pvParameters)
 
 #endif // CONFIG_LOCAL_SENSORS_TEMPERATURE
 
+static void initialize_nvs()
+{
+    esp_err_t ret;
+
+    // Initialize NVS
+    ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK( ret );
+}
+
+static esp_err_t read_blemqttproxy_param()
+{
+    esp_err_t ret;
+
+    ret = iot_param_load(PARAM_NAMESPACE, PARAM_KEY, &blemqttproxy_param);
+    if(ret == ESP_OK){
+        ESP_LOGI(TAG, "read_blemqttproxy_param: read param ok, beacon mask %u", blemqttproxy_param.active_beacon_mask);
+    } else {
+        ESP_LOGE(TAG, "read_blemqttproxy_param: read param failed, ret = %d, initialize and save to NVS", ret);
+        blemqttproxy_param.active_beacon_mask = CONFIG_ACTIVE_BLE_DEVICE_MASK;
+        ret = iot_param_save(PARAM_NAMESPACE, PARAM_KEY, &blemqttproxy_param, sizeof(param_t));
+    }
+
+    return ret;
+}
+
 void app_main()
 {
-    ESP_ERROR_CHECK(nvs_flash_init());
+    // NVS initialization and beacon mask retrieval
+    initialize_nvs();
+    ESP_ERROR_CHECK(read_blemqttproxy_param());
+
     ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
     wifi_init();
     mqtt_init();
