@@ -265,6 +265,13 @@ menu "BLE-MQTT Proxy"
             range 0 1023
             default 1023
 
+        config PROXIMITY_RSSI_THRESHOLD
+            int "Proximity RSSI Threshold"
+            range -80 0
+            default -27
+            help
+                Lower limit for RSSI to initiate an beacon announcement by getting close to the proxy.
+
     endmenu
 
     menu "Button"

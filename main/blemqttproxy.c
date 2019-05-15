@@ -67,6 +67,9 @@ param_t blemqttproxy_param = { 0 };
 // BLE
 const uint8_t uuid_zeros[ESP_UUID_LEN_32] = {0x00, 0x00, 0x00, 0x00};
 static uint8_t beacon_maj_min_to_idx(uint16_t maj, uint16_t min);
+static bool is_beacon_idx_active(uint16_t idx);
+static void set_beacon_idx_active(uint16_t idx);
+static void clear_beacon_idx_active(uint16_t idx);
 static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
 
 typedef struct  {
@@ -140,6 +143,9 @@ esp_ble_mybeacon_head_t mybeacon_common_head = {
 esp_ble_mybeacon_vendor_t mybeacon_common_vendor = {
     .proximity_uuid ={CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4},
 };
+
+#define UNKNOWN_BEACON      99
+static uint16_t s_active_beacon_mask = 0;
 
 // Display
 #define UPDATE_BEAC0     (BIT0)
@@ -240,6 +246,12 @@ uint8_t set_next_display_show(uint8_t current_display)
     return current_display;
 }
 
+void handle_long_button_push(uint8_t current_display){
+    if( (current_display > 0) && (current_display < (CONFIG_BLE_DEVICE_COUNT_USE+1))){
+        clear_beacon_idx_active(current_display - 1);
+    }
+}
+
 void button_release_cb(void* arg)
 {
     char* pstr = (char*) arg;
@@ -248,7 +260,8 @@ void button_release_cb(void* arg)
     if(esp_timer_get_time() < time_button_long_press){
         s_display_show = set_next_display_show(s_display_show);
     } else {
-        s_display_show = 0;
+        // s_display_show = 0;
+        handle_long_button_push(s_display_show);
     }
 
     if(s_display_show == 0){
@@ -392,68 +405,67 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
 #ifdef CONFIG_DISPLAY_TIME_TEST
     if (s_display_show == CONFIG_BLE_DEVICE_COUNT_USE+3){
         // DISPLAY TEST FUNCTIONS
-ESP_LOGE(TAG, "displaytest > 1");
-            ssd1306_clear_canvas(canvas, 0x00);
-            ssd1306_fill_point(canvas, 9, 0, 1);
-            ssd1306_fill_point(canvas, 9, 8, 1);
-            ssd1306_fill_point(canvas, 9, 16, 1);
-            ssd1306_fill_point(canvas, 9, 24, 1);
-ESP_LOGE(TAG, "displaytest > 2");
+        ESP_LOGE(TAG, "displaytest > 1");
+        ssd1306_clear_canvas(canvas, 0x00);
+        ssd1306_fill_point(canvas, 9, 0, 1);
+        ssd1306_fill_point(canvas, 9, 8, 1);
+        ssd1306_fill_point(canvas, 9, 16, 1);
+        ssd1306_fill_point(canvas, 9, 24, 1);
+        ESP_LOGE(TAG, "displaytest > 2");
 
-            // ssd1306_fill_rectangle(canvas, 1, 0, 1,  6, 1);
-            // ssd1306_fill_rectangle(canvas, 2, 0, 2,  7, 1);
-            // ssd1306_fill_rectangle(canvas, 3, 0, 3,  8, 1);
-            // ssd1306_fill_rectangle(canvas, 4, 0, 4,  9, 1);
-            // canvas->s_chDisplayBuffer[0 * canvas->w  + 5] |= 0x01;
-            // canvas->s_chDisplayBuffer[0 * canvas->w  + 6] |= 0x0F;
-            // canvas->s_chDisplayBuffer[0 * canvas->w  + 7] |= 0x10;
-            // canvas->s_chDisplayBuffer[0 * canvas->w  + 8] |= 0xF0;
-            // canvas->s_chDisplayBuffer[0 * canvas->w  + 9] |= 0xFF;
+        // ssd1306_fill_rectangle(canvas, 1, 0, 1,  6, 1);
+        // ssd1306_fill_rectangle(canvas, 2, 0, 2,  7, 1);
+        // ssd1306_fill_rectangle(canvas, 3, 0, 3,  8, 1);
+        // ssd1306_fill_rectangle(canvas, 4, 0, 4,  9, 1);
+        // canvas->s_chDisplayBuffer[0 * canvas->w  + 5] |= 0x01;
+        // canvas->s_chDisplayBuffer[0 * canvas->w  + 6] |= 0x0F;
+        // canvas->s_chDisplayBuffer[0 * canvas->w  + 7] |= 0x10;
+        // canvas->s_chDisplayBuffer[0 * canvas->w  + 8] |= 0xF0;
+        // canvas->s_chDisplayBuffer[0 * canvas->w  + 9] |= 0xFF;
+        ssd1306_fill_rectangle(canvas, 10,  0, 10,  7, 1);
+        ssd1306_fill_rectangle(canvas, 11,  1, 11,  7, 1);
+        ssd1306_fill_rectangle(canvas, 12,  2, 12,  7, 1);
+        ssd1306_fill_rectangle(canvas, 13,  3, 13,  7, 1);
+        ssd1306_fill_rectangle(canvas, 14,  4, 14,  7, 1);
+        ssd1306_fill_rectangle(canvas, 15,  5, 15,  7, 1);
+        ssd1306_fill_rectangle(canvas, 16,  6, 16,  7, 1);
+        ssd1306_fill_rectangle(canvas, 17,  7, 17,  7, 1);
+        ESP_LOGE(TAG, "displaytest > 3");
 
-            ssd1306_fill_rectangle(canvas, 10,  0, 10,  7, 1);
-            ssd1306_fill_rectangle(canvas, 11,  1, 11,  7, 1);
-            ssd1306_fill_rectangle(canvas, 12,  2, 12,  7, 1);
-            ssd1306_fill_rectangle(canvas, 13,  3, 13,  7, 1);
-            ssd1306_fill_rectangle(canvas, 14,  4, 14,  7, 1);
-            ssd1306_fill_rectangle(canvas, 15,  5, 15,  7, 1);
-            ssd1306_fill_rectangle(canvas, 16,  6, 16,  7, 1);
-            ssd1306_fill_rectangle(canvas, 17,  7, 17,  7, 1);
-ESP_LOGE(TAG, "displaytest > 3");
+        ssd1306_fill_rectangle(canvas, 20,  0, 20,  8, 1);
+        ssd1306_fill_rectangle(canvas, 21,  1, 21,  9, 1);
+        ssd1306_fill_rectangle(canvas, 22,  2, 22, 10, 1);
+        ssd1306_fill_rectangle(canvas, 23,  3, 23, 11, 1);
+        ssd1306_fill_rectangle(canvas, 24,  4, 24, 12, 1);
+        ssd1306_fill_rectangle(canvas, 25,  5, 25, 13, 1);
+        ssd1306_fill_rectangle(canvas, 26,  6, 26, 14, 1);
+        ssd1306_fill_rectangle(canvas, 27,  7, 27, 15, 1);
+        ssd1306_fill_rectangle(canvas, 28,  8, 28, 16, 1);
+        ssd1306_fill_rectangle(canvas, 29,  9, 29, 17, 1);
+        ESP_LOGE(TAG, "displaytest > 4");
 
-            ssd1306_fill_rectangle(canvas, 20,  0, 20,  8, 1);
-            ssd1306_fill_rectangle(canvas, 21,  1, 21,  9, 1);
-            ssd1306_fill_rectangle(canvas, 22,  2, 22, 10, 1);
-            ssd1306_fill_rectangle(canvas, 23,  3, 23, 11, 1);
-            ssd1306_fill_rectangle(canvas, 24,  4, 24, 12, 1);
-            ssd1306_fill_rectangle(canvas, 25,  5, 25, 13, 1);
-            ssd1306_fill_rectangle(canvas, 26,  6, 26, 14, 1);
-            ssd1306_fill_rectangle(canvas, 27,  7, 27, 15, 1);
-            ssd1306_fill_rectangle(canvas, 28,  8, 28, 16, 1);
-            ssd1306_fill_rectangle(canvas, 29,  9, 29, 17, 1);
-ESP_LOGE(TAG, "displaytest > 4");
+        ssd1306_fill_rectangle(canvas, 40,  0,  40, 16, 1);
+        ssd1306_fill_rectangle(canvas, 41,  1,  41, 17, 1);
+        ssd1306_fill_rectangle(canvas, 42,  2,  42, 18, 1);
+        ssd1306_fill_rectangle(canvas, 43,  3,  43, 19, 1);
+        ssd1306_fill_rectangle(canvas, 44,  4,  44, 20, 1);
+        ssd1306_fill_rectangle(canvas, 45,  5,  45, 21, 1);
+        ssd1306_fill_rectangle(canvas, 46,  6,  46, 22, 1);
+        ssd1306_fill_rectangle(canvas, 47,  7,  47, 23, 1);
+        ssd1306_fill_rectangle(canvas, 48,  8,  48, 24, 1);
+        ssd1306_fill_rectangle(canvas, 49,  9,  49, 25, 1);
+        ssd1306_fill_rectangle(canvas, 50,  10, 50, 26, 1);
+        ssd1306_fill_point(canvas, 52, 0, 1);
+        ssd1306_fill_point(canvas, 52, 8, 1);
+        ssd1306_fill_point(canvas, 52, 16, 1);
+        ssd1306_fill_point(canvas, 52, 24, 1);
+        ssd1306_fill_point(canvas, 52, 32, 1);
+        ESP_LOGE(TAG, "displaytest > 5");
 
-            ssd1306_fill_rectangle(canvas, 40,  0,  40, 16, 1);
-            ssd1306_fill_rectangle(canvas, 41,  1,  41, 17, 1);
-            ssd1306_fill_rectangle(canvas, 42,  2,  42, 18, 1);
-            ssd1306_fill_rectangle(canvas, 43,  3,  43, 19, 1);
-            ssd1306_fill_rectangle(canvas, 44,  4,  44, 20, 1);
-            ssd1306_fill_rectangle(canvas, 45,  5,  45, 21, 1);
-            ssd1306_fill_rectangle(canvas, 46,  6,  46, 22, 1);
-            ssd1306_fill_rectangle(canvas, 47,  7,  47, 23, 1);
-            ssd1306_fill_rectangle(canvas, 48,  8,  48, 24, 1);
-            ssd1306_fill_rectangle(canvas, 49,  9,  49, 25, 1);
-            ssd1306_fill_rectangle(canvas, 50,  10, 50, 26, 1);
-
-            ssd1306_fill_point(canvas, 52, 0, 1);
-            ssd1306_fill_point(canvas, 52, 8, 1);
-            ssd1306_fill_point(canvas, 52, 16, 1);
-            ssd1306_fill_point(canvas, 52, 24, 1);
-            ssd1306_fill_point(canvas, 52, 32, 1);
-ESP_LOGE(TAG, "displaytest > 5");
-            ret = ssd1306_refresh_gram(canvas);
-ESP_LOGE(TAG, "displaytest > 6");
-    return ret;
-        }
+        ret = ssd1306_refresh_gram(canvas);
+        ESP_LOGE(TAG, "displaytest > 6");
+        return ret;
+    }
 #endif // CONFIG_DISPLAY_TIME_TEST
 
     if(uxBits & (1 << idx)){
@@ -466,6 +478,8 @@ ESP_LOGE(TAG, "displaytest > 6");
         ssd1306_draw_string(canvas, 0, 24, (const uint8_t*) buffer, 10, 1);
         snprintf(buffer, 128, "RSSI %3d dBm", ble_adv_data[idx].measured_power);
         ssd1306_draw_string(canvas, 0, 36, (const uint8_t*) buffer, 10, 1);
+        snprintf(buffer, 128, "active: %s",(is_beacon_idx_active(idx)?"y":"n"));
+        ssd1306_draw_string(canvas, 0, 48, (const uint8_t*) buffer, 10, 1);
 
         last_dislay_shown = s_display_show;
         return ssd1306_refresh_gram(canvas);
@@ -607,7 +621,22 @@ uint8_t beacon_maj_min_to_idx(uint16_t maj, uint16_t min)
 
     ESP_LOGE(TAG, "beacon_maj_min_to_idx: unknown maj %d min %d", maj, min);
 
-    return 0;
+    return UNKNOWN_BEACON;
+}
+
+bool is_beacon_idx_active(uint16_t idx)
+{
+    return (s_active_beacon_mask & (1 << idx) );
+}
+
+void set_beacon_idx_active(uint16_t idx)
+{
+    s_active_beacon_mask |= (1 << idx);
+}
+
+void clear_beacon_idx_active(uint16_t idx)
+{
+    s_active_beacon_mask &= ~(1 << idx);
 }
 
 void update_adv_data(uint16_t maj, uint16_t min, int8_t measured_power,
@@ -695,6 +724,20 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
 
                 uint16_t maj      = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.major);
                 uint16_t min      = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.minor);
+                uint8_t  idx      = beacon_maj_min_to_idx(maj, min);
+
+                if( (idx != UNKNOWN_BEACON) && (!is_beacon_idx_active(idx)) ){
+                    if(scan_result->scan_rst.rssi > CONFIG_PROXIMITY_RSSI_THRESHOLD) {
+                        ESP_LOGI(TAG, "Announcing new mybeacon (0x%04x%04x), idx %d, RSSI %d", maj, min, idx,
+                            scan_result->scan_rst.rssi);
+                        set_beacon_idx_active(idx);
+                    } else {
+                        ESP_LOGD(TAG, "mybeacon not active, not close enough (0x%04x%04x), idx %d, RSSI %d",
+                            maj, min, idx, scan_result->scan_rst.rssi);
+                        break;
+                    }
+                }
+
                 float    temp     = SHT3_GET_TEMPERATURE_VALUE(
                                       LSB_16(mybeacon_data->mybeacon_payload.temp),
                                       MSB_16(mybeacon_data->mybeacon_payload.temp) );
@@ -959,6 +1002,8 @@ static esp_err_t read_blemqttproxy_param()
         blemqttproxy_param.active_beacon_mask = CONFIG_ACTIVE_BLE_DEVICE_MASK;
         ret = iot_param_save(PARAM_NAMESPACE, PARAM_KEY, &blemqttproxy_param, sizeof(param_t));
     }
+
+    s_active_beacon_mask = blemqttproxy_param.active_beacon_mask;
 
     return ret;
 }
