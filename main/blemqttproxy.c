@@ -745,9 +745,9 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                                       LSB_16(mybeacon_data->mybeacon_payload.humidity),
                                       MSB_16(mybeacon_data->mybeacon_payload.humidity) );
                 uint16_t battery  = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.battery);
-                int16_t x         = (int16_t)ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.x);
-                int16_t y         = (int16_t)ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.y);
-                int16_t z         = (int16_t)ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.z);
+                int16_t x         = (int16_t)(mybeacon_data->mybeacon_payload.x);
+                int16_t y         = (int16_t)(mybeacon_data->mybeacon_payload.y);
+                int16_t z         = (int16_t)(mybeacon_data->mybeacon_payload.z);
 
                 ESP_LOGI(TAG, "(0x%04x%04x) rssi %3d | temp %5.1f | hum %5.1f | x %+6d | y %+6d | z %+6d | batt %4d",
                     maj, min, scan_result->scan_rst.rssi, temp, humidity, x, y, z, battery );
