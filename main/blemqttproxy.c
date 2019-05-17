@@ -70,6 +70,7 @@ static uint8_t beacon_maj_min_to_idx(uint16_t maj, uint16_t min);
 static bool is_beacon_idx_active(uint16_t idx);
 static void set_beacon_idx_active(uint16_t idx);
 static void clear_beacon_idx_active(uint16_t idx);
+static bool toggle_beacon_idx_active(uint16_t idx);
 static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
 
 typedef struct  {
@@ -248,7 +249,7 @@ uint8_t set_next_display_show(uint8_t current_display)
 
 void handle_long_button_push(uint8_t current_display){
     if( (current_display > 0) && (current_display < (CONFIG_BLE_DEVICE_COUNT_USE+1))){
-        clear_beacon_idx_active(current_display - 1);
+        toggle_beacon_idx_active(current_display - 1);
     }
 }
 
@@ -300,11 +301,13 @@ void button_release_cb(void* arg)
 void periodic_timer_start()
 {
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, UPDATE_LAST_SEEN_INTERVAL));
+    periodic_timer_running = true;
 }
 
 void periodic_timer_stop()
 {
     ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
+    periodic_timer_running = false;
 }
 
 void periodic_timer_callback(void* arg)
@@ -329,7 +332,7 @@ void convert_s_hhmmss(uint16_t sec, uint8_t *h, uint8_t *m, uint8_t *s)
 esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
 {
     esp_err_t ret;
-    char buffer[128];
+    char buffer[128], buffer2[32];
     static uint8_t last_dislay_shown = 99;
     int idx = s_display_show - 1;
 
@@ -338,12 +341,10 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
     if(run_periodic_timer){
         if(!periodic_timer_running){
             periodic_timer_start();
-            periodic_timer_running = true;
         }
     } else {
         if(periodic_timer_running){
             periodic_timer_stop();
-            periodic_timer_running = false;
         }
     }
 
@@ -366,19 +367,29 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
             snprintf(buffer, 128, "%s", app_desc->version);
             ssd1306_draw_string(canvas, 0, 0, (const uint8_t*) buffer, 10, 1);
             snprintf(buffer, 128, "%s", app_desc->project_name);
-            ssd1306_draw_string(canvas, 0, 12, (const uint8_t*) buffer, 10, 1);
+            ssd1306_draw_string(canvas, 0, 11, (const uint8_t*) buffer, 10, 1);
             snprintf(buffer, 128, "%s", app_desc->idf_ver);
-            ssd1306_draw_string(canvas, 0, 24, (const uint8_t*) buffer, 10, 1);
+            ssd1306_draw_string(canvas, 0, 22, (const uint8_t*) buffer, 10, 1);
             snprintf(buffer, 128, "%2X:%2X:%2X:%2X:%2X:%2X",
                 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-            ssd1306_draw_string(canvas, 0, 36, (const uint8_t*) buffer, 10, 1);
+            ssd1306_draw_string(canvas, 0, 33, (const uint8_t*) buffer, 10, 1);
 #ifdef CONFIG_USE_MQTT
             bool mqtt_avail = true;
 #else
             bool mqtt_avail = false;
 #endif
-            snprintf(buffer, 128, "MQTT: %s",(mqtt_avail?"y":"n"));
-            ssd1306_draw_string(canvas, 0, 48, (const uint8_t*) buffer, 10, 1);
+            snprintf(buffer, 128, "MQTT: %s", (mqtt_avail ? "y" : "n"));
+            ssd1306_draw_string(canvas, 0, 44, (const uint8_t*) buffer, 10, 1);
+
+            itoa(s_active_beacon_mask, buffer2, 2);
+            int num_lead_zeros = CONFIG_BLE_DEVICE_COUNT_USE - strlen(buffer2);
+            if(!num_lead_zeros){
+                snprintf(buffer, 128, "Act:  %s", buffer2);
+            } else {
+                snprintf(buffer, 128, "Act:  %0*d%s (%d..1)", num_lead_zeros, 0, buffer2, CONFIG_BLE_DEVICE_COUNT_USE);
+            }
+            // snprintf(buffer, 128, "Act:  %d", s_active_beacon_mask);
+            ssd1306_draw_string(canvas, 0, 55, (const uint8_t*) buffer, 10, 1);
 
             last_dislay_shown = s_display_show;
             return ssd1306_refresh_gram(canvas);
@@ -637,6 +648,13 @@ void set_beacon_idx_active(uint16_t idx)
 void clear_beacon_idx_active(uint16_t idx)
 {
     s_active_beacon_mask &= ~(1 << idx);
+}
+
+bool toggle_beacon_idx_active(uint16_t idx)
+{
+    s_active_beacon_mask ^= (1 << idx);
+
+    return s_active_beacon_mask & (1 << idx);
 }
 
 void update_adv_data(uint16_t maj, uint16_t min, int8_t measured_power,
@@ -993,6 +1011,7 @@ static void initialize_nvs()
 static esp_err_t read_blemqttproxy_param()
 {
     esp_err_t ret;
+    uint16_t mask = 0xFFFF;
 
     ret = iot_param_load(PARAM_NAMESPACE, PARAM_KEY, &blemqttproxy_param);
     if(ret == ESP_OK){
@@ -1003,7 +1022,8 @@ static esp_err_t read_blemqttproxy_param()
         ret = iot_param_save(PARAM_NAMESPACE, PARAM_KEY, &blemqttproxy_param, sizeof(param_t));
     }
 
-    s_active_beacon_mask = blemqttproxy_param.active_beacon_mask;
+    mask >>= 16 - CONFIG_BLE_DEVICE_COUNT_USE; // len = 16 bit, only use configured dev to use
+    s_active_beacon_mask = blemqttproxy_param.active_beacon_mask & mask;
 
     return ret;
 }
