@@ -384,11 +384,10 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
             itoa(s_active_beacon_mask, buffer2, 2);
             int num_lead_zeros = CONFIG_BLE_DEVICE_COUNT_USE - strlen(buffer2);
             if(!num_lead_zeros){
-                snprintf(buffer, 128, "Act:  %s", buffer2);
+                snprintf(buffer, 128, "Act:  %s (%d..1)", buffer2, CONFIG_BLE_DEVICE_COUNT_USE);
             } else {
                 snprintf(buffer, 128, "Act:  %0*d%s (%d..1)", num_lead_zeros, 0, buffer2, CONFIG_BLE_DEVICE_COUNT_USE);
             }
-            // snprintf(buffer, 128, "Act:  %d", s_active_beacon_mask);
             ssd1306_draw_string(canvas, 0, 55, (const uint8_t*) buffer, 10, 1);
 
             last_dislay_shown = s_display_show;
@@ -398,23 +397,34 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
         }
     } else if (s_display_show == CONFIG_BLE_DEVICE_COUNT_USE+2){
         ssd1306_clear_canvas(canvas, 0x00);
+        int line = 0;
         for(int i=0; i < CONFIG_BLE_DEVICE_COUNT_USE; i++){
-            bool never_seen = (ble_adv_data[i].last_seen == 0);
-            if(never_seen){
-                snprintf(buffer, 128, "%s: %c", ble_beacon_data[i].name, '/');
-            } else {
-                uint16_t last_seen_sec_gone = (esp_timer_get_time() - ble_adv_data[i].last_seen)/1000000;
-                uint8_t h, m, s;
-                convert_s_hhmmss(last_seen_sec_gone, &h, &m, &s);
-                snprintf(buffer, 128, "%s: %02d:%02d:%02d", ble_beacon_data[i].name, h, m, s);
+            if(is_beacon_idx_active(i)){
+                bool never_seen = (ble_adv_data[i].last_seen == 0);
+                if(never_seen){
+                    snprintf(buffer, 128, "%s: %c", ble_beacon_data[i].name, '/');
+                } else {
+                    uint16_t last_seen_sec_gone = (esp_timer_get_time() - ble_adv_data[i].last_seen)/1000000;
+                    uint8_t h, m, s;
+                    convert_s_hhmmss(last_seen_sec_gone, &h, &m, &s);
+                    snprintf(buffer, 128, "%s: %02d:%02d:%02d", ble_beacon_data[i].name, h, m, s);
+                }
+                ssd1306_draw_string(canvas, 0, line*10, (const uint8_t*) buffer, 10, 1);
+                line++;
             }
-            ssd1306_draw_string(canvas, 0, i*10, (const uint8_t*) buffer, 10, 1);
         }
         return ssd1306_refresh_gram(canvas);
+#ifdef CONFIG_LOCAL_SENSORS_TEMPERATURE
+    } else if (s_display_show == CONFIG_BLE_DEVICE_COUNT_USE+3){
+        ssd1306_clear_canvas(canvas, 0x00);
+        snprintf(buffer, 128, "local temperature");
+        ssd1306_draw_string(canvas, 0, 0, (const uint8_t*) buffer, 10, 1);
+        return ssd1306_refresh_gram(canvas);
+#endif
     }
 
 #ifdef CONFIG_DISPLAY_TIME_TEST
-    if (s_display_show == CONFIG_BLE_DEVICE_COUNT_USE+3){
+    if (s_display_show == CONFIG_BLE_DEVICE_COUNT_USE+4){
         // DISPLAY TEST FUNCTIONS
         ESP_LOGE(TAG, "displaytest > 1");
         ssd1306_clear_canvas(canvas, 0x00);
@@ -483,12 +493,21 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
         ssd1306_clear_canvas(canvas, 0x00);
         snprintf(buffer, 128, "%s", ble_beacon_data[idx].name);
         ssd1306_draw_string(canvas, 0, 0, (const uint8_t*) buffer, 10, 1);
-        snprintf(buffer, 128, "%5.2fC, %5.2f%%H", ble_adv_data[idx].temp, ble_adv_data[idx].humidity);
-        ssd1306_draw_string(canvas, 0, 12, (const uint8_t*) buffer, 10, 1);
-        snprintf(buffer, 128, "Batt %4d mV", ble_adv_data[idx].battery);
-        ssd1306_draw_string(canvas, 0, 24, (const uint8_t*) buffer, 10, 1);
-        snprintf(buffer, 128, "RSSI %3d dBm", ble_adv_data[idx].measured_power);
-        ssd1306_draw_string(canvas, 0, 36, (const uint8_t*) buffer, 10, 1);
+        if(is_beacon_idx_active(idx)){
+            snprintf(buffer, 128, "%5.2fC, %5.2f%%H", ble_adv_data[idx].temp, ble_adv_data[idx].humidity);
+            ssd1306_draw_string(canvas, 0, 12, (const uint8_t*) buffer, 10, 1);
+            snprintf(buffer, 128, "Batt %4d mV", ble_adv_data[idx].battery);
+            ssd1306_draw_string(canvas, 0, 24, (const uint8_t*) buffer, 10, 1);
+            snprintf(buffer, 128, "RSSI  %3d dBm", ble_adv_data[idx].measured_power);
+            ssd1306_draw_string(canvas, 0, 36, (const uint8_t*) buffer, 10, 1);
+        } else {
+            snprintf(buffer, 128, "  -  C,   -  %%H");
+            ssd1306_draw_string(canvas, 0, 12, (const uint8_t*) buffer, 10, 1);
+            snprintf(buffer, 128, "Batt   -  mV");
+            ssd1306_draw_string(canvas, 0, 24, (const uint8_t*) buffer, 10, 1);
+            snprintf(buffer, 128, "RSSI   -  dBm");
+            ssd1306_draw_string(canvas, 0, 36, (const uint8_t*) buffer, 10, 1);
+            }
         snprintf(buffer, 128, "active: %s",(is_beacon_idx_active(idx)?"y":"n"));
         ssd1306_draw_string(canvas, 0, 48, (const uint8_t*) buffer, 10, 1);
 
