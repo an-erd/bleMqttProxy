@@ -403,23 +403,38 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
             return ESP_OK;
         }
     } else if (s_display_show == CONFIG_BLE_DEVICE_COUNT_USE+2){
-        ssd1306_clear_canvas(canvas, 0x00);
-        int line = 0;
+        uint8_t num_act_beac = 0, num_pages;
+        uint8_t cur_page = 1;
         for(int i=0; i < CONFIG_BLE_DEVICE_COUNT_USE; i++){
             if(is_beacon_idx_active(i)){
-                bool never_seen = (ble_adv_data[i].last_seen == 0);
-                if(never_seen){
-                    snprintf(buffer, 128, "%s: %c", ble_beacon_data[i].name, '/');
-                } else {
-                    uint16_t last_seen_sec_gone = (esp_timer_get_time() - ble_adv_data[i].last_seen)/1000000;
-                    uint8_t h, m, s;
-                    convert_s_hhmmss(last_seen_sec_gone, &h, &m, &s);
-                    snprintf(buffer, 128, "%s: %02d:%02d:%02d", ble_beacon_data[i].name, h, m, s);
-                }
-                ssd1306_draw_string(canvas, 0, line*10, (const uint8_t*) buffer, 10, 1);
-                line++;
+                num_act_beac++;
             }
         }
+        num_pages = num_act_beac / 6 + (num_act_beac % 6 ? 1:0) + (!num_act_beac ? 1 : 0);
+
+        ssd1306_clear_canvas(canvas, 0x00);
+        if(!num_act_beac){
+            snprintf(buffer, 128, "no active beacon");
+            ssd1306_draw_string(canvas, 0, 0, (const uint8_t*) buffer, 10, 1);
+        } else {
+            int line = 0;
+            for(int i=0; i < CONFIG_BLE_DEVICE_COUNT_USE; i++){
+                if(is_beacon_idx_active(i)){
+                    bool never_seen = (ble_adv_data[i].last_seen == 0);
+                    if(never_seen){
+                        snprintf(buffer, 128, "%s: %c", ble_beacon_data[i].name, '/');
+                    } else {
+                        uint16_t last_seen_sec_gone = (esp_timer_get_time() - ble_adv_data[i].last_seen)/1000000;
+                        uint8_t h, m, s;
+                        convert_s_hhmmss(last_seen_sec_gone, &h, &m, &s);
+                        snprintf(buffer, 128, "%s: %02d:%02d:%02d", ble_beacon_data[i].name, h, m, s);
+                    }
+                    ssd1306_draw_string(canvas, 0, line*10, (const uint8_t*) buffer, 10, 1);
+                    line++;
+                }
+            }
+        }
+        draw_pagenumber(canvas, cur_page, num_pages);
         return ssd1306_refresh_gram(canvas);
 #ifdef CONFIG_LOCAL_SENSORS_TEMPERATURE
     } else if (s_display_show == CONFIG_BLE_DEVICE_COUNT_USE+3){
