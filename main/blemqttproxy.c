@@ -329,6 +329,13 @@ void convert_s_hhmmss(uint16_t sec, uint8_t *h, uint8_t *m, uint8_t *s)
 }
 
 #ifdef CONFIG_DISPLAY_SSD1306
+void draw_pagenumber(ssd1306_canvas_t *canvas, uint8_t nr_act, uint8_t nr_total)
+{
+    char buffer2[5];
+    snprintf(buffer2, 5, "%d/%d", nr_act, nr_total);
+    ssd1306_draw_string_8x8(canvas, 128-3*8, 7, (const uint8_t*) buffer2);
+}
+
 esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
 {
     esp_err_t ret;
@@ -510,6 +517,8 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
             }
         snprintf(buffer, 128, "active: %s",(is_beacon_idx_active(idx)?"y":"n"));
         ssd1306_draw_string(canvas, 0, 48, (const uint8_t*) buffer, 10, 1);
+
+        draw_pagenumber(canvas, idx+1, CONFIG_BLE_DEVICE_COUNT_USE);
 
         last_dislay_shown = s_display_show;
         return ssd1306_refresh_gram(canvas);
