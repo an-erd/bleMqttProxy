@@ -247,8 +247,10 @@ uint8_t set_next_display_show(uint8_t current_display)
     return current_display;
 }
 
-void handle_long_button_push(uint8_t current_display){
+void handle_long_button_push(uint8_t current_display)
+{
     if( (current_display > 0) && (current_display < (CONFIG_BLE_DEVICE_COUNT_USE+1))){
+        // beacon detail screen shown
         toggle_beacon_idx_active(current_display - 1);
     }
 }
@@ -417,7 +419,9 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
             snprintf(buffer, 128, "no active beacon");
             ssd1306_draw_string(canvas, 0, 0, (const uint8_t*) buffer, 10, 1);
         } else {
-            int line = 0;
+            snprintf(buffer, 128, "beacon last seen");
+            ssd1306_draw_string(canvas, 0, 0, (const uint8_t*) buffer, 10, 1);
+            int line = 1;
             for(int i=0; i < CONFIG_BLE_DEVICE_COUNT_USE; i++){
                 if(is_beacon_idx_active(i)){
                     bool never_seen = (ble_adv_data[i].last_seen == 0);
@@ -439,8 +443,9 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
 #ifdef CONFIG_LOCAL_SENSORS_TEMPERATURE
     } else if (s_display_show == CONFIG_BLE_DEVICE_COUNT_USE+3){
         ssd1306_clear_canvas(canvas, 0x00);
-        snprintf(buffer, 128, "local temperature");
+        snprintf(buffer, 128, "no local temperature");
         ssd1306_draw_string(canvas, 0, 0, (const uint8_t*) buffer, 10, 1);
+        draw_pagenumber(canvas, 1, 1);
         return ssd1306_refresh_gram(canvas);
 #endif
     }
