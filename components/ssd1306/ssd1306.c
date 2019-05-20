@@ -95,7 +95,7 @@ void ssd1306_fill_point(ssd1306_canvas_t *canvas, uint8_t chXpos, uint8_t chYpos
 {
     uint8_t chPos, chBx, chTemp = 0;
 
-    if (chXpos > canvas->w || chYpos > (canvas->h * OLED_PIXEL_PER_PAGE)) {
+    if (chXpos >= canvas->w || chYpos >= (canvas->h * OLED_PIXEL_PER_PAGE)) {
         return;
     }
     chPos = chYpos / 8;
