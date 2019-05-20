@@ -265,6 +265,11 @@ menu "BLE-MQTT Proxy"
             range 0 1023
             default 1023
 
+        config ACTIVE_BLE_DEVICE_PERSISTANCE
+            int "Store active beacon mask (after changes) to NVS"
+            range 0 1
+            default 0
+
         config PROXIMITY_RSSI_THRESHOLD
             int "Proximity RSSI Threshold"
             range -80 0
@@ -306,6 +311,11 @@ menu "BLE-MQTT Proxy"
         config LOCAL_SENSORS_TEMPERATURE
             bool "Use local temperature sensor (ds18b20)"
             default y
+
+        config MENU_MIN_LOCAL_SENSOR
+            int "Show the display entry for local sensors only if there are at least X local sensors attached"
+            range 0 8
+            default 1
 
     endmenu
 

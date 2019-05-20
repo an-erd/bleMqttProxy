@@ -64,6 +64,9 @@ typedef struct {
 } param_t;
 param_t blemqttproxy_param = { 0 };
 
+static esp_err_t save_blemqttproxy_param();
+
+
 // BLE
 const uint8_t uuid_zeros[ESP_UUID_LEN_32] = {0x00, 0x00, 0x00, 0x00};
 static uint8_t beacon_maj_min_to_idx(uint16_t maj, uint16_t min);
@@ -72,6 +75,7 @@ static bool is_beacon_idx_active(uint16_t idx);
 static void set_beacon_idx_active(uint16_t idx);
 static void clear_beacon_idx_active(uint16_t idx);
 static bool toggle_beacon_idx_active(uint16_t idx);
+static void persist_active_beacon_mask();
 static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
 
 typedef struct  {
@@ -267,8 +271,13 @@ void set_next_display_show()
             if(s_display_status.lastseen_page_to_show < s_display_status.num_last_seen_pages){
                 s_display_status.lastseen_page_to_show++;
             } else {
-                s_display_status.screen_to_show = LOCALTEMP_SCREEN;
-                s_display_status.localtemp_to_show = 1;
+                if(s_owb_num_devices >= CONFIG_MENU_MIN_LOCAL_SENSOR){
+                    s_display_status.screen_to_show = LOCALTEMP_SCREEN;
+                    s_display_status.localtemp_to_show = 1;
+                } else {
+                    // skip empty local temperature screen
+                    s_display_status.screen_to_show = APPVERSION_SCREEN;
+                }
             }
             break;
         case LOCALTEMP_SCREEN:
@@ -392,8 +401,8 @@ void draw_pagenumber(ssd1306_canvas_t *canvas, uint8_t nr_act, uint8_t nr_total)
 esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
 {
     esp_err_t ret;
+    UNUSED(ret);
     char buffer[128], buffer2[32];
-
     ESP_LOGD(TAG, "ssd1306_update, uxBits %d", uxBits);
 
     if(run_periodic_timer){
@@ -465,13 +474,13 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
 
             ssd1306_clear_canvas(canvas, 0x00);
 
+            snprintf(buffer, 128, "Beacon last seen:");
+            ssd1306_draw_string(canvas, 0, 0, (const uint8_t*) buffer, 10, 1);
             if(!num_act_beac){
                 s_display_status.lastseen_page_to_show = 1;
                 snprintf(buffer, 128, "No active beacon!");
-                ssd1306_draw_string(canvas, 0, 0, (const uint8_t*) buffer, 10, 1);
+                ssd1306_draw_string(canvas, 0, 10, (const uint8_t*) buffer, 10, 1);
             } else {
-                snprintf(buffer, 128, "Beacon last seen:");
-                ssd1306_draw_string(canvas, 0, 0, (const uint8_t*) buffer, 10, 1);
                 int skip  = (s_display_status.lastseen_page_to_show - 1) * BEAC_PER_PAGE_LASTSEEN;
                 int line = 1;
                 for(int i=0; i < CONFIG_BLE_DEVICE_COUNT_USE; i++){
@@ -716,18 +725,31 @@ bool is_beacon_idx_active(uint16_t idx)
 void set_beacon_idx_active(uint16_t idx)
 {
     s_active_beacon_mask |= (1 << idx);
+    persist_active_beacon_mask();
 }
 
-void clear_beacon_idx_active(uint16_t idx)
+__attribute__((unused)) void clear_beacon_idx_active(uint16_t idx)
 {
     s_active_beacon_mask &= ~(1 << idx);
+    persist_active_beacon_mask();
 }
 
 bool toggle_beacon_idx_active(uint16_t idx)
 {
     s_active_beacon_mask ^= (1 << idx);
+    persist_active_beacon_mask();
 
     return s_active_beacon_mask & (1 << idx);
+}
+
+void persist_active_beacon_mask()
+{
+    esp_err_t err;
+    UNUSED(err);
+
+    if(CONFIG_ACTIVE_BLE_DEVICE_PERSISTANCE){
+        err = save_blemqttproxy_param();
+    }
 }
 
 void update_adv_data(uint16_t maj, uint16_t min, int8_t measured_power,
@@ -1098,6 +1120,32 @@ static esp_err_t read_blemqttproxy_param()
     mask >>= 16 - CONFIG_BLE_DEVICE_COUNT_USE; // len = 16 bit, only use configured dev to use
     s_active_beacon_mask = blemqttproxy_param.active_beacon_mask & mask;
 
+    ESP_LOGI(TAG, "read_blemqttproxy_param: blemqttproxy_param.active_beacon_mask = %d", s_active_beacon_mask);
+
+    return ret;
+}
+
+static esp_err_t save_blemqttproxy_param()
+{
+    esp_err_t ret;
+    uint16_t mask = 0xFFFF;
+    mask >>= 16 - CONFIG_BLE_DEVICE_COUNT_USE;
+
+    blemqttproxy_param.active_beacon_mask = (blemqttproxy_param.active_beacon_mask & ~mask) | (s_active_beacon_mask & mask);
+
+    ret = iot_param_save(PARAM_NAMESPACE, PARAM_KEY, &blemqttproxy_param, sizeof(param_t));
+    if(ret == ESP_OK){
+        ESP_LOGI(TAG, "save_blemqttproxy_param: save param ok, beacon mask %u", blemqttproxy_param.active_beacon_mask);
+    } else {
+        ESP_LOGE(TAG, "save_blemqttproxy_param: save param failed, ret = %d, initialize and save to NVS", ret);
+        blemqttproxy_param.active_beacon_mask = s_active_beacon_mask;
+        ret = iot_param_save(PARAM_NAMESPACE, PARAM_KEY, &blemqttproxy_param, sizeof(param_t));
+    }
+
+    s_active_beacon_mask = blemqttproxy_param.active_beacon_mask & mask;
+
+    ESP_LOGI(TAG, "save_blemqttproxy_param: blemqttproxy_param.active_beacon_mask = %d", s_active_beacon_mask);
+
     return ret;
 }
 
@@ -1127,8 +1175,8 @@ void app_main()
     create_timer();
 
 #ifdef CONFIG_DISPLAY_SSD1306
-
     xTaskCreate(&ssd1306_task, "ssd1306_task", 2048 * 2, NULL, 5, NULL);
+    vTaskDelay(50 / portTICK_PERIOD_MS);
 #endif // CONFIG_DISPLAY_SSD1306
 
 #ifdef CONFIG_LOCAL_SENSORS_TEMPERATURE
@@ -1136,6 +1184,8 @@ void app_main()
     s_display_status.num_localtemp_pages = (!s_owb_num_devices ? 1 : s_owb_num_devices);
     xTaskCreate(&localsensor_task, "localsensor_task", 2048 * 2, NULL, 5, NULL);
 #endif // CONFIG_LOCAL_SENSORS_TEMPERATURE
+
+    xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
 
     ESP_ERROR_CHECK(esp_ble_gap_set_scan_params(&ble_scan_params));
 }
