@@ -26,11 +26,18 @@ menu "BLE-MQTT Proxy"
             bool "SSD1306 Display"
     endchoice #DISPLAY_MODE
 
+    config DISABLE_BUTTON_HEADLESS
+        int "Disable button in Headless mode"
+        default 1
+        range 0 1
+
+
     menu "MQTT Configuration"
 
         config USE_MQTT
-            bool "MQTT"
-            default y
+            int "MQTT"
+            default 1
+            range 0 1
 
         config MQTT_HOST
             string "MQTT Broker Host"
@@ -309,8 +316,9 @@ menu "BLE-MQTT Proxy"
             default 0
 
         config LOCAL_SENSORS_TEMPERATURE
-            bool "Use local temperature sensor (ds18b20)"
-            default y
+            int "Use local temperature sensor (ds18b20)"
+            range 0 1
+            default 1
 
         config MENU_MIN_LOCAL_SENSOR
             int "Show the display entry for local sensors only if there are at least X local sensors attached"

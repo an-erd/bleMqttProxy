@@ -242,6 +242,7 @@ local_temperature_data_t local_temperature_data[OWB_MAX_DEVICES] = { 0 };
 #define BUTTON_ACTIVE_LEVEL     0
 static int64_t time_button_long_press = 0;  // long button press -> empty display
 
+#ifndef CONFIG_DISABLE_BUTTON_HEADLESS
 void button_push_cb(void* arg)
 {
     char* pstr = (char*) arg;
@@ -251,6 +252,7 @@ void button_push_cb(void* arg)
 
     ESP_LOGD(TAG, "button_push_cb");
 }
+#endif // CONFIG_DISABLE_BUTTON_HEADLESS
 
 void set_next_display_show()
 {
@@ -271,19 +273,25 @@ void set_next_display_show()
             if(s_display_status.lastseen_page_to_show < s_display_status.num_last_seen_pages){
                 s_display_status.lastseen_page_to_show++;
             } else {
+#ifdef CONFIG_LOCAL_SENSORS_TEMPERATURE
                 if(s_owb_num_devices >= CONFIG_MENU_MIN_LOCAL_SENSOR){
                     s_display_status.screen_to_show = LOCALTEMP_SCREEN;
                     s_display_status.localtemp_to_show = 1;
-                } else {
+                } else
+#endif // CONFIG_LOCAL_SENSORS_TEMPERATURE
+                {
                     // skip empty local temperature screen
                     s_display_status.screen_to_show = APPVERSION_SCREEN;
                 }
             }
             break;
         case LOCALTEMP_SCREEN:
+#ifdef CONFIG_LOCAL_SENSORS_TEMPERATURE
             if(s_display_status.localtemp_to_show < s_display_status.num_localtemp_pages){
                 s_display_status.localtemp_to_show++;
-            } else {
+            } else
+#endif // CONFIG_LOCAL_SENSORS_TEMPERATURE
+            {
                 s_display_status.screen_to_show = APPVERSION_SCREEN;
             }
             break;
@@ -296,6 +304,7 @@ void set_next_display_show()
     }
 }
 
+#ifndef CONFIG_DISABLE_BUTTON_HEADLESS
 void handle_long_button_push()
 {
     switch(s_display_status.current_screen){
@@ -359,6 +368,7 @@ void button_release_cb(void* arg)
     ESP_LOGD(TAG, "button_release_cb: s_display_status.current_screen %d screen_to_show %d <",
         s_display_status.current_screen, s_display_status.screen_to_show);
 }
+#endif // CONFIG_DISABLE_BUTTON_HEADLESS
 
 void periodic_timer_start()
 {
@@ -512,6 +522,7 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
         }
 
         case LOCALTEMP_SCREEN:
+#ifdef CONFIG_LOCAL_SENSORS_TEMPERATURE
             ssd1306_clear_canvas(canvas, 0x00);
             if(s_owb_num_devices == 0){
                 snprintf(buffer, 128, "No local temperature!");
@@ -523,6 +534,7 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
 
             s_display_status.current_screen = s_display_status.screen_to_show;
             return ssd1306_refresh_gram(canvas);
+#endif // CONFIG_LOCAL_SENSORS_TEMPERATURE
             break;
 
         case APPVERSION_SCREEN:
@@ -541,11 +553,8 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
                 snprintf(buffer, 128, "%2X:%2X:%2X:%2X:%2X:%2X",
                     mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
                 ssd1306_draw_string(canvas, 0, 33, (const uint8_t*) buffer, 10, 1);
-                #ifdef CONFIG_USE_MQTT
-                    bool mqtt_avail = true;
-                #else
-                    bool mqtt_avail = false;
-                #endif
+
+                bool mqtt_avail = (CONFIG_USE_MQTT ? true : false);
                 snprintf(buffer, 128, "MQTT: %s", (mqtt_avail ? "y" : "n"));
                 ssd1306_draw_string(canvas, 0, 44, (const uint8_t*) buffer, 10, 1);
 
@@ -1135,7 +1144,7 @@ static esp_err_t save_blemqttproxy_param()
 
     ret = iot_param_save(PARAM_NAMESPACE, PARAM_KEY, &blemqttproxy_param, sizeof(param_t));
     if(ret == ESP_OK){
-        ESP_LOGI(TAG, "save_blemqttproxy_param: save param ok, beacon mask %u", blemqttproxy_param.active_beacon_mask);
+        ESP_LOGV(TAG, "save_blemqttproxy_param: save param ok, beacon mask %u", blemqttproxy_param.active_beacon_mask);
     } else {
         ESP_LOGE(TAG, "save_blemqttproxy_param: save param failed, ret = %d, initialize and save to NVS", ret);
         blemqttproxy_param.active_beacon_mask = s_active_beacon_mask;
@@ -1144,7 +1153,7 @@ static esp_err_t save_blemqttproxy_param()
 
     s_active_beacon_mask = blemqttproxy_param.active_beacon_mask & mask;
 
-    ESP_LOGI(TAG, "save_blemqttproxy_param: blemqttproxy_param.active_beacon_mask = %d", s_active_beacon_mask);
+    ESP_LOGV(TAG, "save_blemqttproxy_param: blemqttproxy_param.active_beacon_mask = %d", s_active_beacon_mask);
 
     return ret;
 }
@@ -1160,9 +1169,11 @@ void app_main()
     mqtt_init();
     s_values_evg = xEventGroupCreate();
 
+#ifndef CONFIG_DISABLE_BUTTON_HEADLESS
     button_handle_t btn_handle = iot_button_create(BUTTON_IO_NUM, BUTTON_ACTIVE_LEVEL);
     iot_button_set_evt_cb(btn_handle, BUTTON_CB_PUSH, button_push_cb, "PUSH");
     iot_button_set_evt_cb(btn_handle, BUTTON_CB_RELEASE, button_release_cb, "RELEASE");
+#endif // CONFIG_DISABLE_BUTTON_HEADLESS
 
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_bt_controller_init(&bt_cfg));
