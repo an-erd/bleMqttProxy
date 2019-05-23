@@ -35,7 +35,7 @@
 #include "ssd1306_fonts.h"
 #endif // CONFIG_DISPLAY_SSD1306
 
-#ifdef CONFIG_LOCAL_SENSORS_TEMPERATURE
+#if CONFIG_LOCAL_SENSORS_TEMPERATURE==1
 #include "owb.h"
 #include "owb_rmt.h"
 #include "ds18b20.h"
@@ -218,7 +218,7 @@ static void periodic_timer_stop();
 #define UPDATE_LAST_SEEN_INTERVAL   250000
 
 // Local sensor: DS18B20 temperatur sensor
-#ifdef CONFIG_LOCAL_SENSORS_TEMPERATURE
+#if CONFIG_LOCAL_SENSORS_TEMPERATURE==1
 #define GPIO_DS18B20_0              (CONFIG_ONE_WIRE_GPIO)
 #define OWB_MAX_DEVICES             (CONFIG_OWB_MAX_DEVICES)
 #define DS18B20_RESOLUTION          (DS18B20_RESOLUTION_12_BIT)
@@ -242,7 +242,7 @@ local_temperature_data_t local_temperature_data[OWB_MAX_DEVICES] = { 0 };
 #define BUTTON_ACTIVE_LEVEL     0
 static int64_t time_button_long_press = 0;  // long button press -> empty display
 
-#ifndef CONFIG_DISABLE_BUTTON_HEADLESS
+#if CONFIG_DISABLE_BUTTON_HEADLESS==0
 void button_push_cb(void* arg)
 {
     char* pstr = (char*) arg;
@@ -273,7 +273,7 @@ void set_next_display_show()
             if(s_display_status.lastseen_page_to_show < s_display_status.num_last_seen_pages){
                 s_display_status.lastseen_page_to_show++;
             } else {
-#ifdef CONFIG_LOCAL_SENSORS_TEMPERATURE
+#if CONFIG_LOCAL_SENSORS_TEMPERATURE==1
                 if(s_owb_num_devices >= CONFIG_MENU_MIN_LOCAL_SENSOR){
                     s_display_status.screen_to_show = LOCALTEMP_SCREEN;
                     s_display_status.localtemp_to_show = 1;
@@ -286,7 +286,7 @@ void set_next_display_show()
             }
             break;
         case LOCALTEMP_SCREEN:
-#ifdef CONFIG_LOCAL_SENSORS_TEMPERATURE
+#if CONFIG_LOCAL_SENSORS_TEMPERATURE==1
             if(s_display_status.localtemp_to_show < s_display_status.num_localtemp_pages){
                 s_display_status.localtemp_to_show++;
             } else
@@ -304,7 +304,7 @@ void set_next_display_show()
     }
 }
 
-#ifndef CONFIG_DISABLE_BUTTON_HEADLESS
+#if CONFIG_DISABLE_BUTTON_HEADLESS==0
 void handle_long_button_push()
 {
     switch(s_display_status.current_screen){
@@ -370,13 +370,13 @@ void button_release_cb(void* arg)
 }
 #endif // CONFIG_DISABLE_BUTTON_HEADLESS
 
-void periodic_timer_start()
+__attribute__((unused)) void periodic_timer_start()
 {
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, UPDATE_LAST_SEEN_INTERVAL));
     periodic_timer_running = true;
 }
 
-void periodic_timer_stop()
+__attribute__((unused)) void periodic_timer_stop()
 {
     ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
     periodic_timer_running = false;
@@ -522,7 +522,7 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
         }
 
         case LOCALTEMP_SCREEN:
-#ifdef CONFIG_LOCAL_SENSORS_TEMPERATURE
+#if CONFIG_LOCAL_SENSORS_TEMPERATURE==1
             ssd1306_clear_canvas(canvas, 0x00);
             if(s_owb_num_devices == 0){
                 snprintf(buffer, 128, "No local temperature!");
@@ -715,7 +715,7 @@ uint8_t beacon_maj_min_to_idx(uint16_t maj, uint16_t min)
     return UNKNOWN_BEACON;
 }
 
-uint8_t num_active_beacon()
+__attribute__((unused)) uint8_t num_active_beacon()
 {
     uint8_t num_act_beac = 0;
     for(int i=0; i < CONFIG_BLE_DEVICE_COUNT_USE; i++){
@@ -743,7 +743,7 @@ __attribute__((unused)) void clear_beacon_idx_active(uint16_t idx)
     persist_active_beacon_mask();
 }
 
-bool toggle_beacon_idx_active(uint16_t idx)
+__attribute__((unused)) bool toggle_beacon_idx_active(uint16_t idx)
 {
     s_active_beacon_mask ^= (1 << idx);
     persist_active_beacon_mask();
@@ -873,7 +873,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
 
                 ESP_LOGI(TAG, "(0x%04x%04x) rssi %3d | temp %5.1f | hum %5.1f | x %+6d | y %+6d | z %+6d | batt %4d",
                     maj, min, scan_result->scan_rst.rssi, temp, humidity, x, y, z, battery );
-#ifdef CONFIG_USE_MQTT
+#if CONFIG_USE_MQTT==1
                 int msg_id = 0;
                 char buffer_topic[128];
                 char buffer_payload[128];
@@ -952,7 +952,7 @@ void create_timer()
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
 }
 
-#ifdef CONFIG_LOCAL_SENSORS_TEMPERATURE
+#if CONFIG_LOCAL_SENSORS_TEMPERATURE==1
 void init_owb_tempsensor(){
     // Create a 1-Wire bus, using the RMT timeslot driver
     owb_rmt_driver_info rmt_driver_info;
@@ -1169,7 +1169,7 @@ void app_main()
     mqtt_init();
     s_values_evg = xEventGroupCreate();
 
-#ifndef CONFIG_DISABLE_BUTTON_HEADLESS
+#if CONFIG_DISABLE_BUTTON_HEADLESS==0
     button_handle_t btn_handle = iot_button_create(BUTTON_IO_NUM, BUTTON_ACTIVE_LEVEL);
     iot_button_set_evt_cb(btn_handle, BUTTON_CB_PUSH, button_push_cb, "PUSH");
     iot_button_set_evt_cb(btn_handle, BUTTON_CB_RELEASE, button_release_cb, "RELEASE");
@@ -1190,7 +1190,7 @@ void app_main()
     vTaskDelay(50 / portTICK_PERIOD_MS);
 #endif // CONFIG_DISPLAY_SSD1306
 
-#ifdef CONFIG_LOCAL_SENSORS_TEMPERATURE
+#if CONFIG_LOCAL_SENSORS_TEMPERATURE==1
     init_owb_tempsensor();
     s_display_status.num_localtemp_pages = (!s_owb_num_devices ? 1 : s_owb_num_devices);
     xTaskCreate(&localsensor_task, "localsensor_task", 2048 * 2, NULL, 5, NULL);

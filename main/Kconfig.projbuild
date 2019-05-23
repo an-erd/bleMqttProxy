@@ -316,7 +316,7 @@ menu "BLE-MQTT Proxy"
             default 0
 
         config LOCAL_SENSORS_TEMPERATURE
-            int "Use local temperature sensor (ds18b20)"
+            int "Enable local temperature sensor driver (ds18b20)"
             range 0 1
             default 1
 
@@ -330,7 +330,7 @@ menu "BLE-MQTT Proxy"
     menu "Test functions"
 
         config DISPLAY_TIME_TEST
-            bool "Add extra display screen with tests"
+            bool "Add extra display screen with tests (currently not in use!)"
             default n
     endmenu
 endmenu
