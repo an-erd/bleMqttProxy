@@ -107,7 +107,8 @@
         "ssd1306_convert_fonts.h": "c",
         "inttypes.h": "c",
         "ssd1306.h": "c",
-        "splashscreen.h": "c"
+        "splashscreen.h": "c",
+        "assert.h": "c"
     },
 	"files.exclude": {
 		"**/.git": true,

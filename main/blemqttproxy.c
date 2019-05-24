@@ -8,6 +8,7 @@
 #include "esp_wifi.h"
 #include "esp_system.h"
 #include "esp_event_loop.h"
+#include "esp_assert.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
@@ -215,6 +216,12 @@ const static int CONNECTED_BIT = BIT0;
 static esp_mqtt_client_handle_t s_client;
 
 // Timer
+typedef enum {
+    TIMER_NO_USAGE = 0,
+    TIMER_SPLASH_SCREEN,
+    TIMER_IDLE_TIMER
+} oneshot_timer_usage_t;
+static oneshot_timer_usage_t oneshot_timer_usage = { TIMER_NO_USAGE };
 static esp_timer_handle_t periodic_timer;
 static esp_timer_handle_t oneshot_timer;
 static bool periodic_timer_running = false;
@@ -223,8 +230,13 @@ static void periodic_timer_callback(void* arg);
 static void periodic_timer_start();
 static void periodic_timer_stop();
 static void oneshot_timer_callback(void* arg);
-#define UPDATE_LAST_SEEN_INTERVAL       250000  // 4 Hz
-#define SPLASH_SCREEN_TIMER_DURATION    2500000 // 2.5 sec
+static void idle_timer_start();
+static void idle_timer_stop();
+static void idle_timer_touch();
+static bool idle_timer_is_running();
+#define UPDATE_LAST_SEEN_INTERVAL       250000      // 4 Hz
+#define SPLASH_SCREEN_TIMER_DURATION    2500000     // 2.5 sec
+#define IDLE_TIMER_DURATION             (CONFIG_DISPLAY_IDLE_TIMER * 1000000)
 
 // Local sensor: DS18B20 temperatur sensor
 #if CONFIG_LOCAL_SENSORS_TEMPERATURE==1
@@ -258,7 +270,7 @@ void button_push_cb(void* arg)
     UNUSED(pstr);
 
     if(!s_display_status.button_enabled){
-        ESP_LOGI(TAG, "button_push_cb: button not enabled");
+        ESP_LOGD(TAG, "button_push_cb: button not enabled");
         return;
     }
 
@@ -267,6 +279,10 @@ void button_push_cb(void* arg)
     ESP_LOGD(TAG, "button_push_cb");
 }
 #endif // CONFIG_DISABLE_BUTTON_HEADLESS
+
+void set_display_show_empty_screen(){
+    s_display_status.screen_to_show = EMPTY_SCREEN;
+}
 
 void set_next_display_show()
 {
@@ -278,6 +294,7 @@ void set_next_display_show()
         case EMPTY_SCREEN:
             s_display_status.screen_to_show = BEACON_SCREEN;
             s_display_status.beac_to_show = 1;
+            idle_timer_start();
             break;
         case BEACON_SCREEN:
             if(s_display_status.beac_to_show < CONFIG_BLE_DEVICE_COUNT_USE){
@@ -314,6 +331,7 @@ void set_next_display_show()
             }
             break;
         case APPVERSION_SCREEN:
+            idle_timer_stop();
             s_display_status.screen_to_show = EMPTY_SCREEN;
             break;
         default:
@@ -349,8 +367,12 @@ void button_release_cb(void* arg)
     UNUSED(pstr);
 
     if(!s_display_status.button_enabled){
-        ESP_LOGI(TAG, "button_release_cb: button not enabled");
+        ESP_LOGD(TAG, "button_release_cb: button not enabled");
         return;
+    }
+
+    if(idle_timer_is_running()){
+        idle_timer_touch();
     }
 
     ESP_LOGD(TAG, "button_release_cb: s_display_status.current_screen %d screen_to_show %d >",
@@ -412,9 +434,55 @@ void periodic_timer_callback(void* arg)
 
 void oneshot_timer_callback(void* arg)
 {
-    // currently only move from SPLASH -> EMPTY screen and enable button
-    set_next_display_show();
-    xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
+    oneshot_timer_usage_t usage = *(oneshot_timer_usage_t *)arg;
+    ESP_LOGD(TAG, "oneshot_timer_callback: usage %d, oneshot_timer_usage %d", usage, oneshot_timer_usage);
+
+    switch(usage){
+        case TIMER_NO_USAGE:
+            ESP_LOGE(TAG, "oneshot_timer_callback: TIMER_NO_USAGE, should not happen");
+            break;
+        case TIMER_SPLASH_SCREEN:
+            // currently only move from SPLASH -> EMPTY screen and enable button
+            set_next_display_show();
+            xEventGroupSetBits(s_values_evg, UPDATE_SPLASH);
+            break;
+        case TIMER_IDLE_TIMER:
+            set_display_show_empty_screen();
+            xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
+            break;
+        default:
+            ESP_LOGE(TAG, "oneshot_timer_callback: unhandled usage, should not happen");
+            break;
+    }
+
+    oneshot_timer_usage = TIMER_NO_USAGE;
+}
+
+void idle_timer_start(){
+    assert(oneshot_timer_usage == TIMER_NO_USAGE);
+    if(!IDLE_TIMER_DURATION)
+        return;
+    oneshot_timer_usage = TIMER_IDLE_TIMER;
+    ESP_ERROR_CHECK(esp_timer_start_once(oneshot_timer, IDLE_TIMER_DURATION));
+}
+
+void idle_timer_stop(){
+    if(!IDLE_TIMER_DURATION)
+        return;
+    assert(oneshot_timer_usage == TIMER_IDLE_TIMER);
+    ESP_ERROR_CHECK(esp_timer_stop(oneshot_timer));
+}
+
+void idle_timer_touch(){
+    if(!IDLE_TIMER_DURATION)
+        return;
+    assert(oneshot_timer_usage == TIMER_IDLE_TIMER);
+    ESP_ERROR_CHECK(esp_timer_stop(oneshot_timer));
+    ESP_ERROR_CHECK(esp_timer_start_once(oneshot_timer, IDLE_TIMER_DURATION));
+}
+
+bool idle_timer_is_running(){
+    return (oneshot_timer_usage == TIMER_IDLE_TIMER);
 }
 
 void convert_s_hhmmss(uint16_t sec, uint8_t *h, uint8_t *m, uint8_t *s)
@@ -983,12 +1051,13 @@ void create_timer()
 {
     const esp_timer_create_args_t oneshot_timer_args = {
             .callback = &oneshot_timer_callback,
-            .name = "oneshot"
+            .arg      = &oneshot_timer_usage,
+            .name     = "oneshot"
     };
 
     const esp_timer_create_args_t periodic_timer_args = {
             .callback = &periodic_timer_callback,
-            .name = "periodic"
+            .name     = "periodic"
     };
 
     ESP_ERROR_CHECK(esp_timer_create(&oneshot_timer_args, &oneshot_timer));
@@ -1222,6 +1291,8 @@ void app_main()
     xTaskCreate(&ssd1306_task, "ssd1306_task", 2048 * 2, NULL, 5, NULL);
     vTaskDelay(50 / portTICK_PERIOD_MS);
     xEventGroupSetBits(s_values_evg, UPDATE_SPLASH);
+    oneshot_timer_usage = SPLASH_SCREEN;
+    ESP_LOGD(TAG, "app_main, start oneshot timer, %d", SPLASH_SCREEN_TIMER_DURATION);
     ESP_ERROR_CHECK(esp_timer_start_once(oneshot_timer, SPLASH_SCREEN_TIMER_DURATION));
 #endif // CONFIG_DISPLAY_SSD1306
 

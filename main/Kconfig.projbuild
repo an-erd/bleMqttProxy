@@ -31,6 +31,12 @@ menu "BLE-MQTT Proxy"
         default 1
         range 0 1
 
+    config DISPLAY_IDLE_TIMER
+        int "Display idle timer"
+        default 60
+        range 0 600
+        help
+            Number of seconds without button to show empty screen, 0 disables idle timer"
 
     menu "MQTT Configuration"
 
