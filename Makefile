@@ -5,6 +5,8 @@
 
 PROJECT_NAME := blemqttproxy
 
-COMPONENT_ADD_INCLUDEDIRS := components/include
+EXTRA_CFLAGS += --save-temps
+
+# COMPONENT_ADD_INCLUDEDIRS := components/include .
 
 include $(IDF_PATH)/make/project.mk

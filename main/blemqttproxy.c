@@ -33,6 +33,7 @@
 #ifdef CONFIG_DISPLAY_SSD1306
 #include "ssd1306.h"
 #include "ssd1306_fonts.h"
+#include "splashscreen.h"
 #endif // CONFIG_DISPLAY_SSD1306
 
 #if CONFIG_LOCAL_SENSORS_TEMPERATURE==1
@@ -166,6 +167,7 @@ static uint16_t s_active_beacon_mask = 0;
 #define UPDATE_BEAC9     (BIT9)
 #define UPDATE_TEMP      (BIT10)
 #define UPDATE_DISPLAY   (BIT11)
+#define UPDATE_SPLASH    (BIT12)
 #define UPDATE_BEAC_MASK (UPDATE_BEAC0 | UPDATE_BEAC1 | UPDATE_BEAC2 | UPDATE_BEAC3 | UPDATE_BEAC4 \
                             | UPDATE_BEAC5 | UPDATE_BEAC6 | UPDATE_BEAC7 | UPDATE_BEAC8 | UPDATE_BEAC9 )
 EventGroupHandle_t s_values_evg;
@@ -174,6 +176,7 @@ EventGroupHandle_t s_values_evg;
 
 typedef enum {
     EMPTY_SCREEN        = 0,
+    SPLASH_SCREEN,
     BEACON_SCREEN,
     LASTSEEN_SCREEN,
     LOCALTEMP_SCREEN,
@@ -194,11 +197,14 @@ typedef struct {
     // local Temperature sensor
     uint8_t             localtemp_to_show;
     uint8_t             num_localtemp_pages;
+    // enable/disable button
+    bool                button_enabled;
 } display_status_t;
 
 static display_status_t s_display_status = {
     .current_screen = UNKNOWN_SCREEN,
-    .screen_to_show = EMPTY_SCREEN
+    .screen_to_show = SPLASH_SCREEN,
+    .button_enabled = false
 };
 
 // Wifi
@@ -210,12 +216,15 @@ static esp_mqtt_client_handle_t s_client;
 
 // Timer
 static esp_timer_handle_t periodic_timer;
+static esp_timer_handle_t oneshot_timer;
 static bool periodic_timer_running = false;
 static volatile bool run_periodic_timer = false;
 static void periodic_timer_callback(void* arg);
 static void periodic_timer_start();
 static void periodic_timer_stop();
-#define UPDATE_LAST_SEEN_INTERVAL   250000
+static void oneshot_timer_callback(void* arg);
+#define UPDATE_LAST_SEEN_INTERVAL       250000  // 4 Hz
+#define SPLASH_SCREEN_TIMER_DURATION    2500000 // 2.5 sec
 
 // Local sensor: DS18B20 temperatur sensor
 #if CONFIG_LOCAL_SENSORS_TEMPERATURE==1
@@ -248,6 +257,11 @@ void button_push_cb(void* arg)
     char* pstr = (char*) arg;
     UNUSED(pstr);
 
+    if(!s_display_status.button_enabled){
+        ESP_LOGI(TAG, "button_push_cb: button not enabled");
+        return;
+    }
+
     time_button_long_press = esp_timer_get_time() + CONFIG_LONG_PRESS_TIME * 1000;
 
     ESP_LOGD(TAG, "button_push_cb");
@@ -257,6 +271,10 @@ void button_push_cb(void* arg)
 void set_next_display_show()
 {
     switch(s_display_status.current_screen){
+        case SPLASH_SCREEN:
+            s_display_status.screen_to_show = EMPTY_SCREEN;
+            s_display_status.button_enabled = true;
+            break;
         case EMPTY_SCREEN:
             s_display_status.screen_to_show = BEACON_SCREEN;
             s_display_status.beac_to_show = 1;
@@ -330,6 +348,11 @@ void button_release_cb(void* arg)
     char* pstr = (char*) arg;
     UNUSED(pstr);
 
+    if(!s_display_status.button_enabled){
+        ESP_LOGI(TAG, "button_release_cb: button not enabled");
+        return;
+    }
+
     ESP_LOGD(TAG, "button_release_cb: s_display_status.current_screen %d screen_to_show %d >",
         s_display_status.current_screen, s_display_status.screen_to_show);
 
@@ -387,6 +410,13 @@ void periodic_timer_callback(void* arg)
     xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
 }
 
+void oneshot_timer_callback(void* arg)
+{
+    // currently only move from SPLASH -> EMPTY screen and enable button
+    set_next_display_show();
+    xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
+}
+
 void convert_s_hhmmss(uint16_t sec, uint8_t *h, uint8_t *m, uint8_t *s)
 {
     uint16_t tmp_sec = sec;
@@ -435,6 +465,12 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
             } else {
                 return ESP_OK;
             }
+            break;
+
+        case SPLASH_SCREEN:
+            memcpy((void *) canvas->s_chDisplayBuffer, (void *) blemqttproxy_splash1, canvas->w * canvas->h);
+            s_display_status.current_screen = s_display_status.screen_to_show;
+            return ssd1306_refresh_gram(canvas);
             break;
 
         case BEACON_SCREEN:{
@@ -594,7 +630,8 @@ static void ssd1306_task(void* pvParameters)
 
     while (1) {
         uxBits = xEventGroupWaitBits(s_values_evg,
-            UPDATE_BEAC_MASK | UPDATE_TEMP | UPDATE_DISPLAY, pdTRUE, pdFALSE, portMAX_DELAY);
+            UPDATE_BEAC_MASK | UPDATE_TEMP | UPDATE_SPLASH | UPDATE_DISPLAY,
+            pdTRUE, pdFALSE, portMAX_DELAY);
         ESP_LOGD(TAG, "ssd1306_task: uxBits = %d", uxBits);
         ssd1306_update(canvas, uxBits);
     }
@@ -944,11 +981,17 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
 
 void create_timer()
 {
+    const esp_timer_create_args_t oneshot_timer_args = {
+            .callback = &oneshot_timer_callback,
+            .name = "oneshot"
+    };
+
     const esp_timer_create_args_t periodic_timer_args = {
             .callback = &periodic_timer_callback,
             .name = "periodic"
     };
 
+    ESP_ERROR_CHECK(esp_timer_create(&oneshot_timer_args, &oneshot_timer));
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
 }
 
@@ -1165,15 +1208,25 @@ void app_main()
     ESP_ERROR_CHECK(read_blemqttproxy_param());
 
     ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
-    wifi_init();
-    mqtt_init();
     s_values_evg = xEventGroupCreate();
+
+    create_timer();
 
 #if CONFIG_DISABLE_BUTTON_HEADLESS==0
     button_handle_t btn_handle = iot_button_create(BUTTON_IO_NUM, BUTTON_ACTIVE_LEVEL);
     iot_button_set_evt_cb(btn_handle, BUTTON_CB_PUSH, button_push_cb, "PUSH");
     iot_button_set_evt_cb(btn_handle, BUTTON_CB_RELEASE, button_release_cb, "RELEASE");
 #endif // CONFIG_DISABLE_BUTTON_HEADLESS
+
+#ifdef CONFIG_DISPLAY_SSD1306
+    xTaskCreate(&ssd1306_task, "ssd1306_task", 2048 * 2, NULL, 5, NULL);
+    vTaskDelay(50 / portTICK_PERIOD_MS);
+    xEventGroupSetBits(s_values_evg, UPDATE_SPLASH);
+    ESP_ERROR_CHECK(esp_timer_start_once(oneshot_timer, SPLASH_SCREEN_TIMER_DURATION));
+#endif // CONFIG_DISPLAY_SSD1306
+
+    wifi_init();
+    mqtt_init();
 
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_bt_controller_init(&bt_cfg));
@@ -1183,12 +1236,6 @@ void app_main()
     ESP_ERROR_CHECK(esp_bluedroid_enable());
     ESP_ERROR_CHECK(esp_ble_gap_register_callback(esp_gap_cb));
 
-    create_timer();
-
-#ifdef CONFIG_DISPLAY_SSD1306
-    xTaskCreate(&ssd1306_task, "ssd1306_task", 2048 * 2, NULL, 5, NULL);
-    vTaskDelay(50 / portTICK_PERIOD_MS);
-#endif // CONFIG_DISPLAY_SSD1306
 
 #if CONFIG_LOCAL_SENSORS_TEMPERATURE==1
     init_owb_tempsensor();

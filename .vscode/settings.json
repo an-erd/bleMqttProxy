@@ -105,7 +105,9 @@
         "esp_ota_ops.h": "c",
         "string.h": "c",
         "ssd1306_convert_fonts.h": "c",
-        "inttypes.h": "c"
+        "inttypes.h": "c",
+        "ssd1306.h": "c",
+        "splashscreen.h": "c"
     },
 	"files.exclude": {
 		"**/.git": true,
