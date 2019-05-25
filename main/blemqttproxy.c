@@ -226,6 +226,7 @@ static esp_timer_handle_t periodic_timer;
 static esp_timer_handle_t oneshot_timer;
 static bool periodic_timer_running = false;
 static volatile bool run_periodic_timer = false;
+static volatile bool run_idle_timer_touch = false;
 static void periodic_timer_callback(void* arg);
 static void periodic_timer_start();
 static void periodic_timer_stop();
@@ -371,9 +372,7 @@ void button_release_cb(void* arg)
         return;
     }
 
-    if(idle_timer_is_running()){
-        idle_timer_touch();
-    }
+    run_idle_timer_touch = true;
 
     ESP_LOGD(TAG, "button_release_cb: s_display_status.current_screen %d screen_to_show %d >",
         s_display_status.current_screen, s_display_status.screen_to_show);
@@ -384,10 +383,10 @@ void button_release_cb(void* arg)
         handle_long_button_push();
     }
 
-    switch(s_display_status.current_screen){
+    switch(s_display_status.screen_to_show){
         case EMPTY_SCREEN:
-            xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             run_periodic_timer = false;
+            xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
         case BEACON_SCREEN:
             run_periodic_timer = false;
@@ -417,14 +416,14 @@ void button_release_cb(void* arg)
 
 __attribute__((unused)) void periodic_timer_start()
 {
-    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, UPDATE_LAST_SEEN_INTERVAL));
     periodic_timer_running = true;
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, UPDATE_LAST_SEEN_INTERVAL));
 }
 
 __attribute__((unused)) void periodic_timer_stop()
 {
-    ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
     periodic_timer_running = false;
+    ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
 }
 
 void periodic_timer_callback(void* arg)
@@ -470,6 +469,7 @@ void idle_timer_stop(){
     if(!IDLE_TIMER_DURATION)
         return;
     assert(oneshot_timer_usage == TIMER_IDLE_TIMER);
+    oneshot_timer_usage = TIMER_NO_USAGE;
     ESP_ERROR_CHECK(esp_timer_stop(oneshot_timer));
 }
 
@@ -513,6 +513,10 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
     char buffer[128], buffer2[32];
     ESP_LOGD(TAG, "ssd1306_update, uxBits %d", uxBits);
 
+    ESP_LOGD(TAG, "ssd1306_update >, run_periodic_timer %d, run_idle_timer_touch %d, periodic_timer_running %d",
+        run_periodic_timer, run_idle_timer_touch, periodic_timer_running);
+    // ESP_ERROR_CHECK(esp_timer_dump(stdout));
+
     if(run_periodic_timer){
         if(!periodic_timer_running){
             periodic_timer_start();
@@ -520,6 +524,13 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
     } else {
         if(periodic_timer_running){
             periodic_timer_stop();
+        }
+    }
+
+    if( run_idle_timer_touch ){
+        run_idle_timer_touch = false;
+        if(idle_timer_is_running()){
+            idle_timer_touch();
         }
     }
 
