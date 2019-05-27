@@ -512,6 +512,7 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
     UNUSED(ret);
     char buffer[128], buffer2[32];
     ESP_LOGD(TAG, "ssd1306_update, uxBits %d", uxBits);
+    EventBits_t uxReturn;
 
     ESP_LOGD(TAG, "ssd1306_update >, run_periodic_timer %d, run_idle_timer_touch %d, periodic_timer_running %d",
         run_periodic_timer, run_idle_timer_touch, periodic_timer_running);
@@ -670,7 +671,10 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
                 ssd1306_draw_string(canvas, 0, 33, (const uint8_t*) buffer, 10, 1);
 
                 bool mqtt_avail = (CONFIG_USE_MQTT ? true : false);
-                snprintf(buffer, 128, "MQTT: %s", (mqtt_avail ? "y" : "n"));
+                uxReturn = xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, false, true, 0);
+                bool wifi_connected = uxReturn & CONNECTED_BIT;
+
+                snprintf(buffer, 128, "MQTT: %s, WIFI: %s", (mqtt_avail ? "y" : "n"),  (wifi_connected ? "y" : "n"));
                 ssd1306_draw_string(canvas, 0, 44, (const uint8_t*) buffer, 10, 1);
 
                 itoa(s_active_beacon_mask, buffer2, 2);
