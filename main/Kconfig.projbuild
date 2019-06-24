@@ -27,6 +27,9 @@ menu "BLE-MQTT Proxy"
             int "Threshold value in seconds for last seen to determine 'not alive'"
             default 60
 
+        config WDT_REBOOT_LAST_SEEN_THRESHOLD
+            int "Reboot if the last seen threshold applies."
+            default 1
     endmenu
 
     choice DISPLAY_MODE

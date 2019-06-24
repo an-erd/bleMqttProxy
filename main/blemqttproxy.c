@@ -504,16 +504,16 @@ void periodic_wdt_timer_callback(void* arg)
 {
     EventBits_t uxReturn;
 
-    ESP_LOGI(TAG, "periodic_wdt_timer_callback(): >>");
+    ESP_LOGD(TAG, "periodic_wdt_timer_callback(): >>");
     uint8_t beacon_to_take = first_active_beacon();
-    ESP_LOGI(TAG, "periodic_wdt_timer_callback: first active beac %d", beacon_to_take);
+    ESP_LOGD(TAG, "periodic_wdt_timer_callback: first active beac %d", beacon_to_take);
     if(beacon_to_take == UNKNOWN_BEACON){
-        ESP_LOGI(TAG, "periodic_wdt_timer_callback: no active beac <<");
+        ESP_LOGD(TAG, "periodic_wdt_timer_callback: no active beac <<");
         return;
     }
 
     uint16_t last_seen_sec_gone = (esp_timer_get_time() - ble_adv_data[beacon_to_take].last_seen)/1000000;
-    ESP_LOGI(TAG, "periodic_wdt_timer_callback(): last_seen_sec_gone = %d", last_seen_sec_gone);
+    ESP_LOGD(TAG, "periodic_wdt_timer_callback(): last_seen_sec_gone = %d", last_seen_sec_gone);
     if(last_seen_sec_gone > CONFIG_WDT_LAST_SEEN_THRESHOLD){
 
         uxReturn = xEventGroupWaitBits(mqtt_event_group, CONNECTED_BIT, false, true, 0);
@@ -524,6 +524,11 @@ void periodic_wdt_timer_callback(void* arg)
 
         ESP_LOGE(TAG, "periodic_wdt_timer_callback: last seen > threshold: %d sec, WIFI: %s, MQTT (enabled/onnected): %s/%s", last_seen_sec_gone,
             (wifi_connected ? "y" : "n"), (CONFIG_USE_MQTT ? "y" : "n"), (mqtt_connected ? "y" : "n"));
+
+        if(CONFIG_WDT_REBOOT_LAST_SEEN_THRESHOLD){
+            ESP_LOGE(TAG, "periodic_wdt_timer_callback: reboot initiated");
+            esp_restart();
+        }
     }
 }
 
