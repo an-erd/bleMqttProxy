@@ -15,6 +15,20 @@ menu "BLE-MQTT Proxy"
                 WiFi password (WPA or WPA2) for the example to use.
     endmenu
 
+    menu "Own Watchdog timer (WDT)"
+
+        config WDT_OWN_INTERVAL
+            int "Interval in sec for watchdog timer to check."
+            default 10
+            help
+                Set the interval to use for the watchdog timer. Use 0 for no WDT at all.
+
+        config WDT_LAST_SEEN_THRESHOLD
+            int "Threshold value in seconds for last seen to determine 'not alive'"
+            default 60
+
+    endmenu
+
     choice DISPLAY_MODE
         prompt "Display to used"
         default DISPLAY_SSD1306
