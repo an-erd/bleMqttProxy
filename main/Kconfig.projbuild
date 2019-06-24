@@ -32,28 +32,31 @@ menu "BLE-MQTT Proxy"
             default 1
     endmenu
 
-    choice DISPLAY_MODE
-        prompt "Display to used"
-        default DISPLAY_SSD1306
-        help
-            Choose which display to use or compile as a headless device.
-        config DISPLAY_HEADLESS
-            bool "Headless mode"
-        config DISPLAY_SSD1306
-            bool "SSD1306 Display"
-    endchoice #DISPLAY_MODE
+    menu "Display"
 
-    config DISABLE_BUTTON_HEADLESS
-        int "Disable button in Headless mode"
-        default 1
-        range 0 1
+        choice DISPLAY_MODE
+            prompt "Display to used"
+            default DISPLAY_SSD1306
+            help
+                Choose which display to use or compile as a headless device.
+            config DISPLAY_HEADLESS
+                bool "Headless mode"
+            config DISPLAY_SSD1306
+                bool "SSD1306 Display"
+        endchoice #DISPLAY_MODE
 
-    config DISPLAY_IDLE_TIMER
-        int "Display idle timer"
-        default 60
-        range 0 600
-        help
-            Number of seconds without button to show empty screen, 0 disables idle timer"
+        config DISABLE_BUTTON_HEADLESS
+            int "Disable button in Headless mode"
+            default 1
+            range 0 1
+
+        config DISPLAY_IDLE_TIMER
+            int "Display idle timer"
+            default 60
+            range 0 600
+            help
+                Number of seconds without button to show empty screen, 0 disables idle timer"
+    endmenu
 
     menu "MQTT Configuration"
 

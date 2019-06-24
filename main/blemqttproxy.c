@@ -157,21 +157,22 @@ esp_ble_mybeacon_vendor_t mybeacon_common_vendor = {
 static uint16_t s_active_beacon_mask = 0;
 
 // Display
-#define UPDATE_BEAC0     (BIT0)
-#define UPDATE_BEAC1     (BIT1)
-#define UPDATE_BEAC2     (BIT2)
-#define UPDATE_BEAC3     (BIT3)
-#define UPDATE_BEAC4     (BIT4)
-#define UPDATE_BEAC5     (BIT5)
-#define UPDATE_BEAC6     (BIT6)
-#define UPDATE_BEAC7     (BIT7)
-#define UPDATE_BEAC8     (BIT8)
-#define UPDATE_BEAC9     (BIT9)
-#define UPDATE_TEMP      (BIT10)
-#define UPDATE_DISPLAY   (BIT11)
-#define UPDATE_SPLASH    (BIT12)
-#define UPDATE_BEAC_MASK (UPDATE_BEAC0 | UPDATE_BEAC1 | UPDATE_BEAC2 | UPDATE_BEAC3 | UPDATE_BEAC4 \
-                            | UPDATE_BEAC5 | UPDATE_BEAC6 | UPDATE_BEAC7 | UPDATE_BEAC8 | UPDATE_BEAC9 )
+#define UPDATE_BEAC0        (BIT0)
+#define UPDATE_BEAC1        (BIT1)
+#define UPDATE_BEAC2        (BIT2)
+#define UPDATE_BEAC3        (BIT3)
+#define UPDATE_BEAC4        (BIT4)
+#define UPDATE_BEAC5        (BIT5)
+#define UPDATE_BEAC6        (BIT6)
+#define UPDATE_BEAC7        (BIT7)
+#define UPDATE_BEAC8        (BIT8)
+#define UPDATE_BEAC9        (BIT9)
+#define UPDATE_TEMP         (BIT10)
+#define UPDATE_DISPLAY      (BIT11)
+#define UPDATE_SPLASH       (BIT12)
+#define UPDATE_ESP_RESTART  (BIT13)
+#define UPDATE_BEAC_MASK    (UPDATE_BEAC0 | UPDATE_BEAC1 | UPDATE_BEAC2 | UPDATE_BEAC3 | UPDATE_BEAC4 \
+                                | UPDATE_BEAC5 | UPDATE_BEAC6 | UPDATE_BEAC7 | UPDATE_BEAC8 | UPDATE_BEAC9 )
 EventGroupHandle_t s_values_evg;
 
 #define BEAC_PER_PAGE_LASTSEEN  5
@@ -526,8 +527,8 @@ void periodic_wdt_timer_callback(void* arg)
             (wifi_connected ? "y" : "n"), (CONFIG_USE_MQTT ? "y" : "n"), (mqtt_connected ? "y" : "n"));
 
         if(CONFIG_WDT_REBOOT_LAST_SEEN_THRESHOLD){
-            ESP_LOGE(TAG, "periodic_wdt_timer_callback: reboot initiated");
-            esp_restart();
+            ESP_LOGE(TAG, "periodic_wdt_timer_callback: reboot flag set");
+            xEventGroupSetBits(s_values_evg, UPDATE_ESP_RESTART);   // esp_restart();
         }
     }
 }
@@ -564,6 +565,13 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
     ESP_LOGD(TAG, "ssd1306_update >, run_periodic_timer %d, run_idle_timer_touch %d, periodic_timer_running %d",
         run_periodic_timer, run_idle_timer_touch, periodic_timer_running);
     // ESP_ERROR_CHECK(esp_timer_dump(stdout));
+
+    // TODO: not the best place for the esp_restart() call
+    if(uxBits & UPDATE_ESP_RESTART){
+        ESP_LOGE(TAG, "ssd1306_update: reboot flag is set -> esp_restart() -> REBOOT");
+        fflush(stdout);
+        esp_restart();
+    }
 
     if(run_periodic_timer){
         if(!periodic_timer_running){
@@ -762,7 +770,7 @@ static void ssd1306_task(void* pvParameters)
 
     while (1) {
         uxBits = xEventGroupWaitBits(s_values_evg,
-            UPDATE_BEAC_MASK | UPDATE_TEMP | UPDATE_SPLASH | UPDATE_DISPLAY,
+            UPDATE_BEAC_MASK | UPDATE_TEMP | UPDATE_SPLASH | UPDATE_DISPLAY | UPDATE_ESP_RESTART,
             pdTRUE, pdFALSE, portMAX_DELAY);
         ESP_LOGD(TAG, "ssd1306_task: uxBits = %d", uxBits);
         ssd1306_update(canvas, uxBits);
