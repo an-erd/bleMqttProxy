@@ -803,7 +803,6 @@ static esp_err_t wifi_event_handler(void *ctx, system_event_t *event)
 static void wifi_init(void)
 {
     tcpip_adapter_init();
-    wifi_event_group = xEventGroupCreate();
     ESP_ERROR_CHECK(esp_event_loop_init(wifi_event_handler, NULL));
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -876,7 +875,6 @@ void mqtt_init(void)
         .password       = CONFIG_MQTT_PASSWORD
         // .user_context = (void *)your_context
     };
-    mqtt_event_group = xEventGroupCreate();
     s_client = esp_mqtt_client_init(&mqtt_cfg);
     esp_mqtt_client_start(s_client);
 }
@@ -1376,6 +1374,8 @@ void app_main()
 
     ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
     s_values_evg = xEventGroupCreate();
+    wifi_event_group = xEventGroupCreate();
+    mqtt_event_group = xEventGroupCreate();
 
     create_timer();
 
