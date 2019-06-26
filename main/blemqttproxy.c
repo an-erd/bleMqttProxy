@@ -73,6 +73,7 @@ static esp_err_t save_blemqttproxy_param();
 const uint8_t uuid_zeros[ESP_UUID_LEN_32] = {0x00, 0x00, 0x00, 0x00};
 static uint8_t beacon_maj_min_to_idx(uint16_t maj, uint16_t min);
 static uint8_t num_active_beacon();
+static uint8_t first_active_beacon();
 static bool is_beacon_idx_active(uint16_t idx);
 static void set_beacon_idx_active(uint16_t idx);
 static void clear_beacon_idx_active(uint16_t idx);
@@ -156,21 +157,21 @@ esp_ble_mybeacon_vendor_t mybeacon_common_vendor = {
 static uint16_t s_active_beacon_mask = 0;
 
 // Display
-#define UPDATE_BEAC0     (BIT0)
-#define UPDATE_BEAC1     (BIT1)
-#define UPDATE_BEAC2     (BIT2)
-#define UPDATE_BEAC3     (BIT3)
-#define UPDATE_BEAC4     (BIT4)
-#define UPDATE_BEAC5     (BIT5)
-#define UPDATE_BEAC6     (BIT6)
-#define UPDATE_BEAC7     (BIT7)
-#define UPDATE_BEAC8     (BIT8)
-#define UPDATE_BEAC9     (BIT9)
-#define UPDATE_TEMP      (BIT10)
-#define UPDATE_DISPLAY   (BIT11)
-#define UPDATE_SPLASH    (BIT12)
-#define UPDATE_BEAC_MASK (UPDATE_BEAC0 | UPDATE_BEAC1 | UPDATE_BEAC2 | UPDATE_BEAC3 | UPDATE_BEAC4 \
-                            | UPDATE_BEAC5 | UPDATE_BEAC6 | UPDATE_BEAC7 | UPDATE_BEAC8 | UPDATE_BEAC9 )
+#define UPDATE_BEAC0        (BIT0)
+#define UPDATE_BEAC1        (BIT1)
+#define UPDATE_BEAC2        (BIT2)
+#define UPDATE_BEAC3        (BIT3)
+#define UPDATE_BEAC4        (BIT4)
+#define UPDATE_BEAC5        (BIT5)
+#define UPDATE_BEAC6        (BIT6)
+#define UPDATE_BEAC7        (BIT7)
+#define UPDATE_BEAC8        (BIT8)
+#define UPDATE_BEAC9        (BIT9)
+#define UPDATE_TEMP         (BIT10)
+#define UPDATE_DISPLAY      (BIT11)
+#define UPDATE_SPLASH       (BIT12)
+#define UPDATE_BEAC_MASK    (UPDATE_BEAC0 | UPDATE_BEAC1 | UPDATE_BEAC2 | UPDATE_BEAC3 | UPDATE_BEAC4 \
+                                | UPDATE_BEAC5 | UPDATE_BEAC6 | UPDATE_BEAC7 | UPDATE_BEAC8 | UPDATE_BEAC9 )
 EventGroupHandle_t s_values_evg;
 
 #define BEAC_PER_PAGE_LASTSEEN  5
@@ -209,11 +210,13 @@ static display_status_t s_display_status = {
 };
 
 // Wifi
-static EventGroupHandle_t wifi_event_group;
+static EventGroupHandle_t s_wifi_evg;
 const static int CONNECTED_BIT = BIT0;
 
 // MQTT
 static esp_mqtt_client_handle_t s_client;
+static EventGroupHandle_t s_mqtt_evg;
+const static int MQTT_CONNECTED_BIT = BIT0;
 
 // Timer
 typedef enum {
@@ -238,6 +241,14 @@ static bool idle_timer_is_running();
 #define UPDATE_LAST_SEEN_INTERVAL       250000      // 4 Hz
 #define SPLASH_SCREEN_TIMER_DURATION    2500000     // 2.5 sec
 #define IDLE_TIMER_DURATION             (CONFIG_DISPLAY_IDLE_TIMER * 1000000)
+
+// Watchdog timer / WDT
+static esp_timer_handle_t periodic_wdt_timer;
+static void periodic_wdt_timer_callback(void* arg);
+static void periodic_wdt_timer_start();
+#define UPDATE_ESP_RESTART  (BIT0)
+static EventGroupHandle_t s_wdt_evg;
+#define WDT_TIMER_DURATION              (CONFIG_WDT_OWN_INTERVAL * 1000000)
 
 // Local sensor: DS18B20 temperatur sensor
 #if CONFIG_LOCAL_SENSORS_TEMPERATURE==1
@@ -401,7 +412,7 @@ void button_release_cb(void* arg)
             xEventGroupSetBits(s_values_evg, UPDATE_TEMP);
             break;
         case APPVERSION_SCREEN:
-            run_periodic_timer = false;
+            run_periodic_timer = true;
             xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
         default:
@@ -461,6 +472,7 @@ void idle_timer_start(){
     assert(oneshot_timer_usage == TIMER_NO_USAGE);
     if(!IDLE_TIMER_DURATION)
         return;
+    ESP_LOGD(TAG, "idle_timer_start()");
     oneshot_timer_usage = TIMER_IDLE_TIMER;
     ESP_ERROR_CHECK(esp_timer_start_once(oneshot_timer, IDLE_TIMER_DURATION));
 }
@@ -469,6 +481,7 @@ void idle_timer_stop(){
     if(!IDLE_TIMER_DURATION)
         return;
     assert(oneshot_timer_usage == TIMER_IDLE_TIMER);
+    ESP_LOGD(TAG, "idle_timer_stop()");
     oneshot_timer_usage = TIMER_NO_USAGE;
     ESP_ERROR_CHECK(esp_timer_stop(oneshot_timer));
 }
@@ -476,13 +489,51 @@ void idle_timer_stop(){
 void idle_timer_touch(){
     if(!IDLE_TIMER_DURATION)
         return;
+    ESP_LOGD(TAG, "idle_timer_touch()");
     assert(oneshot_timer_usage == TIMER_IDLE_TIMER);
     ESP_ERROR_CHECK(esp_timer_stop(oneshot_timer));
     ESP_ERROR_CHECK(esp_timer_start_once(oneshot_timer, IDLE_TIMER_DURATION));
 }
 
 bool idle_timer_is_running(){
+    ESP_LOGD(TAG, "idle_timer_is_running(), %d", (oneshot_timer_usage == TIMER_IDLE_TIMER));
     return (oneshot_timer_usage == TIMER_IDLE_TIMER);
+}
+
+__attribute__((unused)) void periodic_wdt_timer_start(){
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_wdt_timer, WDT_TIMER_DURATION));
+}
+
+void periodic_wdt_timer_callback(void* arg)
+{
+    EventBits_t uxReturn;
+
+    ESP_LOGD(TAG, "periodic_wdt_timer_callback(): >>");
+    uint8_t beacon_to_take = first_active_beacon();
+    ESP_LOGD(TAG, "periodic_wdt_timer_callback: first active beac %d", beacon_to_take);
+    if(beacon_to_take == UNKNOWN_BEACON){
+        ESP_LOGD(TAG, "periodic_wdt_timer_callback: no active beac <<");
+        return;
+    }
+
+    uint16_t last_seen_sec_gone = (esp_timer_get_time() - ble_adv_data[beacon_to_take].last_seen)/1000000;
+    ESP_LOGD(TAG, "periodic_wdt_timer_callback(): last_seen_sec_gone = %d", last_seen_sec_gone);
+    if(last_seen_sec_gone > CONFIG_WDT_LAST_SEEN_THRESHOLD){
+
+        uxReturn = xEventGroupWaitBits(s_mqtt_evg, CONNECTED_BIT, false, true, 0);
+        bool mqtt_connected = uxReturn & CONNECTED_BIT;
+
+        uxReturn = xEventGroupWaitBits(s_wifi_evg, CONNECTED_BIT, false, true, 0);
+        bool wifi_connected = uxReturn & CONNECTED_BIT;
+
+        ESP_LOGE(TAG, "periodic_wdt_timer_callback: last seen > threshold: %d sec, WIFI: %s, MQTT (enabled/onnected): %s/%s", last_seen_sec_gone,
+            (wifi_connected ? "y" : "n"), (CONFIG_USE_MQTT ? "y" : "n"), (mqtt_connected ? "y" : "n"));
+
+        if(CONFIG_WDT_REBOOT_LAST_SEEN_THRESHOLD){
+            ESP_LOGE(TAG, "periodic_wdt_timer_callback: reboot flag set");
+            xEventGroupSetBits(s_wdt_evg, UPDATE_ESP_RESTART);
+        }
+    }
 }
 
 void convert_s_hhmmss(uint16_t sec, uint8_t *h, uint8_t *m, uint8_t *s)
@@ -511,9 +562,9 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
     esp_err_t ret;
     UNUSED(ret);
     char buffer[128], buffer2[32];
-    ESP_LOGD(TAG, "ssd1306_update, uxBits %d", uxBits);
     EventBits_t uxReturn;
 
+    ESP_LOGD(TAG, "ssd1306_update, uxBits %d", uxBits);
     ESP_LOGD(TAG, "ssd1306_update >, run_periodic_timer %d, run_idle_timer_touch %d, periodic_timer_running %d",
         run_periodic_timer, run_idle_timer_touch, periodic_timer_running);
     // ESP_ERROR_CHECK(esp_timer_dump(stdout));
@@ -670,11 +721,13 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
                     mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
                 ssd1306_draw_string(canvas, 0, 33, (const uint8_t*) buffer, 10, 1);
 
-                bool mqtt_avail = (CONFIG_USE_MQTT ? true : false);
-                uxReturn = xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, false, true, 0);
+                uxReturn = xEventGroupWaitBits(s_mqtt_evg, CONNECTED_BIT, false, true, 0);
+                bool mqtt_connected = uxReturn & CONNECTED_BIT;
+
+                uxReturn = xEventGroupWaitBits(s_wifi_evg, CONNECTED_BIT, false, true, 0);
                 bool wifi_connected = uxReturn & CONNECTED_BIT;
 
-                snprintf(buffer, 128, "MQTT: %s, WIFI: %s", (mqtt_avail ? "y" : "n"),  (wifi_connected ? "y" : "n"));
+                snprintf(buffer, 128, "WIFI: %s, MQTT: %s/%s", (wifi_connected ? "y" : "n"), (CONFIG_USE_MQTT ? "y" : "n"), (mqtt_connected ? "y" : "n"));
                 ssd1306_draw_string(canvas, 0, 44, (const uint8_t*) buffer, 10, 1);
 
                 itoa(s_active_beacon_mask, buffer2, 2);
@@ -729,11 +782,13 @@ static esp_err_t wifi_event_handler(void *ctx, system_event_t *event)
             esp_wifi_connect();
             break;
         case SYSTEM_EVENT_STA_GOT_IP:
-            xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
+            xEventGroupSetBits(s_wifi_evg, CONNECTED_BIT);
+            ESP_LOGI(TAG, "wifi_event_handler: SYSTEM_EVENT_STA_GOT_IP");
             break;
         case SYSTEM_EVENT_STA_DISCONNECTED:
             esp_wifi_connect();
-            xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
+            xEventGroupClearBits(s_wifi_evg, CONNECTED_BIT);
+            ESP_LOGI(TAG, "wifi_event_handler: SYSTEM_EVENT_STA_DISCONNECTED");
             break;
         default:
             break;
@@ -744,7 +799,6 @@ static esp_err_t wifi_event_handler(void *ctx, system_event_t *event)
 static void wifi_init(void)
 {
     tcpip_adapter_init();
-    wifi_event_group = xEventGroupCreate();
     ESP_ERROR_CHECK(esp_event_loop_init(wifi_event_handler, NULL));
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -757,10 +811,11 @@ static void wifi_init(void)
     };
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
+    // WiFi.setSleepMode(WIFI_NONE_SLEEP);
     ESP_LOGI(TAG, "start the WIFI SSID:[%s]", CONFIG_WIFI_SSID);
     ESP_ERROR_CHECK(esp_wifi_start());
     ESP_LOGI(TAG, "Waiting for wifi");
-    xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, false, true, portMAX_DELAY);
+    xEventGroupWaitBits(s_wifi_evg, CONNECTED_BIT, false, true, portMAX_DELAY);
 }
 
 static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
@@ -776,9 +831,13 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
             break;
         case MQTT_EVENT_CONNECTED:
             ESP_LOGD(TAG, "MQTT_EVENT_CONNECTED");
+            xEventGroupSetBits(s_mqtt_evg, CONNECTED_BIT);
+            ESP_LOGI(TAG, "mqtt_event_handler: MQTT_EVENT_CONNECTED");
             break;
         case MQTT_EVENT_DISCONNECTED:
             ESP_LOGD(TAG, "MQTT_EVENT_DISCONNECTED");
+            xEventGroupClearBits(s_mqtt_evg, CONNECTED_BIT);
+            ESP_LOGI(TAG, "mqtt_event_handler: MQTT_EVENT_DISCONNECTED");
             break;
         case MQTT_EVENT_SUBSCRIBED:
             ESP_LOGD(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
@@ -812,7 +871,6 @@ void mqtt_init(void)
         .password       = CONFIG_MQTT_PASSWORD
         // .user_context = (void *)your_context
     };
-
     s_client = esp_mqtt_client_init(&mqtt_cfg);
     esp_mqtt_client_start(s_client);
 }
@@ -844,6 +902,19 @@ __attribute__((unused)) uint8_t num_active_beacon()
         }
     }
     return num_act_beac;
+}
+
+__attribute__((unused)) uint8_t first_active_beacon()
+{
+    uint8_t first_act_beac = UNKNOWN_BEACON;
+
+    for(int i=0; i < CONFIG_BLE_DEVICE_COUNT_USE; i++){
+        if(is_beacon_idx_active(i)){
+            first_act_beac = i;
+        }
+    }
+
+    return first_act_beac;
 }
 
 bool is_beacon_idx_active(uint16_t idx)
@@ -1075,8 +1146,14 @@ void create_timer()
             .name     = "periodic"
     };
 
+    const esp_timer_create_args_t periodic_wdt_timer_args = {
+            .callback = &periodic_wdt_timer_callback,
+            .name     = "periodic_wdt"
+    };
+
     ESP_ERROR_CHECK(esp_timer_create(&oneshot_timer_args, &oneshot_timer));
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
+    ESP_ERROR_CHECK(esp_timer_create(&periodic_wdt_timer_args, &periodic_wdt_timer));
 }
 
 #if CONFIG_LOCAL_SENSORS_TEMPERATURE==1
@@ -1285,6 +1362,23 @@ static esp_err_t save_blemqttproxy_param()
     return ret;
 }
 
+static void wdt_task(void* pvParameters)
+{
+    EventBits_t uxBits;
+    UNUSED(uxBits);
+
+    periodic_wdt_timer_start();
+
+    while (1) {
+        uxBits = xEventGroupWaitBits(s_wdt_evg, UPDATE_ESP_RESTART, pdTRUE, pdFALSE, portMAX_DELAY);
+
+        ESP_LOGE(TAG, "ssd1306_update: reboot flag is set -> esp_restart() -> REBOOT");
+        fflush(stdout);
+        esp_restart();
+    }
+    vTaskDelete(NULL);
+}
+
 void app_main()
 {
     // NVS initialization and beacon mask retrieval
@@ -1293,6 +1387,9 @@ void app_main()
 
     ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
     s_values_evg = xEventGroupCreate();
+    s_wifi_evg   = xEventGroupCreate();
+    s_mqtt_evg   = xEventGroupCreate();
+    s_wdt_evg    = xEventGroupCreate();
 
     create_timer();
 
@@ -1332,5 +1429,6 @@ void app_main()
     xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
 
     ESP_ERROR_CHECK(esp_ble_gap_set_scan_params(&ble_scan_params));
-}
 
+    xTaskCreate(&wdt_task, "wdt_task", 2048 * 2, NULL, 5, NULL);
+}
