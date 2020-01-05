@@ -10,6 +10,12 @@ Start the script to forward MQTT messages to the InfluxDB database:
 pi@raspberrypi:~ $ nohup python3 ./mosq-influx-task.py > /dev/null 2> textpy.err.log & 
 ```
 
+
+
+## Grafana
+
+Use the following link to open the Grafana frontend: [link](http://192.168.2.137:3000/)
+
 ## InfluxDB
 
 ### Backup the InfluxDB database
