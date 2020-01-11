@@ -36,7 +36,7 @@ The database must not exist. If it already exist, use the InfluxDB CLI to drop t
 
 ```bash
 $ influx
-drop database solaranzeige
+drop database sensordata
 quit
 ```
 
