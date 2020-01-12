@@ -111,6 +111,14 @@ ble_beacon_data_t ble_beacon_data[CONFIG_BLE_DEVICE_COUNT_CONFIGURED] = {
 ble_adv_data_t    ble_adv_data[CONFIG_BLE_DEVICE_COUNT_CONFIGURED] = { 0 };
 
 // Beacon
+//#define UNKNOWN_BEACON  99
+typedef enum {
+    BEACON_V3           = 0,    // ble_bacon v3 adv
+    BEACON_V4,                  // only ble_beacon v4 adv
+    BEACON_V4_SR,                // ble_beacon v4 adv+sr
+    UNKNOWN_BEACON      = 99
+} beacon_type_t;
+
 typedef struct {
     uint8_t flags[3];
     uint8_t length;
@@ -139,9 +147,9 @@ typedef struct {
     esp_ble_mybeacon_head_t     mybeacon_head;
     esp_ble_mybeacon_vendor_t   mybeacon_vendor;
     esp_ble_mybeacon_payload_t  mybeacon_payload;
-}__attribute__((packed)) esp_ble_mybeacon_t;
+}__attribute__((packed)) esp_ble_mybeacon_v3_t;
 
-esp_ble_mybeacon_head_t mybeacon_common_head = {
+esp_ble_mybeacon_head_t mybeacon_common_head_v3 = {
     .flags = {0x02, 0x01, 0x04},
     .length = 0x1A,
     .type = 0xFF,
@@ -149,11 +157,18 @@ esp_ble_mybeacon_head_t mybeacon_common_head = {
     .beacon_type = 0x1502
 };
 
-esp_ble_mybeacon_vendor_t mybeacon_common_vendor = {
+esp_ble_mybeacon_head_t mybeacon_common_head_v4 = {
+    .flags = {0x02, 0x01, 0x06},
+    .length = 0x13,
+    .type = 0xFF,
+    .company_id = 0x0059,
+    .beacon_type = 0x0700
+};
+
+esp_ble_mybeacon_vendor_t mybeacon_common_vendor_v3 = {
     .proximity_uuid ={CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4},
 };
 
-#define UNKNOWN_BEACON      99
 static uint16_t s_active_beacon_mask = 0;
 
 // Display
@@ -966,20 +981,29 @@ void update_adv_data(uint16_t maj, uint16_t min, int8_t measured_power,
     xEventGroupSetBits(s_values_evg, (EventBits_t) (1 << idx));
 }
 
-bool esp_ble_is_mybeacon_packet (uint8_t *adv_data, uint8_t adv_data_len){
-    bool result = false;
+beacon_type_t esp_ble_is_mybeacon_packet (uint8_t *adv_data, uint8_t adv_data_len, uint8_t scan_rsp_len){
+    beacon_type_t result = UNKNOWN_BEACON;
 
     ESP_LOG_BUFFER_HEXDUMP(TAG, adv_data, adv_data_len, ESP_LOG_DEBUG);
 
     if ((adv_data != NULL) && (adv_data_len == 0x1E)){
-        if ( (!memcmp(adv_data, (uint8_t*)&mybeacon_common_head, sizeof(mybeacon_common_head)))
-            && (!memcmp((uint8_t*)(adv_data + sizeof(mybeacon_common_head)),
-                (uint8_t*)&mybeacon_common_vendor, sizeof(mybeacon_common_vendor.proximity_uuid)))){
-            ESP_LOGD(TAG, "esp_ble_is_mybeacon_packet, true");
-            result = true;
+        if ( (!memcmp(adv_data, (uint8_t*)&mybeacon_common_head_v3, sizeof(mybeacon_common_head_v3)))
+            && (!memcmp((uint8_t*)(adv_data + sizeof(mybeacon_common_head_v3)),
+                (uint8_t*)&mybeacon_common_vendor_v3, sizeof(mybeacon_common_vendor_v3.proximity_uuid)))){
+            ESP_LOGD(TAG, "esp_ble_is_mybeacon_packet v3, true");
+            result = BEACON_V3;
         } else {
-            ESP_LOGD(TAG, "esp_ble_is_mybeacon_packet, false");
-            result = false;
+            ESP_LOGD(TAG, "esp_ble_is_mybeacon_packet v3, false");
+            result = UNKNOWN_BEACON;
+        }
+    } else if ((adv_data != NULL) && (adv_data_len == 0x17)){
+        if ( (!memcmp(adv_data, (uint8_t*)&mybeacon_common_head_v4, sizeof(mybeacon_common_head_v4))) ){
+            ESP_LOGI(TAG, "esp_ble_is_mybeacon_packet v4, true");
+
+            result = (scan_rsp_len ? BEACON_V4_SR : BEACON_V4);
+        } else {
+            ESP_LOGI(TAG, "esp_ble_is_mybeacon_packet v4, false");
+            result = UNKNOWN_BEACON;
         }
     }
 
@@ -1028,39 +1052,103 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
 
         ESP_LOGD(TAG, "ESP_GAP_BLE_SCAN_RESULT_EVT");
         esp_ble_gap_cb_param_t *scan_result = (esp_ble_gap_cb_param_t *)param;
+
+        beacon_type_t beacon_type = UNKNOWN_BEACON;
+        uint16_t maj = 0, min = 0, battery = 0;
+        int16_t x = 0, y = 0, z = 0;
+        uint8_t idx = 0;
+        float temp = 0, humidity = 0;
+
+        bool is_beacon_active = true;
+
         switch (scan_result->scan_rst.search_evt) {
         case ESP_GAP_SEARCH_INQ_RES_EVT:
             ESP_LOGD(TAG, "ESP_GAP_SEARCH_INQ_RES_EVT");
-            if(esp_ble_is_mybeacon_packet (scan_result->scan_rst.ble_adv, scan_result->scan_rst.adv_data_len)){
-                ESP_LOGD(TAG, "mybeacon found");
-                esp_ble_mybeacon_t *mybeacon_data = (esp_ble_mybeacon_t*)(scan_result->scan_rst.ble_adv);
+/*
+            uint8_t *adv_name = NULL;
+            uint8_t adv_name_len = 0;
 
-                uint16_t maj      = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.major);
-                uint16_t min      = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.minor);
-                uint8_t  idx      = beacon_maj_min_to_idx(maj, min);
+            ESP_LOGI(TAG, "searched Adv Data Len %d, Scan Response Len %d", scan_result->scan_rst.adv_data_len, scan_result->scan_rst.scan_rsp_len);
+		    adv_name = esp_ble_resolve_adv_data(scan_result->scan_rst.ble_adv, ESP_BLE_AD_TYPE_NAME_CMPL, &adv_name_len);
+		    ESP_LOGI(TAG, "searched Device Name Len %d", adv_name_len);
+            esp_log_buffer_char(TAG, adv_name, adv_name_len);
 
-                if( (idx != UNKNOWN_BEACON) && (!is_beacon_idx_active(idx)) ){
-                    if(scan_result->scan_rst.rssi > CONFIG_PROXIMITY_RSSI_THRESHOLD) {
-                        ESP_LOGI(TAG, "Announcing new mybeacon (0x%04x%04x), idx %d, RSSI %d", maj, min, idx,
-                            scan_result->scan_rst.rssi);
-                        set_beacon_idx_active(idx);
-                    } else {
-                        ESP_LOGD(TAG, "mybeacon not active, not close enough (0x%04x%04x), idx %d, RSSI %d",
-                            maj, min, idx, scan_result->scan_rst.rssi);
-                        break;
+            if (scan_result->scan_rst.adv_data_len > 0) {
+                ESP_LOGI(GATTC_TAG, "adv data:");
+                esp_log_buffer_hex(GATTC_TAG, &scan_result->scan_rst.ble_adv[0], scan_result->scan_rst.adv_data_len);
+            }
+            if (scan_result->scan_rst.scan_rsp_len > 0) {
+                ESP_LOGI(GATTC_TAG, "scan resp:");
+                esp_log_buffer_hex(GATTC_TAG, &scan_result->scan_rst.ble_adv[scan_result->scan_rst.adv_data_len], scan_result->scan_rst.scan_rsp_len);
+            }
+*/
+            beacon_type = esp_ble_is_mybeacon_packet (scan_result->scan_rst.ble_adv, scan_result->scan_rst.adv_data_len, scan_result->scan_rst.scan_rsp_len);
+
+            if( (beacon_type == BEACON_V3) || (beacon_type == BEACON_V4) || (beacon_type == BEACON_V4_SR) ){
+
+                ESP_LOGD(TAG, "mybeacon found, type %d", beacon_type);
+
+                switch(beacon_type){
+                case BEACON_V3: {
+                    esp_ble_mybeacon_v3_t *mybeacon_data = (esp_ble_mybeacon_v3_t*)(scan_result->scan_rst.ble_adv);
+
+                    maj      = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.major);
+                    min      = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.minor);
+                    idx      = beacon_maj_min_to_idx(maj, min);
+
+                    if( (idx != UNKNOWN_BEACON) && (!is_beacon_idx_active(idx)) ){
+                        if(scan_result->scan_rst.rssi > CONFIG_PROXIMITY_RSSI_THRESHOLD) {
+                            ESP_LOGI(TAG, "Announcing new mybeacon (0x%04x%04x), idx %d, RSSI %d", maj, min, idx,
+                                scan_result->scan_rst.rssi);
+                            set_beacon_idx_active(idx);
+                        } else {
+                            ESP_LOGD(TAG, "mybeacon not active, not close enough (0x%04x%04x), idx %d, RSSI %d",
+                                maj, min, idx, scan_result->scan_rst.rssi);
+                            is_beacon_active = false;
+                            break;
+                        }
                     }
+
+                    temp         = SHT3_GET_TEMPERATURE_VALUE(
+                                        LSB_16(mybeacon_data->mybeacon_payload.temp),
+                                        MSB_16(mybeacon_data->mybeacon_payload.temp) );
+                    humidity    = SHT3_GET_HUMIDITY_VALUE(
+                                        LSB_16(mybeacon_data->mybeacon_payload.humidity),
+                                        MSB_16(mybeacon_data->mybeacon_payload.humidity) );
+                    battery     = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.battery);
+                    x           = (int16_t)(mybeacon_data->mybeacon_payload.x);
+                    y           = (int16_t)(mybeacon_data->mybeacon_payload.y);
+                    z           = (int16_t)(mybeacon_data->mybeacon_payload.z);
+
+                    break;
+                }
+                case BEACON_V4:
+                case BEACON_V4_SR:
+                {
+                    esp_ble_mybeacon_payload_t *mybeacon_payload = (esp_ble_mybeacon_payload_t *)(&scan_result->scan_rst.ble_adv[11]);
+
+                    ESP_LOG_BUFFER_HEXDUMP(TAG, &scan_result->scan_rst.ble_adv[11], scan_result->scan_rst.adv_data_len-11, ESP_LOG_DEBUG);
+
+                    maj         = (uint16_t) ( ((scan_result->scan_rst.ble_adv[7])<<8) + (scan_result->scan_rst.ble_adv[8]));
+                    min         = (uint16_t) ( ((scan_result->scan_rst.ble_adv[9])<<8) + (scan_result->scan_rst.ble_adv[10]));
+                    idx         = beacon_maj_min_to_idx(maj, min);
+                    temp        = SHT3_GET_TEMPERATURE_VALUE(LSB_16(mybeacon_payload->temp), MSB_16(mybeacon_payload->temp) );
+                    humidity    = SHT3_GET_HUMIDITY_VALUE(LSB_16(mybeacon_payload->humidity), MSB_16(mybeacon_payload->humidity) );
+                    battery     = ENDIAN_CHANGE_U16(mybeacon_payload->battery);
+                    x           = (int16_t)(mybeacon_payload->x);
+                    y           = (int16_t)(mybeacon_payload->y);
+                    z           = (int16_t)(mybeacon_payload->z);
+
+                    break;
+                }
+                default:
+                    ESP_LOGE(TAG, "ESP_GAP_SEARCH_INQ_RES_EVT: should not happen");
+                    break;
                 }
 
-                float    temp     = SHT3_GET_TEMPERATURE_VALUE(
-                                      LSB_16(mybeacon_data->mybeacon_payload.temp),
-                                      MSB_16(mybeacon_data->mybeacon_payload.temp) );
-                float    humidity = SHT3_GET_HUMIDITY_VALUE(
-                                      LSB_16(mybeacon_data->mybeacon_payload.humidity),
-                                      MSB_16(mybeacon_data->mybeacon_payload.humidity) );
-                uint16_t battery  = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.battery);
-                int16_t x         = (int16_t)(mybeacon_data->mybeacon_payload.x);
-                int16_t y         = (int16_t)(mybeacon_data->mybeacon_payload.y);
-                int16_t z         = (int16_t)(mybeacon_data->mybeacon_payload.z);
+                if(!is_beacon_active){
+                    break;
+                }
 
                 ESP_LOGI(TAG, "(0x%04x%04x) rssi %3d | temp %5.1f | hum %5.1f | x %+6d | y %+6d | z %+6d | batt %4d",
                     maj, min, scan_result->scan_rst.rssi, temp, humidity, x, y, z, battery );
@@ -1111,6 +1199,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         }
         break;
     }
+
     case ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT:
         if ((err = param->scan_stop_cmpl.status) != ESP_BT_STATUS_SUCCESS){
             ESP_LOGE(TAG, "Scan stop failed: %s", esp_err_to_name(err));
@@ -1362,6 +1451,7 @@ static esp_err_t save_blemqttproxy_param()
     return ret;
 }
 
+#if CONFIG_WDT_REBOOT_LAST_SEEN_THRESHOLD==1
 static void wdt_task(void* pvParameters)
 {
     EventBits_t uxBits;
@@ -1378,6 +1468,7 @@ static void wdt_task(void* pvParameters)
     }
     vTaskDelete(NULL);
 }
+#endif
 
 void app_main()
 {
@@ -1430,5 +1521,7 @@ void app_main()
 
     ESP_ERROR_CHECK(esp_ble_gap_set_scan_params(&ble_scan_params));
 
+#if CONFIG_WDT_REBOOT_LAST_SEEN_THRESHOLD==1
     xTaskCreate(&wdt_task, "wdt_task", 2048 * 2, NULL, 5, NULL);
+#endif
 }
