@@ -94,6 +94,7 @@ typedef struct  {
     float       humidity;
     uint16_t    battery;
     int64_t     last_seen;
+    int64_t     mqtt_last_send;
 } ble_adv_data_t;
 
 ble_beacon_data_t ble_beacon_data[CONFIG_BLE_DEVICE_COUNT_CONFIGURED] = {
@@ -968,7 +969,7 @@ void persist_active_beacon_mask()
 }
 
 void update_adv_data(uint16_t maj, uint16_t min, int8_t measured_power,
-    float temp, float humidity, uint16_t battery)
+    float temp, float humidity, uint16_t battery, bool mqtt_send)
 {
     uint8_t  idx = beacon_maj_min_to_idx(maj, min);
 
@@ -977,6 +978,10 @@ void update_adv_data(uint16_t maj, uint16_t min, int8_t measured_power,
     ble_adv_data[idx].humidity       = humidity;
     ble_adv_data[idx].battery        = battery;
     ble_adv_data[idx].last_seen      = esp_timer_get_time();
+
+    if(mqtt_send){
+        ble_adv_data[idx].mqtt_last_send    = esp_timer_get_time();
+    }
 
     xEventGroupSetBits(s_values_evg, (EventBits_t) (1 << idx));
 }
@@ -998,11 +1003,11 @@ beacon_type_t esp_ble_is_mybeacon_packet (uint8_t *adv_data, uint8_t adv_data_le
         }
     } else if ((adv_data != NULL) && (adv_data_len == 0x17)){
         if ( (!memcmp(adv_data, (uint8_t*)&mybeacon_common_head_v4, sizeof(mybeacon_common_head_v4))) ){
-            ESP_LOGI(TAG, "esp_ble_is_mybeacon_packet v4, true");
+            ESP_LOGD(TAG, "esp_ble_is_mybeacon_packet v4, true");
 
             result = (scan_rsp_len ? BEACON_V4_SR : BEACON_V4);
         } else {
-            ESP_LOGI(TAG, "esp_ble_is_mybeacon_packet v4, false");
+            ESP_LOGD(TAG, "esp_ble_is_mybeacon_packet v4, false");
             result = UNKNOWN_BEACON;
         }
     }
@@ -1060,6 +1065,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         float temp = 0, humidity = 0;
 
         bool is_beacon_active = true;
+        bool mqtt_send_adv = false;
 
         switch (scan_result->scan_rst.search_evt) {
         case ESP_GAP_SEARCH_INQ_RES_EVT:
@@ -1150,45 +1156,63 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     break;
                 }
 
-                ESP_LOGI(TAG, "(0x%04x%04x) rssi %3d | temp %5.1f | hum %5.1f | x %+6d | y %+6d | z %+6d | batt %4d",
-                    maj, min, scan_result->scan_rst.rssi, temp, humidity, x, y, z, battery );
-#if CONFIG_USE_MQTT==1
-                int msg_id = 0;
-                char buffer_topic[128];
-                char buffer_payload[128];
+                // ESP_LOGI(TAG, "free heap %d", esp_get_free_heap_size());
 
-                // identifier, maj, min, sensor -> data
-                // snprintf(buffer_topic, 128,  "/%s/0x%04x/x%04x/%s", "beac", maj, min, "temp");
-                if( (temp < CONFIG_TEMP_LOW) || (temp > CONFIG_TEMP_HIGH) ){
-                    ESP_LOGE(TAG, "temperature out of range, not send");
-                } else {
-                    snprintf(buffer_topic, 128,  CONFIG_MQTT_FORMAT, "beac", maj, min, "temp");
-                    snprintf(buffer_payload, 128, "%.2f", temp);
+
+#if CONFIG_USE_MQTT==1
+                uint16_t mqtt_last_send_sec_gone = (esp_timer_get_time() - ble_adv_data[idx].mqtt_last_send)/1000000;
+                if( (mqtt_last_send_sec_gone > CONFIG_MQTT_MIN_TIME_INTERVAL_BETWEEN_MESSAGES)
+                    || (ble_adv_data[idx].mqtt_last_send == 0)){
+                    int msg_id = 0;
+                    char buffer_topic[128];
+                    char buffer_payload[128];
+
+                    mqtt_send_adv = true;
+
+                    // identifier, maj, min, sensor -> data
+                    // snprintf(buffer_topic, 128,  "/%s/0x%04x/x%04x/%s", "beac", maj, min, "temp");
+                    if( (temp < CONFIG_TEMP_LOW) || (temp > CONFIG_TEMP_HIGH) ){
+                        ESP_LOGE(TAG, "temperature out of range, not send");
+                    } else {
+                        snprintf(buffer_topic, 128,  CONFIG_MQTT_FORMAT, "beac", maj, min, "temp");
+                        snprintf(buffer_payload, 128, "%.2f", temp);
+                        msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
+                        ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+                        if(msg_id == -1){
+                            mqtt_send_adv = false;
+                        }
+                    }
+                    if( (humidity < CONFIG_HUMIDITY_LOW) || (humidity > CONFIG_HUMIDITY_HIGH) ){
+                        ESP_LOGE(TAG, "humidity out of range, not send");
+                    } else {
+                        snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "humidity");
+                        snprintf(buffer_payload, 128, "%.2f", humidity);
+                        msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
+                        ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+                        if(msg_id == -1){
+                            mqtt_send_adv = false;
+                        }
+                    }
+                    snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "rssi");
+                    snprintf(buffer_payload, 128, "%d", scan_result->scan_rst.rssi);
                     msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
                     ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
-                }
-                if( (humidity < CONFIG_HUMIDITY_LOW) || (humidity > CONFIG_HUMIDITY_HIGH) ){
-                    ESP_LOGE(TAG, "humidity out of range, not send");
-                } else {
-                    snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "humidity");
-                    snprintf(buffer_payload, 128, "%.2f", humidity);
-                    msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
-                    ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
-                }
-                snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "rssi");
-                snprintf(buffer_payload, 128, "%d", scan_result->scan_rst.rssi);
-                msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
-                ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
-                if( (battery < CONFIG_BATTERY_LOW) || (battery > CONFIG_BATTERY_HIGH )){
-                    ESP_LOGE(TAG, "battery out of range, not send");
-                } else {
-                    snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "battery");
-                    snprintf(buffer_payload, 128, "%d", battery);
-                    msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
-                    ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+                    if( (battery < CONFIG_BATTERY_LOW) || (battery > CONFIG_BATTERY_HIGH )){
+                        ESP_LOGE(TAG, "battery out of range, not send");
+                    } else {
+                        snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "battery");
+                        snprintf(buffer_payload, 128, "%d", battery);
+                        msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
+                        ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+                        if(msg_id == -1){
+                            mqtt_send_adv = false;
+                        }
+                    }
                 }
 #endif // CONFIG_USE_MQTT
-                update_adv_data(maj, min, scan_result->scan_rst.rssi, temp, humidity, battery);
+                ESP_LOGI(TAG, "(0x%04x%04x) rssi %3d | temp %5.1f | hum %5.1f | x %+6d | y %+6d | z %+6d | batt %4d | mqtt send %c",
+                    maj, min, scan_result->scan_rst.rssi, temp, humidity, x, y, z, battery, (mqtt_send_adv ? 'y':'n') );
+                update_adv_data(maj, min, scan_result->scan_rst.rssi, temp, humidity, battery, mqtt_send_adv);
             } else {
                 ESP_LOGD(TAG, "mybeacon not found");
             }

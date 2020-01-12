@@ -65,6 +65,13 @@ menu "BLE-MQTT Proxy"
             default 1
             range 0 1
 
+        config MQTT_MIN_TIME_INTERVAL_BETWEEN_MESSAGES
+            int "Wait time between MQTT messages for same device (sec)"
+            default 60
+            range 0 3600
+            help
+                Only send a MQTT message to the same device only once during this time interval.
+
         config MQTT_HOST
             string "MQTT Broker Host"
             default "iot.eclipse.org"
