@@ -262,7 +262,9 @@ static bool idle_timer_is_running();
 static esp_timer_handle_t periodic_wdt_timer;
 static void periodic_wdt_timer_callback(void* arg);
 static void periodic_wdt_timer_start();
-#define UPDATE_ESP_RESTART  (BIT0)
+#define UPDATE_ESP_RESTART          (BIT0)
+#define UPDATE_ESP_MQTT_RESTART     (BIT1)
+static uint8_t esp_restart_mqtt_beacon_to_take = UNKNOWN_BEACON;
 static EventGroupHandle_t s_wdt_evg;
 #define WDT_TIMER_DURATION              (CONFIG_WDT_OWN_INTERVAL * 1000000)
 
@@ -522,7 +524,7 @@ __attribute__((unused)) void periodic_wdt_timer_start(){
 
 void periodic_wdt_timer_callback(void* arg)
 {
-    EventBits_t uxReturn;
+    EventBits_t uxSet, uxReturn;
 
     ESP_LOGD(TAG, "periodic_wdt_timer_callback(): >>");
     uint8_t beacon_to_take = first_active_beacon();
@@ -545,9 +547,17 @@ void periodic_wdt_timer_callback(void* arg)
         ESP_LOGE(TAG, "periodic_wdt_timer_callback: last seen > threshold: %d sec, WIFI: %s, MQTT (enabled/onnected): %s/%s", last_seen_sec_gone,
             (wifi_connected ? "y" : "n"), (CONFIG_USE_MQTT ? "y" : "n"), (mqtt_connected ? "y" : "n"));
 
+        uxSet = 0;
         if(CONFIG_WDT_REBOOT_LAST_SEEN_THRESHOLD){
-            ESP_LOGE(TAG, "periodic_wdt_timer_callback: reboot flag set");
-            xEventGroupSetBits(s_wdt_evg, UPDATE_ESP_RESTART);
+            uxSet |= UPDATE_ESP_RESTART;
+        }
+        if(CONFIG_WDT_SEND_MQTT_BEFORE_REBOOT){
+            uxSet |= UPDATE_ESP_MQTT_RESTART;
+        }
+        if(uxSet){
+            ESP_LOGE(TAG, "periodic_wdt_timer_callback: reboot/mqtt flag set: %d", uxSet);
+            esp_restart_mqtt_beacon_to_take = beacon_to_take;
+            xEventGroupSetBits(s_wdt_evg, uxSet);
         }
     }
 }
@@ -558,6 +568,16 @@ void convert_s_hhmmss(uint16_t sec, uint8_t *h, uint8_t *m, uint8_t *s)
 
     *h = sec / 3600;
     tmp_sec -= *h*3600;
+
+    *m = tmp_sec / 60;
+    tmp_sec -= *m * 60;
+
+    *s = tmp_sec;
+}
+
+void convert_s_mmss(uint16_t sec, uint8_t *m, uint8_t *s)
+{
+    uint16_t tmp_sec = sec;
 
     *m = tmp_sec / 60;
     tmp_sec -= *m * 60;
@@ -667,7 +687,7 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
 
             ssd1306_clear_canvas(canvas, 0x00);
 
-            snprintf(buffer, 128, "Beacon last seen:");
+            snprintf(buffer, 128, "Last seen/send:");
             ssd1306_draw_string(canvas, 0, 0, (const uint8_t*) buffer, 10, 1);
             if(!num_act_beac){
                 s_display_status.lastseen_page_to_show = 1;
@@ -686,9 +706,15 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
                                 snprintf(buffer, 128, "%s: %c", ble_beacon_data[i].name, '/');
                             } else {
                                 uint16_t last_seen_sec_gone = (esp_timer_get_time() - ble_adv_data[i].last_seen)/1000000;
-                                uint8_t h, m, s;
-                                convert_s_hhmmss(last_seen_sec_gone, &h, &m, &s);
-                                snprintf(buffer, 128, "%s: %02d:%02d:%02d", ble_beacon_data[i].name, h, m, s);
+                                uint16_t mqtt_last_send_sec_gone = (esp_timer_get_time() - ble_adv_data[i].mqtt_last_send)/1000000;
+                                uint8_t m, s, mq, sq;
+                                convert_s_mmss(last_seen_sec_gone, &m, &s);
+                                convert_s_mmss(mqtt_last_send_sec_gone, &mq, &sq);
+                                if(m>99){
+                                    snprintf(buffer, 128, "%s: %c", ble_beacon_data[i].name, '>');
+                                } else {
+                                    snprintf(buffer, 128, "%s: %02d:%02d %02d:%02d", ble_beacon_data[i].name, m, s, mq, sq);
+                                }
                             }
                             ssd1306_draw_string(canvas, 0, line*10, (const uint8_t*) buffer, 10, 1);
                             if(BEAC_PER_PAGE_LASTSEEN == line++){
@@ -980,6 +1006,7 @@ void update_adv_data(uint16_t maj, uint16_t min, int8_t measured_power,
     ble_adv_data[idx].last_seen      = esp_timer_get_time();
 
     if(mqtt_send){
+        ESP_LOGI(TAG, "update_adv_data, update mqtt_last_send");
         ble_adv_data[idx].mqtt_last_send    = esp_timer_get_time();
     }
 
@@ -1475,20 +1502,37 @@ static esp_err_t save_blemqttproxy_param()
     return ret;
 }
 
-#if CONFIG_WDT_REBOOT_LAST_SEEN_THRESHOLD==1
+#if (CONFIG_WDT_REBOOT_LAST_SEEN_THRESHOLD==1 || CONFIG_WDT_SEND_MQTT_BEFORE_REBOOT==1)
 static void wdt_task(void* pvParameters)
 {
     EventBits_t uxBits;
-    UNUSED(uxBits);
+    char buffer_topic[128];
+    char buffer_payload[128];
+    uint32_t uptime_sec;
+    int msg_id = 0;
 
     periodic_wdt_timer_start();
 
     while (1) {
-        uxBits = xEventGroupWaitBits(s_wdt_evg, UPDATE_ESP_RESTART, pdTRUE, pdFALSE, portMAX_DELAY);
+        uxBits = xEventGroupWaitBits(s_wdt_evg, UPDATE_ESP_RESTART | UPDATE_ESP_MQTT_RESTART, pdTRUE, pdFALSE, portMAX_DELAY);
 
-        ESP_LOGE(TAG, "ssd1306_update: reboot flag is set -> esp_restart() -> REBOOT");
-        fflush(stdout);
-        esp_restart();
+        if(uxBits & UPDATE_ESP_MQTT_RESTART){
+            ESP_LOGE(TAG, "ssd1306_update: reboot send mqtt flag is set -> send MQTT message");
+            uptime_sec = esp_timer_get_time()/1000000;
+
+            snprintf(buffer_topic, 128,  CONFIG_MQTT_FORMAT, "beac",
+                ble_beacon_data[esp_restart_mqtt_beacon_to_take].major, ble_beacon_data[esp_restart_mqtt_beacon_to_take].minor, "reboot");
+            snprintf(buffer_payload, 128, "%d", uptime_sec);
+            msg_id = esp_mqtt_client_publish(s_client, buffer_topic, buffer_payload, 0, 1, 0);
+            ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+            fflush(stdout);
+        }
+
+        if(uxBits & UPDATE_ESP_RESTART){
+            ESP_LOGE(TAG, "ssd1306_update: reboot flag is set -> esp_restart() -> REBOOT");
+            fflush(stdout);
+            esp_restart();
+        }
     }
     vTaskDelete(NULL);
 }
@@ -1545,7 +1589,7 @@ void app_main()
 
     ESP_ERROR_CHECK(esp_ble_gap_set_scan_params(&ble_scan_params));
 
-#if CONFIG_WDT_REBOOT_LAST_SEEN_THRESHOLD==1
+#if (CONFIG_WDT_REBOOT_LAST_SEEN_THRESHOLD==1 || CONFIG_WDT_SEND_MQTT_BEFORE_REBOOT==1)
     xTaskCreate(&wdt_task, "wdt_task", 2048 * 2, NULL, 5, NULL);
 #endif
 }

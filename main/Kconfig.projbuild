@@ -30,6 +30,11 @@ menu "BLE-MQTT Proxy"
         config WDT_REBOOT_LAST_SEEN_THRESHOLD
             int "Reboot if the last seen threshold applies."
             default 1
+
+        config WDT_SEND_MQTT_BEFORE_REBOOT
+            int "Send a last MQTT message if last seen threshold applies (just before reboot, if configured)"
+            default 1
+
     endmenu
 
     menu "Display"
