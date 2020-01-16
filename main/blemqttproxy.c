@@ -112,7 +112,6 @@ ble_beacon_data_t ble_beacon_data[CONFIG_BLE_DEVICE_COUNT_CONFIGURED] = {
 ble_adv_data_t    ble_adv_data[CONFIG_BLE_DEVICE_COUNT_CONFIGURED] = { 0 };
 
 // Beacon
-//#define UNKNOWN_BEACON  99
 typedef enum {
     BEACON_V3           = 0,    // ble_bacon v3 adv
     BEACON_V4,                  // only ble_beacon v4 adv
@@ -173,21 +172,7 @@ esp_ble_mybeacon_vendor_t mybeacon_common_vendor_v3 = {
 static uint16_t s_active_beacon_mask = 0;
 
 // Display
-#define UPDATE_BEAC0        (BIT0)
-#define UPDATE_BEAC1        (BIT1)
-#define UPDATE_BEAC2        (BIT2)
-#define UPDATE_BEAC3        (BIT3)
-#define UPDATE_BEAC4        (BIT4)
-#define UPDATE_BEAC5        (BIT5)
-#define UPDATE_BEAC6        (BIT6)
-#define UPDATE_BEAC7        (BIT7)
-#define UPDATE_BEAC8        (BIT8)
-#define UPDATE_BEAC9        (BIT9)
-#define UPDATE_TEMP         (BIT10)
-#define UPDATE_DISPLAY      (BIT11)
-#define UPDATE_SPLASH       (BIT12)
-#define UPDATE_BEAC_MASK    (UPDATE_BEAC0 | UPDATE_BEAC1 | UPDATE_BEAC2 | UPDATE_BEAC3 | UPDATE_BEAC4 \
-                                | UPDATE_BEAC5 | UPDATE_BEAC6 | UPDATE_BEAC7 | UPDATE_BEAC8 | UPDATE_BEAC9 )
+#define UPDATE_DISPLAY      (BIT0)
 EventGroupHandle_t s_values_evg;
 
 #define BEAC_PER_PAGE_LASTSEEN  5
@@ -208,7 +193,8 @@ typedef struct {
     display_screen_t    current_screen;
     display_screen_t    screen_to_show;
     // Beacon
-    uint8_t             beac_to_show;   // 1..CONFIG_BLE_DEVICE_COUNT_USE
+    uint8_t             current_beac;
+    uint8_t             beac_to_show;   // 0..CONFIG_BLE_DEVICE_COUNT_USE-1
     // last seen
     uint8_t             lastseen_page_to_show;
     uint8_t             num_last_seen_pages;
@@ -235,28 +221,43 @@ static EventGroupHandle_t s_mqtt_evg;
 const static int MQTT_CONNECTED_BIT = BIT0;
 
 // Timer
+
+// The Oneshot timer is used for displaying the splash screen or the idle timer (to switch to empty screen after inactivity)
+
+#define SPLASH_SCREEN_TIMER_DURATION    2500000     // 2.5 sec
+#define IDLE_TIMER_DURATION             (CONFIG_DISPLAY_IDLE_TIMER * 1000000)
+
 typedef enum {
     TIMER_NO_USAGE = 0,
     TIMER_SPLASH_SCREEN,
     TIMER_IDLE_TIMER
 } oneshot_timer_usage_t;
+
 static oneshot_timer_usage_t oneshot_timer_usage = { TIMER_NO_USAGE };
-static esp_timer_handle_t periodic_timer;
 static esp_timer_handle_t oneshot_timer;
-static bool periodic_timer_running = false;
-static volatile bool run_periodic_timer = false;
-static volatile bool run_idle_timer_touch = false;
-static void periodic_timer_callback(void* arg);
-static void periodic_timer_start();
-static void periodic_timer_stop();
 static void oneshot_timer_callback(void* arg);
+
+static volatile bool idle_timer_running = false;    // status of the timer
+static volatile bool run_idle_timer = false;        // start/stop idle timer, set during cb , will be handled in ssd1306_update
+static volatile bool run_idle_timer_touch = false;  // touch the idle timer, will be handled in ssd1306_update
+static volatile bool show_empty_screen = false;     // switch to empty screen as idle timer action, will be handled in ssd1306_update
+
 static void idle_timer_start();
 static void idle_timer_stop();
 static void idle_timer_touch();
 static bool idle_timer_is_running();
+
+// The periodic timer is used to update the display regulary, e.g. for displaying last seen/send screen
+
 #define UPDATE_LAST_SEEN_INTERVAL       250000      // 4 Hz
-#define SPLASH_SCREEN_TIMER_DURATION    2500000     // 2.5 sec
-#define IDLE_TIMER_DURATION             (CONFIG_DISPLAY_IDLE_TIMER * 1000000)
+
+static esp_timer_handle_t periodic_timer;
+static volatile bool periodic_timer_running = false;
+static volatile bool run_periodic_timer = false;
+static void periodic_timer_callback(void* arg);
+static void periodic_timer_start();
+static void periodic_timer_stop();
+static bool periodic_timer_is_running();
 
 // Watchdog timer / WDT
 static esp_timer_handle_t periodic_wdt_timer;
@@ -310,10 +311,6 @@ void button_push_cb(void* arg)
 }
 #endif // CONFIG_DISABLE_BUTTON_HEADLESS
 
-void set_display_show_empty_screen(){
-    s_display_status.screen_to_show = EMPTY_SCREEN;
-}
-
 void set_next_display_show()
 {
     switch(s_display_status.current_screen){
@@ -323,13 +320,15 @@ void set_next_display_show()
             break;
         case EMPTY_SCREEN:
             s_display_status.screen_to_show = BEACON_SCREEN;
-            s_display_status.beac_to_show = 1;
+            s_display_status.current_beac = UNKNOWN_BEACON;
+            s_display_status.beac_to_show = 0;
             idle_timer_start();
             break;
         case BEACON_SCREEN:
-            if(s_display_status.beac_to_show < CONFIG_BLE_DEVICE_COUNT_USE){
+            if(s_display_status.beac_to_show < CONFIG_BLE_DEVICE_COUNT_USE - 1){
                 s_display_status.beac_to_show++;
             } else {
+                s_display_status.current_beac = UNKNOWN_BEACON;
                 s_display_status.screen_to_show = LASTSEEN_SCREEN;
                 s_display_status.lastseen_page_to_show = 1;
             }
@@ -377,7 +376,7 @@ void handle_long_button_push()
         case EMPTY_SCREEN:
             break;
         case BEACON_SCREEN:
-            toggle_beacon_idx_active(s_display_status.beac_to_show - 1);
+            toggle_beacon_idx_active(s_display_status.beac_to_show);
             break;
         case LASTSEEN_SCREEN:
             break;
@@ -418,16 +417,16 @@ void button_release_cb(void* arg)
             xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
         case BEACON_SCREEN:
-            run_periodic_timer = false;
-            xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY | (EventBits_t) (1 << (s_display_status.beac_to_show - 1) ));
+            run_periodic_timer = true;
+            xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
         case LASTSEEN_SCREEN:
             run_periodic_timer = true;
             xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
         case LOCALTEMP_SCREEN:
-            run_periodic_timer = false;
-            xEventGroupSetBits(s_values_evg, UPDATE_TEMP);
+            run_periodic_timer = true;
+            xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
         case APPVERSION_SCREEN:
             run_periodic_timer = true;
@@ -455,6 +454,13 @@ __attribute__((unused)) void periodic_timer_stop()
     ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
 }
 
+__attribute__((unused)) bool periodic_timer_is_running()
+{
+    ESP_LOGD(TAG, "periodic_timer_is_running(), %d", periodic_timer_running);
+
+    return periodic_timer_running;
+}
+
 void periodic_timer_callback(void* arg)
 {
     xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
@@ -463,7 +469,7 @@ void periodic_timer_callback(void* arg)
 void oneshot_timer_callback(void* arg)
 {
     oneshot_timer_usage_t usage = *(oneshot_timer_usage_t *)arg;
-    ESP_LOGD(TAG, "oneshot_timer_callback: usage %d, oneshot_timer_usage %d", usage, oneshot_timer_usage);
+    ESP_LOGD(TAG, "oneshot_timer_callback: usage %d, oneshot_timer_usage %d", usage, oneshot_timer_usage);  // TODO DEBUG
 
     switch(usage){
         case TIMER_NO_USAGE:
@@ -472,10 +478,12 @@ void oneshot_timer_callback(void* arg)
         case TIMER_SPLASH_SCREEN:
             // currently only move from SPLASH -> EMPTY screen and enable button
             set_next_display_show();
-            xEventGroupSetBits(s_values_evg, UPDATE_SPLASH);
+            xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
         case TIMER_IDLE_TIMER:
-            set_display_show_empty_screen();
+            show_empty_screen = true;
+            run_idle_timer = false;
+            run_periodic_timer = false;
             xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
         default:
@@ -492,15 +500,17 @@ void idle_timer_start(){
         return;
     ESP_LOGD(TAG, "idle_timer_start()");
     oneshot_timer_usage = TIMER_IDLE_TIMER;
+    idle_timer_running = true;
     ESP_ERROR_CHECK(esp_timer_start_once(oneshot_timer, IDLE_TIMER_DURATION));
 }
 
 void idle_timer_stop(){
     if(!IDLE_TIMER_DURATION)
         return;
+    ESP_LOGI(TAG, "idle_timer_stop()");
     assert(oneshot_timer_usage == TIMER_IDLE_TIMER);
-    ESP_LOGD(TAG, "idle_timer_stop()");
     oneshot_timer_usage = TIMER_NO_USAGE;
+    idle_timer_running = false;
     ESP_ERROR_CHECK(esp_timer_stop(oneshot_timer));
 }
 
@@ -515,7 +525,9 @@ void idle_timer_touch(){
 
 bool idle_timer_is_running(){
     ESP_LOGD(TAG, "idle_timer_is_running(), %d", (oneshot_timer_usage == TIMER_IDLE_TIMER));
-    return (oneshot_timer_usage == TIMER_IDLE_TIMER);
+    ESP_LOGD(TAG, "idle_timer_is_running %d, usage %d", idle_timer_running, oneshot_timer_usage);
+
+    return idle_timer_running;
 }
 
 __attribute__((unused)) void periodic_wdt_timer_start(){
@@ -593,14 +605,13 @@ void draw_pagenumber(ssd1306_canvas_t *canvas, uint8_t nr_act, uint8_t nr_total)
     ssd1306_draw_string_8x8(canvas, 128-3*8, 7, (const uint8_t*) buffer2);
 }
 
-esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
+esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
 {
     esp_err_t ret;
     UNUSED(ret);
     char buffer[128], buffer2[32];
     EventBits_t uxReturn;
 
-    ESP_LOGD(TAG, "ssd1306_update, uxBits %d", uxBits);
     ESP_LOGD(TAG, "ssd1306_update >, run_periodic_timer %d, run_idle_timer_touch %d, periodic_timer_running %d",
         run_periodic_timer, run_idle_timer_touch, periodic_timer_running);
     // ESP_ERROR_CHECK(esp_timer_dump(stdout));
@@ -617,15 +628,27 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
 
     if( run_idle_timer_touch ){
         run_idle_timer_touch = false;
+        ESP_LOGD(TAG, "ssd1306_update idle_timer_is_running() = %d", idle_timer_is_running());
+
         if(idle_timer_is_running()){
             idle_timer_touch();
         }
     }
 
+    if (show_empty_screen){
+        show_empty_screen = false;
+        s_display_status.current_screen = UNKNOWN_SCREEN;
+        s_display_status.screen_to_show = EMPTY_SCREEN;
+    }
+
+    ESP_LOGD(TAG, "ssd1306_update current_screen %d, screen_to_show %d", s_display_status.current_screen, s_display_status.screen_to_show);
+
     switch(s_display_status.screen_to_show){
 
         case EMPTY_SCREEN:
+            ESP_LOGD(TAG, "ssd1306_update current_screen %d, screen_to_show %d", s_display_status.current_screen, s_display_status.screen_to_show);
             if((s_display_status.current_screen != s_display_status.screen_to_show)){
+                ESP_LOGD(TAG, "ssd1306_update next command  ssd1306_clear_canvas");
                 ssd1306_clear_canvas(canvas, 0);
                 s_display_status.current_screen = s_display_status.screen_to_show;
                 return ssd1306_refresh_gram(canvas);
@@ -641,8 +664,9 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, EventBits_t uxBits)
             break;
 
         case BEACON_SCREEN:{
-            int idx = s_display_status.beac_to_show - 1;
-            if( (s_display_status.current_screen != s_display_status.screen_to_show) || (uxBits & (1 << idx)) ){
+            int idx = s_display_status.beac_to_show;
+            if( (s_display_status.current_screen != s_display_status.screen_to_show)
+                || (s_display_status.current_beac != s_display_status.beac_to_show) ){  // TODO
                 ssd1306_clear_canvas(canvas, 0x00);
                 snprintf(buffer, 128, "%s", ble_beacon_data[idx].name);
                 ssd1306_draw_string(canvas, 0, 0, (const uint8_t*) buffer, 10, 1);
@@ -807,11 +831,8 @@ static void ssd1306_task(void* pvParameters)
 	ssd1306_init();
 
     while (1) {
-        uxBits = xEventGroupWaitBits(s_values_evg,
-            UPDATE_BEAC_MASK | UPDATE_TEMP | UPDATE_SPLASH | UPDATE_DISPLAY,
-            pdTRUE, pdFALSE, portMAX_DELAY);
-        ESP_LOGD(TAG, "ssd1306_task: uxBits = %d", uxBits);
-        ssd1306_update(canvas, uxBits);
+        uxBits = xEventGroupWaitBits(s_values_evg, UPDATE_DISPLAY, pdTRUE, pdFALSE, portMAX_DELAY);
+        ssd1306_update(canvas);
     }
     vTaskDelete(NULL);
 }
@@ -1006,11 +1027,26 @@ void update_adv_data(uint16_t maj, uint16_t min, int8_t measured_power,
     ble_adv_data[idx].last_seen      = esp_timer_get_time();
 
     if(mqtt_send){
-        ESP_LOGI(TAG, "update_adv_data, update mqtt_last_send");
+        ESP_LOGD(TAG, "update_adv_data, update mqtt_last_send");
         ble_adv_data[idx].mqtt_last_send    = esp_timer_get_time();
     }
 
-    xEventGroupSetBits(s_values_evg, (EventBits_t) (1 << idx));
+    s_display_status.current_beac = UNKNOWN_BEACON;
+    xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
+}
+
+void check_update_display(uint16_t maj, uint16_t min)
+{
+    uint8_t  idx = beacon_maj_min_to_idx(maj, min);
+
+    if( (s_display_status.current_screen == BEACON_SCREEN) && (s_display_status.current_beac == idx) ){
+        s_display_status.current_beac = UNKNOWN_BEACON; // invalidate beacon to force update
+        xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
+        return;
+    } else if ( (s_display_status.current_screen == LASTSEEN_SCREEN) ){
+        xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
+        return;
+    }
 }
 
 beacon_type_t esp_ble_is_mybeacon_packet (uint8_t *adv_data, uint8_t adv_data_len, uint8_t scan_rsp_len){
@@ -1240,6 +1276,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 ESP_LOGI(TAG, "(0x%04x%04x) rssi %3d | temp %5.1f | hum %5.1f | x %+6d | y %+6d | z %+6d | batt %4d | mqtt send %c",
                     maj, min, scan_result->scan_rst.rssi, temp, humidity, x, y, z, battery, (mqtt_send_adv ? 'y':'n') );
                 update_adv_data(maj, min, scan_result->scan_rst.rssi, temp, humidity, battery, mqtt_send_adv);
+                check_update_display(maj, min);
             } else {
                 ESP_LOGD(TAG, "mybeacon not found");
             }
@@ -1395,7 +1432,7 @@ void update_local_temp_data(uint8_t num_devices, float *readings)
         local_temperature_data[i].last_seen   = esp_timer_get_time();
     }
 
-    xEventGroupSetBits(s_values_evg, UPDATE_TEMP);
+    xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
 }
 
 static void localsensor_task(void* pvParameters)
@@ -1561,7 +1598,8 @@ void app_main()
 #ifdef CONFIG_DISPLAY_SSD1306
     xTaskCreate(&ssd1306_task, "ssd1306_task", 2048 * 2, NULL, 5, NULL);
     vTaskDelay(50 / portTICK_PERIOD_MS);
-    xEventGroupSetBits(s_values_evg, UPDATE_SPLASH);
+    xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
+
     oneshot_timer_usage = SPLASH_SCREEN;
     ESP_LOGD(TAG, "app_main, start oneshot timer, %d", SPLASH_SCREEN_TIMER_DURATION);
     ESP_ERROR_CHECK(esp_timer_start_once(oneshot_timer, SPLASH_SCREEN_TIMER_DURATION));
