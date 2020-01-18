@@ -178,8 +178,7 @@ EventGroupHandle_t s_values_evg;
 #define BEAC_PER_PAGE_LASTSEEN  5
 
 typedef enum {
-    EMPTY_SCREEN        = 0,
-    SPLASH_SCREEN,
+    SPLASH_SCREEN       = 0,
     BEACON_SCREEN,
     LASTSEEN_SCREEN,
     LOCALTEMP_SCREEN,
@@ -194,22 +193,27 @@ typedef struct {
     display_screen_t    screen_to_show;
     // Beacon
     uint8_t             current_beac;
-    uint8_t             beac_to_show;   // 0..CONFIG_BLE_DEVICE_COUNT_USE-1
+    uint8_t             beac_to_show;           // 0..CONFIG_BLE_DEVICE_COUNT_USE-1
     // last seen
-    uint8_t             lastseen_page_to_show;
+    uint8_t             lastseen_page_to_show;  // 1..num_last_seen_pages
     uint8_t             num_last_seen_pages;
     // local Temperature sensor
-    uint8_t             localtemp_to_show;
+    uint8_t             localtemp_to_show;      // 1..num_localtemp_pages
     uint8_t             num_localtemp_pages;
     // enable/disable button
-    bool                button_enabled;
+    bool                button_enabled;         // will be enabled after splash screen
+    // display on/off
+    bool                display_on;
 } display_status_t;
 
 static display_status_t s_display_status = {
     .current_screen = UNKNOWN_SCREEN,
     .screen_to_show = SPLASH_SCREEN,
-    .button_enabled = false
+    .button_enabled = false,
+    .display_on     = true
 };
+
+static volatile bool turn_display_off = false;     // switch display on/off as idle timer action, will be handled in ssd1306_update
 
 // Wifi
 static EventGroupHandle_t s_wifi_evg;
@@ -237,10 +241,9 @@ static oneshot_timer_usage_t oneshot_timer_usage = { TIMER_NO_USAGE };
 static esp_timer_handle_t oneshot_timer;
 static void oneshot_timer_callback(void* arg);
 
-static volatile bool idle_timer_running = false;    // status of the timer
-static volatile bool run_idle_timer = false;        // start/stop idle timer, set during cb , will be handled in ssd1306_update
-static volatile bool run_idle_timer_touch = false;  // touch the idle timer, will be handled in ssd1306_update
-static volatile bool show_empty_screen = false;     // switch to empty screen as idle timer action, will be handled in ssd1306_update
+static volatile bool idle_timer_running     = false;    // status of the timer
+static volatile bool run_idle_timer         = false;    // start/stop idle timer, set during cb , will be handled in ssd1306_update
+static volatile bool run_idle_timer_touch   = false;    // touch the idle timer, will be handled in ssd1306_update
 
 static void idle_timer_start();
 static void idle_timer_stop();
@@ -313,17 +316,18 @@ void button_push_cb(void* arg)
 
 void set_next_display_show()
 {
+    ESP_LOGD(TAG, "set_next_display_show: s_display_status.current_screen %d", s_display_status.current_screen);
+
     switch(s_display_status.current_screen){
         case SPLASH_SCREEN:
-            s_display_status.screen_to_show = EMPTY_SCREEN;
             s_display_status.button_enabled = true;
-            break;
-        case EMPTY_SCREEN:
             s_display_status.screen_to_show = BEACON_SCREEN;
-            s_display_status.current_beac = UNKNOWN_BEACON;
-            s_display_status.beac_to_show = 0;
-            idle_timer_start();
+            s_display_status.current_beac   = UNKNOWN_BEACON;
+            s_display_status.beac_to_show   = 0;
+            run_idle_timer                  = true;
+            // idle_timer_start();
             break;
+
         case BEACON_SCREEN:
             if(s_display_status.beac_to_show < CONFIG_BLE_DEVICE_COUNT_USE - 1){
                 s_display_status.beac_to_show++;
@@ -333,6 +337,7 @@ void set_next_display_show()
                 s_display_status.lastseen_page_to_show = 1;
             }
             break;
+
         case LASTSEEN_SCREEN:
             if(s_display_status.lastseen_page_to_show < s_display_status.num_last_seen_pages){
                 s_display_status.lastseen_page_to_show++;
@@ -349,6 +354,7 @@ void set_next_display_show()
                 }
             }
             break;
+
         case LOCALTEMP_SCREEN:
 #if CONFIG_LOCAL_SENSORS_TEMPERATURE==1
             if(s_display_status.localtemp_to_show < s_display_status.num_localtemp_pages){
@@ -359,10 +365,13 @@ void set_next_display_show()
                 s_display_status.screen_to_show = APPVERSION_SCREEN;
             }
             break;
+
         case APPVERSION_SCREEN:
-            idle_timer_stop();
-            s_display_status.screen_to_show = EMPTY_SCREEN;
+            s_display_status.screen_to_show = BEACON_SCREEN;
+            s_display_status.current_beac   = UNKNOWN_BEACON;
+            s_display_status.beac_to_show   = 0;
             break;
+
         default:
             ESP_LOGE(TAG, "set_next_display_show: unhandled switch-case");
             break;
@@ -372,13 +381,20 @@ void set_next_display_show()
 #if CONFIG_DISABLE_BUTTON_HEADLESS==0
 void handle_long_button_push()
 {
+    static bool display_on = true;
+
     switch(s_display_status.current_screen){
-        case EMPTY_SCREEN:
-            break;
         case BEACON_SCREEN:
             toggle_beacon_idx_active(s_display_status.beac_to_show);
             break;
         case LASTSEEN_SCREEN:
+            if(display_on){
+                ssd1306_display_off();
+                display_on = false;
+            } else {
+                ssd1306_display_on();
+                display_on = true;
+            }
             break;
         case LOCALTEMP_SCREEN:
             break;
@@ -400,6 +416,19 @@ void button_release_cb(void* arg)
         return;
     }
 
+    if(!s_display_status.display_on){
+        ESP_LOGI(TAG, "button_release_cb: turn display on again");
+
+        run_idle_timer = true;
+        if( (s_display_status.current_screen == LASTSEEN_SCREEN)
+            || (s_display_status.current_screen ==  APPVERSION_SCREEN) ){
+            run_periodic_timer  = true;
+        }
+        turn_display_off = false;
+        xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
+        return;
+    }
+
     run_idle_timer_touch = true;
 
     ESP_LOGD(TAG, "button_release_cb: s_display_status.current_screen %d screen_to_show %d >",
@@ -412,12 +441,8 @@ void button_release_cb(void* arg)
     }
 
     switch(s_display_status.screen_to_show){
-        case EMPTY_SCREEN:
-            run_periodic_timer = false;
-            xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
-            break;
         case BEACON_SCREEN:
-            run_periodic_timer = true;
+            run_periodic_timer = false;
             xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
         case LASTSEEN_SCREEN:
@@ -425,7 +450,7 @@ void button_release_cb(void* arg)
             xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
         case LOCALTEMP_SCREEN:
-            run_periodic_timer = true;
+            run_periodic_timer = false;
             xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
         case APPVERSION_SCREEN:
@@ -471,19 +496,20 @@ void oneshot_timer_callback(void* arg)
     oneshot_timer_usage_t usage = *(oneshot_timer_usage_t *)arg;
     ESP_LOGD(TAG, "oneshot_timer_callback: usage %d, oneshot_timer_usage %d", usage, oneshot_timer_usage);  // TODO DEBUG
 
+    oneshot_timer_usage = TIMER_NO_USAGE;
+
     switch(usage){
         case TIMER_NO_USAGE:
             ESP_LOGE(TAG, "oneshot_timer_callback: TIMER_NO_USAGE, should not happen");
             break;
         case TIMER_SPLASH_SCREEN:
-            // currently only move from SPLASH -> EMPTY screen and enable button
             set_next_display_show();
             xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
         case TIMER_IDLE_TIMER:
-            show_empty_screen = true;
             run_idle_timer = false;
             run_periodic_timer = false;
+            turn_display_off = true;
             xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
         default:
@@ -495,6 +521,7 @@ void oneshot_timer_callback(void* arg)
 }
 
 void idle_timer_start(){
+    ESP_LOGD(TAG, "idle_timer_start(), idle_timer_running %d, usage %d", idle_timer_running, oneshot_timer_usage);
     assert(oneshot_timer_usage == TIMER_NO_USAGE);
     if(!IDLE_TIMER_DURATION)
         return;
@@ -507,7 +534,11 @@ void idle_timer_start(){
 void idle_timer_stop(){
     if(!IDLE_TIMER_DURATION)
         return;
-    ESP_LOGI(TAG, "idle_timer_stop()");
+    ESP_LOGD(TAG, "idle_timer_stop(), idle_timer_running %d, usage %d", idle_timer_running, oneshot_timer_usage);
+    if(oneshot_timer_usage == TIMER_NO_USAGE){
+        idle_timer_running = false;
+        return;
+    }
     assert(oneshot_timer_usage == TIMER_IDLE_TIMER);
     oneshot_timer_usage = TIMER_NO_USAGE;
     idle_timer_running = false;
@@ -517,14 +548,13 @@ void idle_timer_stop(){
 void idle_timer_touch(){
     if(!IDLE_TIMER_DURATION)
         return;
-    ESP_LOGD(TAG, "idle_timer_touch()");
+    ESP_LOGD(TAG, "idle_timer_touch(), idle_timer_running %d, usage %d", idle_timer_running, oneshot_timer_usage);
     assert(oneshot_timer_usage == TIMER_IDLE_TIMER);
     ESP_ERROR_CHECK(esp_timer_stop(oneshot_timer));
     ESP_ERROR_CHECK(esp_timer_start_once(oneshot_timer, IDLE_TIMER_DURATION));
 }
 
 bool idle_timer_is_running(){
-    ESP_LOGD(TAG, "idle_timer_is_running(), %d", (oneshot_timer_usage == TIMER_IDLE_TIMER));
     ESP_LOGD(TAG, "idle_timer_is_running %d, usage %d", idle_timer_running, oneshot_timer_usage);
 
     return idle_timer_running;
@@ -612,17 +642,28 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
     char buffer[128], buffer2[32];
     EventBits_t uxReturn;
 
-    ESP_LOGD(TAG, "ssd1306_update >, run_periodic_timer %d, run_idle_timer_touch %d, periodic_timer_running %d",
-        run_periodic_timer, run_idle_timer_touch, periodic_timer_running);
+    ESP_LOGD(TAG, "ssd1306_update >, run_periodic_timer %d, run_idle_timer_touch %d, periodic_timer_is_running %d, ssd1306_update current_screen %d, screen_to_show %d",
+        run_periodic_timer, run_idle_timer_touch, periodic_timer_running, s_display_status.current_screen, s_display_status.screen_to_show);
+
     // ESP_ERROR_CHECK(esp_timer_dump(stdout));
 
     if(run_periodic_timer){
-        if(!periodic_timer_running){
+        if(!periodic_timer_is_running()){
             periodic_timer_start();
         }
     } else {
-        if(periodic_timer_running){
+        if(periodic_timer_is_running()){
             periodic_timer_stop();
+        }
+    }
+
+    if(run_idle_timer){
+        if(!idle_timer_is_running()){
+            idle_timer_start();
+        }
+    } else {
+        if(idle_timer_is_running()){
+            idle_timer_stop();
         }
     }
 
@@ -635,31 +676,31 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
         }
     }
 
-    if (show_empty_screen){
-        show_empty_screen = false;
-        s_display_status.current_screen = UNKNOWN_SCREEN;
-        s_display_status.screen_to_show = EMPTY_SCREEN;
+    ESP_LOGD(TAG, "ssd1306_update turn_display_off %d, s_display_status.display_on %d ", turn_display_off, s_display_status.display_on);
+    if (turn_display_off){
+        if(s_display_status.display_on){
+            s_display_status.display_on = false;
+            ssd1306_display_off();
+            return ESP_OK;
+       }
+    } else {
+        if(!s_display_status.display_on){
+            s_display_status.display_on = true;
+            ssd1306_display_on();
+            return ESP_OK;
+      }
     }
 
     ESP_LOGD(TAG, "ssd1306_update current_screen %d, screen_to_show %d", s_display_status.current_screen, s_display_status.screen_to_show);
 
     switch(s_display_status.screen_to_show){
 
-        case EMPTY_SCREEN:
-            ESP_LOGD(TAG, "ssd1306_update current_screen %d, screen_to_show %d", s_display_status.current_screen, s_display_status.screen_to_show);
-            if((s_display_status.current_screen != s_display_status.screen_to_show)){
-                ESP_LOGD(TAG, "ssd1306_update next command  ssd1306_clear_canvas");
-                ssd1306_clear_canvas(canvas, 0);
-                s_display_status.current_screen = s_display_status.screen_to_show;
-                return ssd1306_refresh_gram(canvas);
-            } else {
-                return ESP_OK;
-            }
-            break;
-
         case SPLASH_SCREEN:
+            ESP_LOGI(TAG, "ssd1306_update SPLASH_SCREEN current_screen %d, screen_to_show %d", s_display_status.current_screen, s_display_status.screen_to_show);
+
             memcpy((void *) canvas->s_chDisplayBuffer, (void *) blemqttproxy_splash1, canvas->w * canvas->h);
             s_display_status.current_screen = s_display_status.screen_to_show;
+
             return ssd1306_refresh_gram(canvas);
             break;
 
@@ -1598,10 +1639,11 @@ void app_main()
 #ifdef CONFIG_DISPLAY_SSD1306
     xTaskCreate(&ssd1306_task, "ssd1306_task", 2048 * 2, NULL, 5, NULL);
     vTaskDelay(50 / portTICK_PERIOD_MS);
+
+    oneshot_timer_usage = TIMER_SPLASH_SCREEN;
     xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
 
-    oneshot_timer_usage = SPLASH_SCREEN;
-    ESP_LOGD(TAG, "app_main, start oneshot timer, %d", SPLASH_SCREEN_TIMER_DURATION);
+    ESP_LOGI(TAG, "app_main, start oneshot timer, %d", SPLASH_SCREEN_TIMER_DURATION);
     ESP_ERROR_CHECK(esp_timer_start_once(oneshot_timer, SPLASH_SCREEN_TIMER_DURATION));
 #endif // CONFIG_DISPLAY_SSD1306
 
@@ -1623,7 +1665,7 @@ void app_main()
     xTaskCreate(&localsensor_task, "localsensor_task", 2048 * 2, NULL, 5, NULL);
 #endif // CONFIG_LOCAL_SENSORS_TEMPERATURE
 
-    xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
+//    xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
 
     ESP_ERROR_CHECK(esp_ble_gap_set_scan_params(&ble_scan_params));
 
