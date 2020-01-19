@@ -381,20 +381,11 @@ void set_next_display_show()
 #if CONFIG_DISABLE_BUTTON_HEADLESS==0
 void handle_long_button_push()
 {
-    static bool display_on = true;
-
     switch(s_display_status.current_screen){
         case BEACON_SCREEN:
             toggle_beacon_idx_active(s_display_status.beac_to_show);
             break;
         case LASTSEEN_SCREEN:
-            if(display_on){
-                ssd1306_display_off();
-                display_on = false;
-            } else {
-                ssd1306_display_on();
-                display_on = true;
-            }
             break;
         case LOCALTEMP_SCREEN:
             break;
@@ -569,16 +560,29 @@ void periodic_wdt_timer_callback(void* arg)
     EventBits_t uxSet, uxReturn;
 
     ESP_LOGD(TAG, "periodic_wdt_timer_callback(): >>");
-    uint8_t beacon_to_take = first_active_beacon();
-    ESP_LOGD(TAG, "periodic_wdt_timer_callback: first active beac %d", beacon_to_take);
+
+    uint8_t beacon_to_take = UNKNOWN_BEACON;
+    uint16_t lowest_last_seen_sec = CONFIG_WDT_LAST_SEEN_THRESHOLD;
+    uint16_t temp_last_seen_sec;
+
+    for(int i=0; i < CONFIG_BLE_DEVICE_COUNT_USE; i++){
+        if(is_beacon_idx_active(i)){
+            temp_last_seen_sec = (esp_timer_get_time() - ble_adv_data[i].last_seen)/1000000;
+            if(temp_last_seen_sec < lowest_last_seen_sec){
+                beacon_to_take = i;
+                lowest_last_seen_sec = temp_last_seen_sec;
+            }
+        }
+    }
+
+    ESP_LOGD(TAG, "periodic_wdt_timer_callback: lowest beac found %d", beacon_to_take);
     if(beacon_to_take == UNKNOWN_BEACON){
         ESP_LOGD(TAG, "periodic_wdt_timer_callback: no active beac <<");
         return;
     }
 
-    uint16_t last_seen_sec_gone = (esp_timer_get_time() - ble_adv_data[beacon_to_take].last_seen)/1000000;
-    ESP_LOGD(TAG, "periodic_wdt_timer_callback(): last_seen_sec_gone = %d", last_seen_sec_gone);
-    if(last_seen_sec_gone > CONFIG_WDT_LAST_SEEN_THRESHOLD){
+    ESP_LOGD(TAG, "periodic_wdt_timer_callback(): last_seen_sec_gone = %d", lowest_last_seen_sec);
+    if(lowest_last_seen_sec >= CONFIG_WDT_LAST_SEEN_THRESHOLD){
 
         uxReturn = xEventGroupWaitBits(s_mqtt_evg, CONNECTED_BIT, false, true, 0);
         bool mqtt_connected = uxReturn & CONNECTED_BIT;
@@ -586,7 +590,7 @@ void periodic_wdt_timer_callback(void* arg)
         uxReturn = xEventGroupWaitBits(s_wifi_evg, CONNECTED_BIT, false, true, 0);
         bool wifi_connected = uxReturn & CONNECTED_BIT;
 
-        ESP_LOGE(TAG, "periodic_wdt_timer_callback: last seen > threshold: %d sec, WIFI: %s, MQTT (enabled/onnected): %s/%s", last_seen_sec_gone,
+        ESP_LOGE(TAG, "periodic_wdt_timer_callback: last seen > threshold: %d sec, WIFI: %s, MQTT (enabled/onnected): %s/%s", lowest_last_seen_sec,
             (wifi_connected ? "y" : "n"), (CONFIG_USE_MQTT ? "y" : "n"), (mqtt_connected ? "y" : "n"));
 
         uxSet = 0;
@@ -772,13 +776,13 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
                             } else {
                                 uint16_t last_seen_sec_gone = (esp_timer_get_time() - ble_adv_data[i].last_seen)/1000000;
                                 uint16_t mqtt_last_send_sec_gone = (esp_timer_get_time() - ble_adv_data[i].mqtt_last_send)/1000000;
-                                uint8_t m, s, mq, sq;
-                                convert_s_mmss(last_seen_sec_gone, &m, &s);
-                                convert_s_mmss(mqtt_last_send_sec_gone, &mq, &sq);
-                                if(m>99){
-                                    snprintf(buffer, 128, "%s: %c", ble_beacon_data[i].name, '>');
+                                uint8_t h, m, s, hq, mq, sq;
+                                convert_s_hhmmss(last_seen_sec_gone, &h, &m, &s);
+                                convert_s_hhmmss(mqtt_last_send_sec_gone, &hq, &mq, &sq);
+                                if(h>99){
+                                    snprintf(buffer, 128, "%s: %s", ble_beacon_data[i].name, "seen >99h");
                                 } else {
-                                    snprintf(buffer, 128, "%s: %02d:%02d %02d:%02d", ble_beacon_data[i].name, m, s, mq, sq);
+                                    snprintf(buffer, 128, "%s: %02d:%02d:%02d %02d:%02d:%02d", ble_beacon_data[i].name, h, m, s, hq, mq, sq);
                                 }
                             }
                             ssd1306_draw_string(canvas, 0, line*10, (const uint8_t*) buffer, 10, 1);
