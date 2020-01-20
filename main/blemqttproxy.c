@@ -183,6 +183,7 @@ typedef enum {
     LASTSEEN_SCREEN,
     LOCALTEMP_SCREEN,
     APPVERSION_SCREEN,
+    STATS_SCREEN,
     MAX_SCREEN_NUM,
     UNKNOWN_SCREEN      = 99
 } display_screen_t;
@@ -367,6 +368,10 @@ void set_next_display_show()
             break;
 
         case APPVERSION_SCREEN:
+            s_display_status.screen_to_show = STATS_SCREEN;
+            break;
+
+        case STATS_SCREEN:
             s_display_status.screen_to_show = BEACON_SCREEN;
             s_display_status.current_beac   = UNKNOWN_BEACON;
             s_display_status.beac_to_show   = 0;
@@ -391,6 +396,8 @@ void handle_long_button_push()
             break;
         case APPVERSION_SCREEN:
             break;
+        case STATS_SCREEN:
+            break;
         default:
             ESP_LOGE(TAG, "handle_long_button_push: unhandled switch-case");
             break;
@@ -412,7 +419,8 @@ void button_release_cb(void* arg)
 
         run_idle_timer = true;
         if( (s_display_status.current_screen == LASTSEEN_SCREEN)
-            || (s_display_status.current_screen ==  APPVERSION_SCREEN) ){
+            || (s_display_status.current_screen ==  APPVERSION_SCREEN)
+            || (s_display_status.current_screen ==  STATS_SCREEN) ){
             run_periodic_timer  = true;
         }
         turn_display_off = false;
@@ -445,6 +453,10 @@ void button_release_cb(void* arg)
             xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
         case APPVERSION_SCREEN:
+            run_periodic_timer = true;
+            xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
+            break;
+        case STATS_SCREEN:
             run_periodic_timer = true;
             xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
@@ -816,7 +828,7 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
             break;
 
         case APPVERSION_SCREEN:
-            if((s_display_status.current_screen != s_display_status.screen_to_show)){
+            {
                 const esp_app_desc_t *app_desc = esp_ota_get_app_description();
                 uint8_t mac[6];
                 ESP_ERROR_CHECK(esp_efuse_mac_get_default(mac));
@@ -852,10 +864,19 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
 
                 s_display_status.current_screen = s_display_status.screen_to_show;
                 return ssd1306_refresh_gram(canvas);
-            } else {
-                return ESP_OK;
             }
             break;
+
+        case STATS_SCREEN: {
+            ssd1306_clear_canvas(canvas, 0x00);
+            snprintf(buffer, 128, "%s", "STATS_SCREEN");
+            ssd1306_draw_string(canvas, 0, 0, (const uint8_t*) buffer, 10, 1);
+
+            s_display_status.current_screen = s_display_status.screen_to_show;
+            return ssd1306_refresh_gram(canvas);
+            }
+            break;
+
         default:
             ESP_LOGE(TAG, "unhandled ssd1306_update screen");
             break;
