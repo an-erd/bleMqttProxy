@@ -208,10 +208,10 @@ typedef struct {
 } display_status_t;
 
 static display_status_t s_display_status = {
-    .current_screen = UNKNOWN_SCREEN,
-    .screen_to_show = SPLASH_SCREEN,
-    .button_enabled = false,
-    .display_on     = true
+    .current_screen     = UNKNOWN_SCREEN,
+    .screen_to_show     = SPLASH_SCREEN,
+    .button_enabled     = false,
+    .display_on         = true
 };
 
 static volatile bool turn_display_off = false;     // switch display on/off as idle timer action, will be handled in ssd1306_update
@@ -219,11 +219,15 @@ static volatile bool turn_display_off = false;     // switch display on/off as i
 // Wifi
 static EventGroupHandle_t s_wifi_evg;
 const static int CONNECTED_BIT = BIT0;
+static uint16_t wifi_connections_connect = 0;
+static uint16_t wifi_connections_disconnect = 0;
 
 // MQTT
 static esp_mqtt_client_handle_t s_client;
 static EventGroupHandle_t s_mqtt_evg;
 const static int MQTT_CONNECTED_BIT = BIT0;
+static uint16_t mqtt_packets_send = 0;
+static uint16_t mqtt_packets_fail = 0;
 
 // Timer
 
@@ -383,6 +387,14 @@ void set_next_display_show()
     }
 }
 
+void clear_stats_values()
+{
+    wifi_connections_connect = 0;
+    wifi_connections_disconnect = 0;
+    mqtt_packets_send = 0;
+    mqtt_packets_fail = 0;
+}
+
 #if CONFIG_DISABLE_BUTTON_HEADLESS==0
 void handle_long_button_push()
 {
@@ -397,6 +409,7 @@ void handle_long_button_push()
         case APPVERSION_SCREEN:
             break;
         case STATS_SCREEN:
+            clear_stats_values();
             break;
         default:
             ESP_LOGE(TAG, "handle_long_button_push: unhandled switch-case");
@@ -721,6 +734,7 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
             break;
 
         case BEACON_SCREEN:{
+
             int idx = s_display_status.beac_to_show;
             if( (s_display_status.current_screen != s_display_status.screen_to_show)
                 || (s_display_status.current_beac != s_display_status.beac_to_show) ){  // TODO
@@ -759,7 +773,7 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
         case LASTSEEN_SCREEN:{
             uint8_t num_act_beac = num_active_beacon();
             s_display_status.num_last_seen_pages = num_act_beac / BEAC_PER_PAGE_LASTSEEN
-                + (num_act_beac % BEAC_PER_PAGE_LASTSEEN ? 1:0) + (!num_act_beac ? 1 : 0);
+                + (num_act_beac % BEAC_PER_PAGE_LASTSEEN ? 1 : 0) + (!num_act_beac ? 1 : 0);
 
             if(s_display_status.lastseen_page_to_show > s_display_status.num_last_seen_pages){
                 // due to deannouncment by "touching" the beacon - TODO
@@ -827,50 +841,63 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
 #endif // CONFIG_LOCAL_SENSORS_TEMPERATURE
             break;
 
-        case APPVERSION_SCREEN:
-            {
-                const esp_app_desc_t *app_desc = esp_ota_get_app_description();
-                uint8_t mac[6];
-                ESP_ERROR_CHECK(esp_efuse_mac_get_default(mac));
+        case APPVERSION_SCREEN: {
+            const esp_app_desc_t *app_desc = esp_ota_get_app_description();
+            uint8_t mac[6];
+            ESP_ERROR_CHECK(esp_efuse_mac_get_default(mac));
 
-                ssd1306_clear_canvas(canvas, 0x00);
-                snprintf(buffer, 128, "%s", app_desc->version);
-                ssd1306_draw_string(canvas, 0, 0, (const uint8_t*) buffer, 10, 1);
-                snprintf(buffer, 128, "%s", app_desc->project_name);
-                ssd1306_draw_string(canvas, 0, 11, (const uint8_t*) buffer, 10, 1);
-                snprintf(buffer, 128, "%s", app_desc->idf_ver);
-                ssd1306_draw_string(canvas, 0, 22, (const uint8_t*) buffer, 10, 1);
-                snprintf(buffer, 128, "%2X:%2X:%2X:%2X:%2X:%2X",
-                    mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-                ssd1306_draw_string(canvas, 0, 33, (const uint8_t*) buffer, 10, 1);
+            ssd1306_clear_canvas(canvas, 0x00);
+            snprintf(buffer, 128, "%s", app_desc->version);
+            ssd1306_draw_string(canvas, 0, 0, (const uint8_t*) buffer, 10, 1);
+            snprintf(buffer, 128, "%s", app_desc->project_name);
+            ssd1306_draw_string(canvas, 0, 11, (const uint8_t*) buffer, 10, 1);
+            snprintf(buffer, 128, "%s", app_desc->idf_ver);
+            ssd1306_draw_string(canvas, 0, 22, (const uint8_t*) buffer, 10, 1);
+            snprintf(buffer, 128, "%2X:%2X:%2X:%2X:%2X:%2X",
+                mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+            ssd1306_draw_string(canvas, 0, 33, (const uint8_t*) buffer, 10, 1);
 
-                uxReturn = xEventGroupWaitBits(s_mqtt_evg, CONNECTED_BIT, false, true, 0);
-                bool mqtt_connected = uxReturn & CONNECTED_BIT;
+            uxReturn = xEventGroupWaitBits(s_mqtt_evg, CONNECTED_BIT, false, true, 0);
+            bool mqtt_connected = uxReturn & CONNECTED_BIT;
 
-                uxReturn = xEventGroupWaitBits(s_wifi_evg, CONNECTED_BIT, false, true, 0);
-                bool wifi_connected = uxReturn & CONNECTED_BIT;
+            uxReturn = xEventGroupWaitBits(s_wifi_evg, CONNECTED_BIT, false, true, 0);
+            bool wifi_connected = uxReturn & CONNECTED_BIT;
 
-                snprintf(buffer, 128, "WIFI: %s, MQTT: %s/%s", (wifi_connected ? "y" : "n"), (CONFIG_USE_MQTT ? "y" : "n"), (mqtt_connected ? "y" : "n"));
-                ssd1306_draw_string(canvas, 0, 44, (const uint8_t*) buffer, 10, 1);
+            snprintf(buffer, 128, "WIFI: %s, MQTT: %s/%s", (wifi_connected ? "y" : "n"), (CONFIG_USE_MQTT ? "y" : "n"), (mqtt_connected ? "y" : "n"));
+            ssd1306_draw_string(canvas, 0, 44, (const uint8_t*) buffer, 10, 1);
 
-                itoa(s_active_beacon_mask, buffer2, 2);
-                int num_lead_zeros = CONFIG_BLE_DEVICE_COUNT_USE - strlen(buffer2);
-                if(!num_lead_zeros){
-                    snprintf(buffer, 128, "Act:  %s (%d..1)", buffer2, CONFIG_BLE_DEVICE_COUNT_USE);
-                } else {
-                    snprintf(buffer, 128, "Act:  %0*d%s (%d..1)", num_lead_zeros, 0, buffer2,   CONFIG_BLE_DEVICE_COUNT_USE);
-                }
-                ssd1306_draw_string(canvas, 0, 55, (const uint8_t*) buffer, 10, 1);
+            itoa(s_active_beacon_mask, buffer2, 2);
+            int num_lead_zeros = CONFIG_BLE_DEVICE_COUNT_USE - strlen(buffer2);
+            if(!num_lead_zeros){
+                snprintf(buffer, 128, "Act:  %s (%d..1)", buffer2, CONFIG_BLE_DEVICE_COUNT_USE);
+            } else {
+                snprintf(buffer, 128, "Act:  %0*d%s (%d..1)", num_lead_zeros, 0, buffer2,   CONFIG_BLE_DEVICE_COUNT_USE);
+            }
+            ssd1306_draw_string(canvas, 0, 55, (const uint8_t*) buffer, 10, 1);
 
-                s_display_status.current_screen = s_display_status.screen_to_show;
-                return ssd1306_refresh_gram(canvas);
+            s_display_status.current_screen = s_display_status.screen_to_show;
+            return ssd1306_refresh_gram(canvas);
             }
             break;
 
         case STATS_SCREEN: {
+            uint16_t uptime_sec = esp_timer_get_time() / 1000000;
+            uint8_t up_h, up_m, up_s;
+
             ssd1306_clear_canvas(canvas, 0x00);
-            snprintf(buffer, 128, "%s", "STATS_SCREEN");
+
+            snprintf(buffer, 128, "%s", "Statistics:");
             ssd1306_draw_string(canvas, 0, 0, (const uint8_t*) buffer, 10, 1);
+
+            convert_s_hhmmss(uptime_sec, &up_h, &up_m, &up_s);
+            snprintf(buffer, 128, "%-9s: %3d:%02d:%02d", "uptime", up_h, up_m, up_s);
+            ssd1306_draw_string(canvas, 0, 11, (const uint8_t*) buffer, 10, 1);
+
+            snprintf(buffer, 128, "%-9s: %5d/%5d", "WiFi ok/f", wifi_connections_connect, wifi_connections_disconnect);
+            ssd1306_draw_string(canvas, 0, 22, (const uint8_t*) buffer, 10, 1);
+
+            snprintf(buffer, 128, "%-9s: %5d/%5d", "MQTT s/f", mqtt_packets_send, mqtt_packets_fail);
+            ssd1306_draw_string(canvas, 0, 33, (const uint8_t*) buffer, 10, 1);
 
             s_display_status.current_screen = s_display_status.screen_to_show;
             return ssd1306_refresh_gram(canvas);
@@ -911,10 +938,12 @@ static esp_err_t wifi_event_handler(void *ctx, system_event_t *event)
             esp_wifi_connect();
             break;
         case SYSTEM_EVENT_STA_GOT_IP:
+            wifi_connections_connect++;
             xEventGroupSetBits(s_wifi_evg, CONNECTED_BIT);
             ESP_LOGI(TAG, "wifi_event_handler: SYSTEM_EVENT_STA_GOT_IP");
             break;
         case SYSTEM_EVENT_STA_DISCONNECTED:
+            wifi_connections_disconnect++;
             esp_wifi_connect();
             xEventGroupClearBits(s_wifi_evg, CONNECTED_BIT);
             ESP_LOGI(TAG, "wifi_event_handler: SYSTEM_EVENT_STA_DISCONNECTED");
@@ -1320,6 +1349,9 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                             ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
                             if(msg_id == -1){
                                 mqtt_send_adv = false;
+                                mqtt_packets_fail++;
+                            } else {
+                                mqtt_packets_send++;
                             }
                         }
                         if( (humidity < CONFIG_HUMIDITY_LOW) || (humidity > CONFIG_HUMIDITY_HIGH) ){
@@ -1331,6 +1363,9 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                             ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
                             if(msg_id == -1){
                                 mqtt_send_adv = false;
+                                mqtt_packets_fail++;
+                            } else {
+                                mqtt_packets_send++;
                             }
                         }
                         snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "rssi");
@@ -1346,6 +1381,9 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                             ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
                             if(msg_id == -1){
                                 mqtt_send_adv = false;
+                                mqtt_packets_fail++;
+                            } else {
+                                mqtt_packets_send++;
                             }
                         }
                     }
