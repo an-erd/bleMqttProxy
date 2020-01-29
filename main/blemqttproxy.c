@@ -39,6 +39,9 @@
 #include "ble.h"
 #include "beacon.h"
 #include "localsensor.h"
+#include "ble_mqtt.h"
+#include "timer.h"
+#include "web_file_server.h"
 
 static const char* TAG = "BLEMQTTPROXY";
 
@@ -88,10 +91,10 @@ static struct gattc_profile_inst gl_profile_tab[PROFILE_NUM] = {
 };
 
 // Wifi
-static EventGroupHandle_t s_wifi_evg;
-const static int CONNECTED_BIT = BIT0;
-static uint16_t wifi_connections_connect = 0;
-static uint16_t wifi_connections_disconnect = 0;
+EventGroupHandle_t s_wifi_evg;
+const int CONNECTED_BIT = BIT0;
+uint16_t wifi_connections_connect = 0;
+uint16_t wifi_connections_disconnect = 0;
 
 // Watchdog timer / WDT
 static esp_timer_handle_t periodic_wdt_timer;
@@ -170,18 +173,18 @@ void button_release_cb(void* arg)
     if(!s_display_status.display_on){
         ESP_LOGD(TAG, "button_release_cb: turn display on again");
 
-        run_idle_timer = true;
+        set_run_idle_timer(true);
         if( (s_display_status.current_screen == LASTSEEN_SCREEN)
             || (s_display_status.current_screen ==  APPVERSION_SCREEN)
             || (s_display_status.current_screen ==  STATS_SCREEN) ){
-            run_periodic_timer  = true;
+            set_run_periodic_timer(true);
         }
         turn_display_off = false;
         xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
         return;
     }
 
-    run_idle_timer_touch = true;
+    set_run_idle_timer_touch(true);
 
     ESP_LOGD(TAG, "button_release_cb: s_display_status.current_screen %d screen_to_show %d >",
         s_display_status.current_screen, s_display_status.screen_to_show);
@@ -194,23 +197,23 @@ void button_release_cb(void* arg)
 
     switch(s_display_status.screen_to_show){
         case BEACON_SCREEN:
-            run_periodic_timer = false;
+            set_run_periodic_timer(false);
             xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
         case LASTSEEN_SCREEN:
-            run_periodic_timer = true;
+            set_run_periodic_timer(true);
             xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
         case LOCALTEMP_SCREEN:
-            run_periodic_timer = false;
+            set_run_periodic_timer(false);
             xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
         case APPVERSION_SCREEN:
-            run_periodic_timer = true;
+            set_run_periodic_timer(true);
             xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
         case STATS_SCREEN:
-            run_periodic_timer = true;
+            set_run_periodic_timer(true);
             xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
         default:

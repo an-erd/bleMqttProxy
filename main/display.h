@@ -7,7 +7,6 @@
 #define UPDATE_DISPLAY      (BIT0)
 extern EventGroupHandle_t s_values_evg;
 
-
 #define BEAC_PER_PAGE_LASTSEEN  5
 
 typedef enum {

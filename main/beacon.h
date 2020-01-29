@@ -91,15 +91,15 @@ esp_ble_mybeacon_vendor_t mybeacon_common_vendor_v3 = {
     .proximity_uuid ={CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4},
 };
 
-
-static uint8_t beacon_maj_min_to_idx(uint16_t maj, uint16_t min);
-static uint8_t num_active_beacon();
-static uint8_t first_active_beacon();
-static bool is_beacon_idx_active(uint16_t idx);
-static void set_beacon_idx_active(uint16_t idx);
-static void clear_beacon_idx_active(uint16_t idx);
-static bool toggle_beacon_idx_active(uint16_t idx);
-static void persist_active_beacon_mask();
+beacon_type_t esp_ble_is_mybeacon_packet (uint8_t *adv_data, uint8_t adv_data_len, uint8_t scan_rsp_len);
+uint8_t beacon_maj_min_to_idx(uint16_t maj, uint16_t min);
+uint8_t num_active_beacon();
+uint8_t first_active_beacon();
+bool is_beacon_idx_active(uint16_t idx);
+void set_beacon_idx_active(uint16_t idx);
+void clear_beacon_idx_active(uint16_t idx);
+bool toggle_beacon_idx_active(uint16_t idx);
+void persist_active_beacon_mask();
 
 
 #endif // __BEACON_H__

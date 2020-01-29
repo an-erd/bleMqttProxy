@@ -114,7 +114,11 @@
         "mqtt_client.h": "c",
         "esp_log.h": "c",
         "timer.h": "c",
-        "display.h": "c"
+        "display.h": "c",
+        "web_file_server.h": "c",
+        "mqtt.h": "c",
+        "ble_mqtt.h": "c",
+        "helperfunctions.h": "c"
     },
 	"files.exclude": {
 		"**/.git": true,

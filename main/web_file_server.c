@@ -255,115 +255,115 @@ void stop_webserver(httpd_handle_t server)
 
 
 
-struct web_file_server_data {
+// struct web_file_server_data {
 
-};
-
-
-
-static esp_err_t download_get_handler(httpd_req_t *req)
-{
-    const char *filename = get_path_from_uri(filepath, ((struct file_server_data *)req->user_ctx)->base_path,
-                                             req->uri, sizeof(filepath));
-    if (!filename) {
-        ESP_LOGE(TAG, "Filename is too long");
-        /* Respond with 500 Internal Server Error */
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Filename too long");
-        return ESP_FAIL;
-    }
-
-    /* If name has trailing '/', respond with directory contents */
-    if (filename[strlen(filename) - 1] == '/') {
-        return http_resp_dir_html(req, filepath);
-    }
-
-    if (stat(filepath, &file_stat) == -1) {
-        /* If file not present on SPIFFS check if URI
-         * corresponds to one of the hardcoded paths */
-        if (strcmp(filename, "/index.html") == 0) {
-            return index_html_get_handler(req);
-        } else if (strcmp(filename, "/favicon.ico") == 0) {
-            return favicon_get_handler(req);
-        }
-        ESP_LOGE(TAG, "Failed to stat file : %s", filepath);
-        /* Respond with 404 Not Found */
-        httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "File does not exist");
-        return ESP_FAIL;
-    }
-
-    ESP_LOGI(TAG, "Sending file : %s (%ld bytes)...", filename, file_stat.st_size);
-    set_content_type_from_file(req, filename);
-
-    /* Retrieve the pointer to scratch buffer for temporary storage */
-    char *chunk = ((struct file_server_data *)req->user_ctx)->scratch;
-    size_t chunksize;
-    do {
-        /* Read file in chunks into the scratch buffer */
-        chunksize = fread(chunk, 1, SCRATCH_BUFSIZE, fd);
-
-        /* Send the buffer contents as HTTP response chunk */
-        if (httpd_resp_send_chunk(req, chunk, chunksize) != ESP_OK) {
-            fclose(fd);
-            ESP_LOGE(TAG, "File sending failed!");
-            /* Abort sending file */
-            httpd_resp_sendstr_chunk(req, NULL);
-            /* Respond with 500 Internal Server Error */
-            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to send file");
-            return ESP_FAIL;
-        }
-
-        /* Keep looping till the whole file is sent */
-    } while (chunksize != 0);
-
-    /* Close file after sending complete */
-    fclose(fd);
-    ESP_LOGI(TAG, "File sending complete");
-
-    /* Respond with an empty chunk to signal HTTP response completion */
-    httpd_resp_send_chunk(req, NULL, 0);
-    return ESP_OK;
-}
+// };
 
 
-/* Function to start the file server */
-esp_err_t start_web_file_server()
-{
-    static struct web_file_server_data *server_data = NULL;
 
-    if (server_data) {
-        ESP_LOGE(TAG, "File server already started");
-        return ESP_ERR_INVALID_STATE;
-    }
+// static esp_err_t download_get_handler(httpd_req_t *req)
+// {
+//     const char *filename = get_path_from_uri(filepath, ((struct file_server_data *)req->user_ctx)->base_path,
+//                                              req->uri, sizeof(filepath));
+//     if (!filename) {
+//         ESP_LOGE(TAG, "Filename is too long");
+//         /* Respond with 500 Internal Server Error */
+//         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Filename too long");
+//         return ESP_FAIL;
+//     }
 
-    /* Allocate memory for server data */
-    server_data = calloc(1, sizeof(struct file_server_data));
-    if (!server_data) {
-        ESP_LOGE(TAG, "Failed to allocate memory for server data");
-        return ESP_ERR_NO_MEM;
-    }
+//     /* If name has trailing '/', respond with directory contents */
+//     if (filename[strlen(filename) - 1] == '/') {
+//         return http_resp_dir_html(req, filepath);
+//     }
 
-    httpd_handle_t server = NULL;
-    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+//     if (stat(filepath, &file_stat) == -1) {
+//         /* If file not present on SPIFFS check if URI
+//          * corresponds to one of the hardcoded paths */
+//         if (strcmp(filename, "/index.html") == 0) {
+//             return index_html_get_handler(req);
+//         } else if (strcmp(filename, "/favicon.ico") == 0) {
+//             return favicon_get_handler(req);
+//         }
+//         ESP_LOGE(TAG, "Failed to stat file : %s", filepath);
+//         /* Respond with 404 Not Found */
+//         httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "File does not exist");
+//         return ESP_FAIL;
+//     }
 
-    /* Use the URI wildcard matching function in order to
-     * allow the same handler to respond to multiple different
-     * target URIs which match the wildcard scheme */
-    config.uri_match_fn = httpd_uri_match_wildcard;
+//     ESP_LOGI(TAG, "Sending file : %s (%ld bytes)...", filename, file_stat.st_size);
+//     set_content_type_from_file(req, filename);
 
-    ESP_LOGI(TAG, "Starting HTTP Server");
-    if (httpd_start(&server, &config) != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to start file server!");
-        return ESP_FAIL;
-    }
+//     /* Retrieve the pointer to scratch buffer for temporary storage */
+//     char *chunk = ((struct file_server_data *)req->user_ctx)->scratch;
+//     size_t chunksize;
+//     do {
+//         /* Read file in chunks into the scratch buffer */
+//         chunksize = fread(chunk, 1, SCRATCH_BUFSIZE, fd);
 
-    /* URI handler for getting uploaded files */
-    httpd_uri_t file_download = {
-        .uri       = "/*",  // Match all URIs of type /path/to/file
-        .method    = HTTP_GET,
-        .handler   = download_get_handler,
-        .user_ctx  = server_data    // Pass server data as context
-    };
-    httpd_register_uri_handler(server, &file_download);
+//         /* Send the buffer contents as HTTP response chunk */
+//         if (httpd_resp_send_chunk(req, chunk, chunksize) != ESP_OK) {
+//             fclose(fd);
+//             ESP_LOGE(TAG, "File sending failed!");
+//             /* Abort sending file */
+//             httpd_resp_sendstr_chunk(req, NULL);
+//             /* Respond with 500 Internal Server Error */
+//             httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to send file");
+//             return ESP_FAIL;
+//         }
 
-    return ESP_OK;
-}
+//         /* Keep looping till the whole file is sent */
+//     } while (chunksize != 0);
+
+//     /* Close file after sending complete */
+//     fclose(fd);
+//     ESP_LOGI(TAG, "File sending complete");
+
+//     /* Respond with an empty chunk to signal HTTP response completion */
+//     httpd_resp_send_chunk(req, NULL, 0);
+//     return ESP_OK;
+// }
+
+
+// /* Function to start the file server */
+// esp_err_t start_web_file_server()
+// {
+//     static struct web_file_server_data *server_data = NULL;
+
+//     if (server_data) {
+//         ESP_LOGE(TAG, "File server already started");
+//         return ESP_ERR_INVALID_STATE;
+//     }
+
+//     /* Allocate memory for server data */
+//     server_data = calloc(1, sizeof(struct file_server_data));
+//     if (!server_data) {
+//         ESP_LOGE(TAG, "Failed to allocate memory for server data");
+//         return ESP_ERR_NO_MEM;
+//     }
+
+//     httpd_handle_t server = NULL;
+//     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+
+//     /* Use the URI wildcard matching function in order to
+//      * allow the same handler to respond to multiple different
+//      * target URIs which match the wildcard scheme */
+//     config.uri_match_fn = httpd_uri_match_wildcard;
+
+//     ESP_LOGI(TAG, "Starting HTTP Server");
+//     if (httpd_start(&server, &config) != ESP_OK) {
+//         ESP_LOGE(TAG, "Failed to start file server!");
+//         return ESP_FAIL;
+//     }
+
+//     /* URI handler for getting uploaded files */
+//     httpd_uri_t file_download = {
+//         .uri       = "/*",  // Match all URIs of type /path/to/file
+//         .method    = HTTP_GET,
+//         .handler   = download_get_handler,
+//         .user_ctx  = server_data    // Pass server data as context
+//     };
+//     httpd_register_uri_handler(server, &file_download);
+
+//     return ESP_OK;
+// }

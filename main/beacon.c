@@ -1,4 +1,5 @@
 
+#include "beacon.h"
 
 
 uint16_t s_active_beacon_mask = 0;

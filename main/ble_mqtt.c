@@ -1,4 +1,6 @@
 
+#include "ble_mqtt.h"
+
 uint16_t mqtt_packets_send = 0;
 uint16_t mqtt_packets_fail = 0;
 

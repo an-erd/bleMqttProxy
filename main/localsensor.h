@@ -29,5 +29,5 @@ extern local_temperature_data_t local_temperature_data[OWB_MAX_DEVICES];
 void init_owb_tempsensor();
 void localsensor_task(void* pvParameters);
 
-#endif // CONFIG_LOCAL_SENSORS_TEMPERATURE
+// #endif // CONFIG_LOCAL_SENSORS_TEMPERATURE
 #endif // __LOCALSENSOR_H__

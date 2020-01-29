@@ -15,10 +15,9 @@
     ((((int16_t)humidity_msb << 8) | ((int16_t)humidity_lsb))*100/(float)0xFFFF)
 
 
-__attribute__((unused)) uint16_t uint16_decode(const uint8_t * p_encoded_data);
-__attribute__((unused)) uint32_t uint32_decode(const uint8_t * p_encoded_data);
-
-__attribute__((unused)) void convert_s_hhmmss(uint16_t sec, uint8_t *h, uint8_t *m, uint8_t *s);
-__attribute__((unused)) void convert_s_mmss(uint16_t sec, uint8_t *m, uint8_t *s);
+uint16_t uint16_decode(const uint8_t * p_encoded_data);
+uint32_t uint32_decode(const uint8_t * p_encoded_data);
+void convert_s_hhmmss(uint16_t sec, uint8_t *h, uint8_t *m, uint8_t *s);
+void convert_s_mmss(uint16_t sec, uint8_t *m, uint8_t *s);
 
 #endif // __HELPERFUNCTIONS_H__
