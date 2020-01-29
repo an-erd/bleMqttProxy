@@ -105,7 +105,7 @@ void ssd1306_display_on()
 
 	espRc = i2c_master_cmd_begin(I2C_NUM_0, cmd, 10/portTICK_PERIOD_MS);
 	if (espRc == ESP_OK) {
-		ESP_LOGD(TAG, "ssd1306_display_on configured successfully");
+		// ESP_LOGD(TAG, "ssd1306_display_on configured successfully");
 	} else {
 		ESP_LOGE(TAG, "ssd1306_display_on configuration failed. code: 0x%.2X", espRc);
 	}
@@ -127,7 +127,7 @@ void ssd1306_display_off()
 
 	espRc = i2c_master_cmd_begin(I2C_NUM_0, cmd, 10/portTICK_PERIOD_MS);
 	if (espRc == ESP_OK) {
-		ESP_LOGD(TAG, "ssd1306_display_off configured successfully");
+		// ESP_LOGD(TAG, "ssd1306_display_off configured successfully");
 	} else {
 		ESP_LOGE(TAG, "ssd1306_display_off configuration failed. code: 0x%.2X", espRc);
 	}
