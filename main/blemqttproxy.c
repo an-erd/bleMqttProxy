@@ -54,8 +54,8 @@ typedef struct {
 } param_t;
 param_t blemqttproxy_param = { 0 };
 
-static esp_err_t read_blemqttproxy_param();
-static esp_err_t save_blemqttproxy_param();
+esp_err_t read_blemqttproxy_param();
+esp_err_t save_blemqttproxy_param();
 
 // BLE
 static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
@@ -702,9 +702,6 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         bool is_beacon_active = true;
         bool mqtt_send_adv = false;
 
-        EventBits_t uxReturn;
-        bool mqtt_connected, wifi_connected;
-
         switch (scan_result->scan_rst.search_evt) {
         case ESP_GAP_SEARCH_INQ_RES_EVT:
             ESP_LOGD(TAG, "ESP_GAP_SEARCH_INQ_RES_EVT");
@@ -733,56 +730,20 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 ESP_LOGD(TAG, "mybeacon found, type %d", beacon_type);
 
                 switch(beacon_type){
+
                 case BEACON_V3: {
-                    esp_ble_mybeacon_v3_t *mybeacon_data = (esp_ble_mybeacon_v3_t*)(scan_result->scan_rst.ble_adv);
-
-                    maj      = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.major);
-                    min      = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.minor);
-                    idx      = beacon_maj_min_to_idx(maj, min);
-
-                    if( (idx != UNKNOWN_BEACON) && (!is_beacon_idx_active(idx)) ){
-                        if(scan_result->scan_rst.rssi > CONFIG_PROXIMITY_RSSI_THRESHOLD) {
-                            ESP_LOGI(TAG, "Announcing new mybeacon (0x%04x%04x), idx %d, RSSI %d", maj, min, idx,
-                                scan_result->scan_rst.rssi);
-                            set_beacon_idx_active(idx);
-                        } else {
-                            ESP_LOGD(TAG, "mybeacon not active, not close enough (0x%04x%04x), idx %d, RSSI %d",
-                                maj, min, idx, scan_result->scan_rst.rssi);
-                            is_beacon_active = false;
-                            break;
-                        }
-                    }
-
-                    temp         = SHT3_GET_TEMPERATURE_VALUE(
-                                        LSB_16(mybeacon_data->mybeacon_payload.temp),
-                                        MSB_16(mybeacon_data->mybeacon_payload.temp) );
-                    humidity    = SHT3_GET_HUMIDITY_VALUE(
-                                        LSB_16(mybeacon_data->mybeacon_payload.humidity),
-                                        MSB_16(mybeacon_data->mybeacon_payload.humidity) );
-                    battery     = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_payload.battery);
-                    x           = (int16_t)(mybeacon_data->mybeacon_payload.x);
-                    y           = (int16_t)(mybeacon_data->mybeacon_payload.y);
-                    z           = (int16_t)(mybeacon_data->mybeacon_payload.z);
-
+                    decode_mybeacon_packet_v3((esp_ble_mybeacon_v3_t*)(scan_result->scan_rst.ble_adv), &idx, &maj, &min, &temp, &humidity, &battery,
+                        &x, &y, &z, scan_result->scan_rst.rssi, &is_beacon_active);
                     break;
                 }
+
                 case BEACON_V4:
                 case BEACON_V4_SR:
                 {
                     esp_ble_mybeacon_payload_t *mybeacon_payload = (esp_ble_mybeacon_payload_t *)(&scan_result->scan_rst.ble_adv[11]);
 
-                    // ESP_LOG_BUFFER_HEXDUMP(TAG, &scan_result->scan_rst.ble_adv[11], scan_result->scan_rst.adv_data_len-11, ESP_LOG_DEBUG);
-
-                    maj         = (uint16_t) ( ((scan_result->scan_rst.ble_adv[7])<<8) + (scan_result->scan_rst.ble_adv[8]));
-                    min         = (uint16_t) ( ((scan_result->scan_rst.ble_adv[9])<<8) + (scan_result->scan_rst.ble_adv[10]));
-                    idx         = beacon_maj_min_to_idx(maj, min);
-                    temp        = SHT3_GET_TEMPERATURE_VALUE(LSB_16(mybeacon_payload->temp), MSB_16(mybeacon_payload->temp) );
-                    humidity    = SHT3_GET_HUMIDITY_VALUE(LSB_16(mybeacon_payload->humidity), MSB_16(mybeacon_payload->humidity) );
-                    battery     = ENDIAN_CHANGE_U16(mybeacon_payload->battery);
-                    x           = (int16_t)(mybeacon_payload->x);
-                    y           = (int16_t)(mybeacon_payload->y);
-                    z           = (int16_t)(mybeacon_payload->z);
-
+                    decode_mybeacon_packet_v4(mybeacon_payload, scan_result->scan_rst.ble_adv, &idx, &maj, &min, &temp, &humidity, &battery,
+                        &x, &y, &z, scan_result->scan_rst.rssi, &is_beacon_active);
                     break;
                 }
                 default:
@@ -796,10 +757,11 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
 
                 // ESP_LOGI(TAG, "free heap %d", esp_get_free_heap_size());
 
-                // CODE PUT TO mqtt.h/c
+                mqtt_send_adv = send_to_mqtt(idx, maj, min, temp, humidity, battery, scan_result->scan_rst.rssi);
 
                ESP_LOGI(TAG, "(0x%04x%04x) rssi %3d | temp %5.1f | hum %5.1f | x %+6d | y %+6d | z %+6d | batt %4d | mqtt send %c",
                     maj, min, scan_result->scan_rst.rssi, temp, humidity, x, y, z, battery, (mqtt_send_adv ? 'y':'n') );
+
                 update_adv_data(maj, min, scan_result->scan_rst.rssi, temp, humidity, battery, mqtt_send_adv);
                 check_update_display(maj, min);
 
@@ -922,7 +884,7 @@ static void initialize_nvs()
     ESP_ERROR_CHECK( ret );
 }
 
-static esp_err_t read_blemqttproxy_param()
+esp_err_t read_blemqttproxy_param()
 {
     esp_err_t ret;
     uint16_t mask = 0xFFFF;
@@ -944,7 +906,7 @@ static esp_err_t read_blemqttproxy_param()
     return ret;
 }
 
-static esp_err_t save_blemqttproxy_param()
+esp_err_t save_blemqttproxy_param()
 {
     esp_err_t ret;
     uint16_t mask = 0xFFFF;

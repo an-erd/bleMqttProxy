@@ -17,27 +17,15 @@ typedef struct  {
     int64_t     mqtt_last_send;
 } ble_adv_data_t;
 
-ble_beacon_data_t ble_beacon_data[CONFIG_BLE_DEVICE_COUNT_CONFIGURED] = {
-    { {CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_1_MAJ,  CONFIG_BLE_DEVICE_1_MIN,  CONFIG_BLE_DEVICE_1_NAME},
-    { {CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_2_MAJ,  CONFIG_BLE_DEVICE_2_MIN,  CONFIG_BLE_DEVICE_2_NAME},
-    { {CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_3_MAJ,  CONFIG_BLE_DEVICE_3_MIN,  CONFIG_BLE_DEVICE_3_NAME},
-    { {CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_4_MAJ,  CONFIG_BLE_DEVICE_4_MIN,  CONFIG_BLE_DEVICE_4_NAME},
-    { {CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_5_MAJ,  CONFIG_BLE_DEVICE_5_MIN,  CONFIG_BLE_DEVICE_5_NAME},
-    { {CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_6_MAJ,  CONFIG_BLE_DEVICE_6_MIN,  CONFIG_BLE_DEVICE_6_NAME},
-    { {CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_7_MAJ,  CONFIG_BLE_DEVICE_7_MIN,  CONFIG_BLE_DEVICE_7_NAME},
-    { {CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_8_MAJ,  CONFIG_BLE_DEVICE_8_MIN,  CONFIG_BLE_DEVICE_8_NAME},
-    { {CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_9_MAJ,  CONFIG_BLE_DEVICE_9_MIN,  CONFIG_BLE_DEVICE_9_NAME},
-    { {CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_10_MAJ, CONFIG_BLE_DEVICE_10_MIN, CONFIG_BLE_DEVICE_10_NAME},
-};
-ble_adv_data_t    ble_adv_data[CONFIG_BLE_DEVICE_COUNT_CONFIGURED] = { 0 };
-
+extern ble_beacon_data_t ble_beacon_data[CONFIG_BLE_DEVICE_COUNT_CONFIGURED];
+extern ble_adv_data_t ble_adv_data[CONFIG_BLE_DEVICE_COUNT_CONFIGURED];
 extern uint16_t s_active_beacon_mask;
 
 // Beacon
 typedef enum {
     BEACON_V3           = 0,    // ble_bacon v3 adv
     BEACON_V4,                  // only ble_beacon v4 adv
-    BEACON_V4_SR,                // ble_beacon v4 adv+sr
+    BEACON_V4_SR,               // ble_beacon v4 adv+sr
     UNKNOWN_BEACON      = 99
 } beacon_type_t;
 
@@ -71,27 +59,18 @@ typedef struct {
     esp_ble_mybeacon_payload_t  mybeacon_payload;
 }__attribute__((packed)) esp_ble_mybeacon_v3_t;
 
-esp_ble_mybeacon_head_t mybeacon_common_head_v3 = {
-    .flags = {0x02, 0x01, 0x04},
-    .length = 0x1A,
-    .type = 0xFF,
-    .company_id = 0x0059,
-    .beacon_type = 0x1502
-};
-
-esp_ble_mybeacon_head_t mybeacon_common_head_v4 = {
-    .flags = {0x02, 0x01, 0x06},
-    .length = 0x13,
-    .type = 0xFF,
-    .company_id = 0x0059,
-    .beacon_type = 0x0700
-};
-
-esp_ble_mybeacon_vendor_t mybeacon_common_vendor_v3 = {
-    .proximity_uuid ={CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4},
-};
+extern esp_ble_mybeacon_head_t mybeacon_common_head_v3;
+extern esp_ble_mybeacon_head_t mybeacon_common_head_v4;
+extern esp_ble_mybeacon_vendor_t mybeacon_common_vendor_v3;
 
 beacon_type_t esp_ble_is_mybeacon_packet (uint8_t *adv_data, uint8_t adv_data_len, uint8_t scan_rsp_len);
+void decode_mybeacon_packet_v3(esp_ble_mybeacon_v3_t *mybeacon_data,
+    uint8_t *idx, uint16_t *maj, uint16_t *min, float *temp, float *humidity, uint16_t *battery,
+    int16_t *x, int16_t *y, int16_t *z, int8_t rssi, bool *is_beacon_active);
+void decode_mybeacon_packet_v4(esp_ble_mybeacon_payload_t *mybeacon_payload, uint8_t *ble_adv,
+    uint8_t *idx, uint16_t *maj, uint16_t *min, float *temp, float *humidity, uint16_t *battery,
+    int16_t *x, int16_t *y, int16_t *z, int8_t rssi, bool *is_beacon_active);
+
 uint8_t beacon_maj_min_to_idx(uint16_t maj, uint16_t min);
 uint8_t num_active_beacon();
 uint8_t first_active_beacon();
