@@ -119,7 +119,8 @@
         "mqtt.h": "c",
         "ble_mqtt.h": "c",
         "helperfunctions.h": "c",
-        "beacon.h": "c"
+        "beacon.h": "c",
+        "ble.h": "c"
     },
 	"files.exclude": {
 		"**/.git": true,

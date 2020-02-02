@@ -338,9 +338,6 @@ void periodic_wdt_timer_callback(void* arg)
     }
 }
 
-
-
-
 static esp_err_t wifi_event_handler(void *ctx, system_event_t *event)
 {
     httpd_handle_t *server = (httpd_handle_t *) ctx;
@@ -891,6 +888,9 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         gattc_connect = false;
         get_server = false;
         ESP_LOGI(TAG, "ESP_GATTC_DISCONNECT_EVT, reason = %d", p_data->disconnect.reason);
+
+        uint32_t duration = 0;  // scan permanently
+        esp_ble_gap_start_scanning(duration);
         break;
     default:
         break;
@@ -1041,8 +1041,6 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
             if( (beacon_type == BEACON_V3) || (beacon_type == BEACON_V4) || (beacon_type == BEACON_V4_SR) ){
 
                 ESP_LOGD(TAG, "mybeacon found, type %d", beacon_type);
-/*
-
                 switch(beacon_type){
 
                 case BEACON_V3: {
@@ -1078,7 +1076,6 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
 
                 update_adv_data(maj, min, scan_result->scan_rst.rssi, temp, humidity, battery, mqtt_send_adv);
                 check_update_display(maj, min);
-*/
 // TODO Connect to device
                 if (adv_name != NULL) {
                     if (strlen(remote_device_name) == adv_name_len && strncmp((char *)adv_name, remote_device_name, adv_name_len) == 0) {
@@ -1355,6 +1352,9 @@ void app_main()
 #endif // CONFIG_DISPLAY_SSD1306
 
     xTaskCreate(&wifi_mqtt_task, "wifi_mqtt_task", 2048 * 2, NULL, 5, NULL);
+
+    remote_filter_service_uuid.len = ESP_UUID_LEN_128;
+    memcpy(remote_filter_service_uuid.uuid.uuid128, REMOTE_SERVICE_UUID, 16);
 
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_bt_controller_init(&bt_cfg));
