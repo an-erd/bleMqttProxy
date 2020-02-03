@@ -42,6 +42,7 @@
 #include "ble_mqtt.h"
 #include "timer.h"
 #include "web_file_server.h"
+#include "offlinebuffer.h"
 
 static const char* TAG = "BLEMQTTPROXY";
 
@@ -58,51 +59,9 @@ esp_err_t read_blemqttproxy_param();
 esp_err_t save_blemqttproxy_param();
 
 // BLE
-const uint8_t const REMOTE_SERVICE_UUID[] = {0x3C, 0xB7, 0xA2, 0x4B, 0x0C, 0x32, 0xF2, 0x9F, 0x4F, 0x4C, 0xF5, 0x37, 0x00, 0x14, 0x2F, 0x61};
-#define REMOTE_NOTIFY_CHAR_UUID         0x1401
-#define REMOTE_INDICATION_CHAR_UUID     0x2A52
-#define REMOTE_NOTIFY_HANDLE            0x26
-#define REMOTE_INDICATE_HANDLE          0x2B
-
-#define PROFILE_NUM      2
-#define PROFILE_A_APP_ID 0
-#define PROFILE_B_APP_ID 1
-#define INVALID_HANDLE   0
-
-static const char remote_device_name[] = "Bx0706";
-static bool gattc_connect    = false;
-static bool get_server = false;
-
-static bool device_notify_1401          = false;
-static bool device_indicate_2A52        = false;
-static esp_gattc_char_elem_t *char_elem_result              = NULL;
-static esp_gattc_descr_elem_t *descr_elem_result            = NULL;
-
 static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
 static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param);
 static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param);
-
-static esp_bt_uuid_t remote_filter_service_uuid;
-
-static esp_bt_uuid_t remote_filter_char_uuid_1401 = {
-    .len = ESP_UUID_LEN_16,
-    .uuid = {.uuid16 = REMOTE_NOTIFY_CHAR_UUID,},
-};
-
-static esp_bt_uuid_t notify_descr_uuid = {
-    .len = ESP_UUID_LEN_16,
-    .uuid = {.uuid16 = ESP_GATT_UUID_CHAR_CLIENT_CONFIG,},
-};
-
-static esp_bt_uuid_t remote_filter_char_uuid_2A52 = {
-    .len = ESP_UUID_LEN_16,
-    .uuid = {.uuid16 = REMOTE_INDICATION_CHAR_UUID,},
-};
-
-static esp_bt_uuid_t indication_descr_uuid = {
-    .len = ESP_UUID_LEN_16,
-    .uuid = {.uuid16 = ESP_GATT_UUID_CHAR_CLIENT_CONFIG,},
-};
 
 static esp_ble_scan_params_t ble_scan_params = {
     .scan_type              = BLE_SCAN_TYPE_ACTIVE,
@@ -132,17 +91,6 @@ static struct gattc_profile_inst gl_profile_tab[PROFILE_NUM] = {
         .gattc_if = ESP_GATT_IF_NONE,       /* Not get the gatt_if, so initial is ESP_GATT_IF_NONE */
     },
 };
-
-typedef struct
-{
-    uint16_t        sequence_number;                            /**< Sequence number */
-    uint32_t        time_stamp;                                 /**< Time stamp */
-    uint16_t        temperature;                                /**< Sensor temperature value */
-    uint16_t        humidity;                                   /**< Sensor humidity value */
-} __attribute__ ((packed)) ble_os_meas_t;
-
-ble_os_meas_t buffer_download[1250];
-uint16_t      buffer_download_count = 0;
 
 // Wifi
 EventGroupHandle_t s_wifi_evg;
@@ -681,6 +629,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
             }
             ESP_LOGI(TAG, "count %d", count);
             if (count > 0){
+                esp_gattc_char_elem_t *char_elem_result = NULL;
                 char_elem_result = (esp_gattc_char_elem_t *)malloc(sizeof(esp_gattc_char_elem_t) * count);
                 if (!char_elem_result){
                     ESP_LOGE(TAG, "gattc no mem");
@@ -750,6 +699,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
             }
             ESP_LOGI(TAG, "ESP_GATTC_REG_FOR_NOTIFY_EVT count = %d", count);
             if (count > 0){
+                esp_gattc_descr_elem_t *descr_elem_result = NULL;
                 descr_elem_result = malloc(sizeof(esp_gattc_descr_elem_t) * count);
                 if (!descr_elem_result){
                     ESP_LOGE(TAG, "malloc error, gattc no mem");
@@ -835,6 +785,8 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
             if (ret_status != ESP_GATT_OK){
                 ESP_LOGE(TAG, "esp_ble_gattc_close, error status %d", ret_status);
             }
+
+            xEventGroupSetBits(offlinebuffer_evg, OFFLINE_BUFFER_CSV_PREPARE_EVT);
         }
         break;
     }
@@ -890,7 +842,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         ESP_LOGI(TAG, "ESP_GATTC_DISCONNECT_EVT, reason = %d", p_data->disconnect.reason);
 
         uint32_t duration = 0;  // scan permanently
-        esp_ble_gap_start_scanning(duration);
+        // esp_ble_gap_start_scanning(duration);   // TODO
         break;
     default:
         break;
@@ -922,7 +874,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
     case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: {
         ESP_LOGD(TAG, "ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT");
         uint32_t duration = 0;  // scan permanently
-        esp_ble_gap_start_scanning(duration);
+        // esp_ble_gap_start_scanning(duration);   // TODO
         break;
     }
     case ESP_GAP_BLE_SCAN_START_COMPLETE_EVT:
@@ -1014,6 +966,8 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         bool is_beacon_active = true;
         bool mqtt_send_adv = false;
 
+        EventBits_t uxBits;
+
         switch (scan_result->scan_rst.search_evt) {
         case ESP_GAP_SEARCH_INQ_RES_EVT:
             ESP_LOGD(TAG, "ESP_GAP_SEARCH_INQ_RES_EVT");
@@ -1076,16 +1030,17 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
 
                 update_adv_data(maj, min, scan_result->scan_rst.rssi, temp, humidity, battery, mqtt_send_adv);
                 check_update_display(maj, min);
-// TODO Connect to device
+
                 if (adv_name != NULL) {
-                    if (strlen(remote_device_name) == adv_name_len && strncmp((char *)adv_name, remote_device_name, adv_name_len) == 0) {
-                        ESP_LOGI(TAG, "searched device %s\n", remote_device_name);
+                    uxBits = xEventGroupWaitBits(offlinebuffer_evg, OFFLINE_BUFFER_TAKE_NEXT_AVD_EVT, pdFALSE, pdFALSE, 0);
+                    if ( (uxBits & OFFLINE_BUFFER_TAKE_NEXT_AVD_EVT)
+                            && strlen(buffer_download_device_name) == adv_name_len && strncmp((char *)adv_name, buffer_download_device_name, adv_name_len) == 0) {
+                        ESP_LOGI(TAG, "searched device %s", buffer_download_device_name);
                         if (gattc_connect == false) {
                             gattc_connect = true;
+                            xEventGroupClearBits(offlinebuffer_evg, OFFLINE_BUFFER_TAKE_NEXT_AVD_EVT);
                             ESP_LOGI(TAG, "connect to the remote device.");
                             esp_ble_gap_stop_scanning();
-                            // show_bonded_devices();
-                            // remove_all_bonded_devices();
                             esp_ble_gattc_open(gl_profile_tab[PROFILE_A_APP_ID].gattc_if, scan_result->scan_rst.bda, scan_result->scan_rst.ble_addr_type, true);
                         }
                     }
@@ -1302,10 +1257,12 @@ static void wifi_mqtt_task(void* pvParameters)
     vTaskDelete(NULL);
 }
 
-void app_main()
+void adjust_log_level()
 {
-
-    // adjust log level
+    esp_log_level_set("httpd", ESP_LOG_WARN);
+    esp_log_level_set("httpd_sess", ESP_LOG_WARN);
+    esp_log_level_set("httpd_txrx", ESP_LOG_WARN);
+    esp_log_level_set("httpd_parse", ESP_LOG_WARN);
     esp_log_level_set("wifi", ESP_LOG_WARN);
     esp_log_level_set("phy_init", ESP_LOG_WARN);
     esp_log_level_set("efuse", ESP_LOG_WARN);
@@ -1319,8 +1276,53 @@ void app_main()
     esp_log_level_set("httpd_uri", ESP_LOG_INFO);
     esp_log_level_set("BTDM_INIT", ESP_LOG_INFO);
     esp_log_level_set("timer", ESP_LOG_INFO);
+}
 
+void initialize_offline_buffer()
+{
+    offline_buffer_clear();
+}
 
+void initialize_ble()
+{
+    remote_filter_service_uuid.len = ESP_UUID_LEN_128;
+    memcpy(remote_filter_service_uuid.uuid.uuid128, REMOTE_SERVICE_UUID, 16);
+
+    esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_bt_controller_init(&bt_cfg));
+    ESP_ERROR_CHECK(esp_bt_controller_enable(ESP_BT_MODE_BLE));
+    ESP_ERROR_CHECK(esp_bluedroid_init());
+    ESP_ERROR_CHECK(esp_bluedroid_enable());
+    ESP_ERROR_CHECK(esp_ble_gap_register_callback(esp_gap_cb));
+    ESP_ERROR_CHECK(esp_ble_gattc_register_callback(esp_gattc_cb));
+    ESP_ERROR_CHECK(esp_ble_gattc_app_register(PROFILE_A_APP_ID));
+    ESP_ERROR_CHECK(esp_ble_gatt_set_local_mtu(500));
+}
+
+void initialize_ble_security()
+{
+    /* set the security iocap & auth_req & key size & init key response key parameters to the stack*/
+    esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_MITM_BOND;     //bonding with peer device after authentication
+    esp_ble_io_cap_t iocap = ESP_IO_CAP_NONE;           //set the IO capability to No output No input
+    uint8_t key_size = 16;      //the key size should be 7~16 bytes
+    uint8_t init_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
+    uint8_t rsp_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
+    uint8_t oob_support = ESP_BLE_OOB_DISABLE;
+    esp_ble_gap_set_security_param(ESP_BLE_SM_AUTHEN_REQ_MODE, &auth_req, sizeof(uint8_t));
+    esp_ble_gap_set_security_param(ESP_BLE_SM_IOCAP_MODE, &iocap, sizeof(uint8_t));
+    esp_ble_gap_set_security_param(ESP_BLE_SM_MAX_KEY_SIZE, &key_size, sizeof(uint8_t));
+    esp_ble_gap_set_security_param(ESP_BLE_SM_OOB_SUPPORT, &oob_support, sizeof(uint8_t));
+    /* If your BLE device act as a Slave, the init_key means you hope which types of key of the master should distribute to you,
+    and the response key means which key you can distribute to the Master;
+    If your BLE device act as a master, the response key means you hope which types of key of the slave should distribute to you,
+    and the init key means which key you can distribute to the slave. */
+    esp_ble_gap_set_security_param(ESP_BLE_SM_SET_INIT_KEY, &init_key, sizeof(uint8_t));
+    esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &rsp_key, sizeof(uint8_t));
+}
+
+void app_main()
+{
+    adjust_log_level();
 
     // NVS initialization and beacon mask retrieval
     initialize_nvs();
@@ -1331,6 +1333,7 @@ void app_main()
     s_wifi_evg   = xEventGroupCreate();
     s_mqtt_evg   = xEventGroupCreate();
     s_wdt_evg    = xEventGroupCreate();
+    offlinebuffer_evg = xEventGroupCreate();
 
     create_timer();
 
@@ -1353,36 +1356,10 @@ void app_main()
 
     xTaskCreate(&wifi_mqtt_task, "wifi_mqtt_task", 2048 * 2, NULL, 5, NULL);
 
-    remote_filter_service_uuid.len = ESP_UUID_LEN_128;
-    memcpy(remote_filter_service_uuid.uuid.uuid128, REMOTE_SERVICE_UUID, 16);
-
-    esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_bt_controller_init(&bt_cfg));
-    ESP_ERROR_CHECK(esp_bt_controller_enable(ESP_BT_MODE_BLE));
-    ESP_ERROR_CHECK(esp_bluedroid_init());
-    ESP_ERROR_CHECK(esp_bluedroid_enable());
-    ESP_ERROR_CHECK(esp_ble_gap_register_callback(esp_gap_cb));
-    ESP_ERROR_CHECK(esp_ble_gattc_register_callback(esp_gattc_cb));
-    ESP_ERROR_CHECK(esp_ble_gattc_app_register(PROFILE_A_APP_ID));
-    ESP_ERROR_CHECK(esp_ble_gatt_set_local_mtu(500));
-
-    /* set the security iocap & auth_req & key size & init key response key parameters to the stack*/
-    esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_MITM_BOND;     //bonding with peer device after authentication
-    esp_ble_io_cap_t iocap = ESP_IO_CAP_NONE;           //set the IO capability to No output No input
-    uint8_t key_size = 16;      //the key size should be 7~16 bytes
-    uint8_t init_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
-    uint8_t rsp_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
-    uint8_t oob_support = ESP_BLE_OOB_DISABLE;
-    esp_ble_gap_set_security_param(ESP_BLE_SM_AUTHEN_REQ_MODE, &auth_req, sizeof(uint8_t));
-    esp_ble_gap_set_security_param(ESP_BLE_SM_IOCAP_MODE, &iocap, sizeof(uint8_t));
-    esp_ble_gap_set_security_param(ESP_BLE_SM_MAX_KEY_SIZE, &key_size, sizeof(uint8_t));
-    esp_ble_gap_set_security_param(ESP_BLE_SM_OOB_SUPPORT, &oob_support, sizeof(uint8_t));
-    /* If your BLE device act as a Slave, the init_key means you hope which types of key of the master should distribute to you,
-    and the response key means which key you can distribute to the Master;
-    If your BLE device act as a master, the response key means you hope which types of key of the slave should distribute to you,
-    and the init key means which key you can distribute to the slave. */
-    esp_ble_gap_set_security_param(ESP_BLE_SM_SET_INIT_KEY, &init_key, sizeof(uint8_t));
-    esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &rsp_key, sizeof(uint8_t));
+    initialize_offline_buffer();
+    initialize_ble();
+    initialize_ble_security();
+    xTaskCreate(&offlinebuffer_task, "offlinebuffer_task", 2048 * 2, NULL, 5, NULL);
 
 #if CONFIG_LOCAL_SENSORS_TEMPERATURE==1
     init_owb_tempsensor();
