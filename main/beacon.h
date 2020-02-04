@@ -20,6 +20,7 @@ typedef struct  {
 extern ble_beacon_data_t ble_beacon_data[CONFIG_BLE_DEVICE_COUNT_CONFIGURED];
 extern ble_adv_data_t ble_adv_data[CONFIG_BLE_DEVICE_COUNT_CONFIGURED];
 extern uint16_t s_active_beacon_mask;
+extern char ble_beacon_names_seen[CONFIG_BLE_DEVICE_COUNT_CONFIGURED][8];
 
 // Beacon
 typedef enum {
@@ -80,5 +81,9 @@ void clear_beacon_idx_active(uint16_t idx);
 bool toggle_beacon_idx_active(uint16_t idx);
 void persist_active_beacon_mask();
 
+uint8_t num_beacon_name_known();
+uint8_t is_beacon_name_known(char* adv_name);       // returns 0 if unknown, otherwise index in ble_beacon_names_seen[]
+uint8_t add_known_beacon_name(char* adv_name);
+char* get_known_beacon_name(uint8_t idx);
 
 #endif // __BEACON_H__

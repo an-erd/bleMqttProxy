@@ -753,27 +753,27 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         break;
     }
     case ESP_GATTC_NOTIFY_EVT: {
-        ESP_LOGI(TAG, "ESP_GATTC_NOTIFY_EVT");
+        ESP_LOGD(TAG, "ESP_GATTC_NOTIFY_EVT");
 
         static int64_t time_measure = 0;
         uint8_t len = 0;
 
         if (p_data->notify.is_notify){
             if(!buffer_download_count){
-                ESP_LOGI(TAG, "ESP_GATTC_NOTIFY_EVT, first");
+                ESP_LOGD(TAG, "ESP_GATTC_NOTIFY_EVT, first");
                 time_measure = esp_timer_get_time();
             }
 
             // ESP_LOGI(TAG, "ESP_GATTC_NOTIFY_EVT, receive notify value:");
             buffer_download[buffer_download_count].sequence_number  = uint16_decode(&p_data->notify.value[len]); len += 2; // uint16_t
             buffer_download[buffer_download_count].time_stamp       = uint32_decode(&p_data->notify.value[len]); len += 4; // time_t
-            buffer_download[buffer_download_count].temperature      = uint16_decode(&p_data->notify.value[len]); len += 2; // uint16_t
-            buffer_download[buffer_download_count].humidity         = uint16_decode(&p_data->notify.value[len]); len += 2; // uint16_t
+            buffer_download[buffer_download_count].temperature      = uint16_decode_r(&p_data->notify.value[len]); len += 2; // uint16_t
+            buffer_download[buffer_download_count].humidity         = uint16_decode_r(&p_data->notify.value[len]); len += 2; // uint16_t
             // esp_log_buffer_hex(TAG, &buffer_download[buffer_download_count], p_data->notify.value_len);
             buffer_download_count++;
         }else{
-            ESP_LOGI(TAG, "ESP_GATTC_NOTIFY_EVT, done");
-            ESP_LOGI(TAG, "ESP_GATTC_NOTIFY_EVT, receive indicate value:");
+            ESP_LOGD(TAG, "ESP_GATTC_NOTIFY_EVT, done");
+            ESP_LOGD(TAG, "ESP_GATTC_NOTIFY_EVT, receive indicate value:");
 
             ESP_LOGI(TAG, "buffer_download_count %d, time difference %d", buffer_download_count, (uint16_t) (esp_timer_get_time() - time_measure));
         }
@@ -874,7 +874,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
     case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: {
         ESP_LOGD(TAG, "ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT");
         uint32_t duration = 0;  // scan permanently
-        // esp_ble_gap_start_scanning(duration);   // TODO
+        esp_ble_gap_start_scanning(duration);   // TODO
         break;
     }
     case ESP_GAP_BLE_SCAN_START_COMPLETE_EVT:
@@ -972,20 +972,20 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         case ESP_GAP_SEARCH_INQ_RES_EVT:
             ESP_LOGD(TAG, "ESP_GAP_SEARCH_INQ_RES_EVT");
 
-            esp_log_buffer_hex(TAG, scan_result->scan_rst.bda, 6);
-            ESP_LOGI(TAG, "searched Adv Data Len %d, Scan Response Len %d", scan_result->scan_rst.adv_data_len, scan_result->scan_rst.scan_rsp_len);
+            // esp_log_buffer_hex(TAG, scan_result->scan_rst.bda, 6);
+            ESP_LOGD(TAG, "searched Adv Data Len %d, Scan Response Len %d", scan_result->scan_rst.adv_data_len, scan_result->scan_rst.scan_rsp_len);
             adv_name = esp_ble_resolve_adv_data(scan_result->scan_rst.ble_adv,
                                                 ESP_BLE_AD_TYPE_NAME_CMPL, &adv_name_len);
-            ESP_LOGI(TAG, "searched Device Name Len %d", adv_name_len);
+            ESP_LOGD(TAG, "searched Device Name Len %d", adv_name_len);
             esp_log_buffer_char(TAG, adv_name, adv_name_len);
 
 #if CONFIG_EXAMPLE_DUMP_ADV_DATA_AND_SCAN_RESP
             if (scan_result->scan_rst.adv_data_len > 0) {
-                ESP_LOGI(TAG, "adv data:");
+                ESP_LOGD(TAG, "adv data:");
                 esp_log_buffer_hex(TAG, &scan_result->scan_rst.ble_adv[0], scan_result->scan_rst.adv_data_len);
             }
             if (scan_result->scan_rst.scan_rsp_len > 0) {
-                ESP_LOGI(TAG, "scan resp:");
+                ESP_LOGD(TAG, "scan resp:");
                 esp_log_buffer_hex(TAG, &scan_result->scan_rst.ble_adv[scan_result->scan_rst.adv_data_len], scan_result->scan_rst.scan_rsp_len);
             }
 #endif
@@ -1032,6 +1032,8 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 check_update_display(maj, min);
 
                 if (adv_name != NULL) {
+                    uint8_t idx = add_known_beacon_name((char*)adv_name);
+                    UNUSED(idx);
                     uxBits = xEventGroupWaitBits(offlinebuffer_evg, OFFLINE_BUFFER_TAKE_NEXT_AVD_EVT, pdFALSE, pdFALSE, 0);
                     if ( (uxBits & OFFLINE_BUFFER_TAKE_NEXT_AVD_EVT)
                             && strlen(buffer_download_device_name) == adv_name_len && strncmp((char *)adv_name, buffer_download_device_name, adv_name_len) == 0) {
@@ -1273,9 +1275,13 @@ void adjust_log_level()
     esp_log_level_set("intr_alloc", ESP_LOG_WARN);
     esp_log_level_set("BT_BTM", ESP_LOG_WARN);
     esp_log_level_set("MQTT_CLIENT", ESP_LOG_INFO);
+    esp_log_level_set("OUTBOX", ESP_LOG_INFO);
     esp_log_level_set("httpd_uri", ESP_LOG_INFO);
     esp_log_level_set("BTDM_INIT", ESP_LOG_INFO);
     esp_log_level_set("timer", ESP_LOG_INFO);
+    esp_log_level_set("BLEMQTTPROXY", ESP_LOG_INFO);
+    esp_log_level_set("beacon", ESP_LOG_INFO);
+    esp_log_level_set("ble_mqtt", ESP_LOG_INFO);
 }
 
 void initialize_offline_buffer()

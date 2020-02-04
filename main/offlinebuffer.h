@@ -11,7 +11,7 @@
 
 #define OFFLINE_BUFFER_BLE_READ_EVT        (BIT0)
 #define OFFLINE_BUFFER_CSV_PREPARE_EVT     (BIT1)
-#define OFFLINE_BUFFER_WEB_CSV_SEND_EVT    (BIT2)
+#define OFFLINE_BUFFER_READY_CSV_SEND_EVT  (BIT2)
 #define OFFLINE_BUFFER_RESET_EVT           (BIT3)
 #define OFFLINE_BUFFER_TAKE_NEXT_AVD_EVT   (BIT4)               /**< Take next appropriate BLE advertisement to connect */
 extern EventGroupHandle_t offlinebuffer_evg;
@@ -32,6 +32,7 @@ typedef struct
 extern char buffer_download_device_name[];
 extern ble_os_meas_t buffer_download[];
 extern uint16_t buffer_download_count;
+extern bool buffer_download_csv_data_available;
 
 typedef struct
 {

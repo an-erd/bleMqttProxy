@@ -9,11 +9,13 @@ EventGroupHandle_t offlinebuffer_evg;
 char buffer_download_device_name[20];    // max len should be 6 chars
 ble_os_meas_t buffer_download[1250];
 uint16_t buffer_download_count = 0;
+bool buffer_download_csv_data_available = false;    // data is available and ready to send back
 
 void offline_buffer_clear()
 {
     buffer_download_count = 0;
     strcpy(buffer_download_device_name, "");
+    buffer_download_csv_data_available = false;
 }
 
 void offline_buffer_csv_prepare()
@@ -38,7 +40,7 @@ void offlinebuffer_task(void* pvParameters)
     {
         BLE_READ,
         CSV_PREPARE,
-        WEB_CSV_SEND,
+        READY_WEB_CSV_SEND,
         NO_STEP,
     } offline_buffer_steps_t;
     offline_buffer_steps_t current_step = NO_STEP;
@@ -49,14 +51,11 @@ void offlinebuffer_task(void* pvParameters)
     while (1)
     {
         uxBits = xEventGroupWaitBits(offlinebuffer_evg,
-            OFFLINE_BUFFER_BLE_READ_EVT | OFFLINE_BUFFER_CSV_PREPARE_EVT | OFFLINE_BUFFER_WEB_CSV_SEND_EVT | OFFLINE_BUFFER_RESET_EVT,
+            OFFLINE_BUFFER_BLE_READ_EVT | OFFLINE_BUFFER_CSV_PREPARE_EVT | OFFLINE_BUFFER_READY_CSV_SEND_EVT | OFFLINE_BUFFER_RESET_EVT,
             pdTRUE, pdFALSE, portMAX_DELAY);
 
         if (uxBits & OFFLINE_BUFFER_BLE_READ_EVT) {
-            ESP_LOGI(TAG, "offlinebuffer_task OFFLINE_BUFFER_BLE_READ_EVT");
-            // offline_buffer_params_t *offline_buffer_params = (offline_buffer_params_t *) pvParameters;
-            // server = offline_buffer_params->server;
-            // strncpy(buffer_download_device_name, offline_buffer_params->device_name, 20);
+            ESP_LOGI(TAG, "offlinebuffer_task OFFLINE_BUFFER_BLE_READ_EVT device=%s", buffer_download_device_name);
             current_step = BLE_READ;
             xEventGroupSetBits(offlinebuffer_evg, OFFLINE_BUFFER_TAKE_NEXT_AVD_EVT);
 
@@ -64,17 +63,18 @@ void offlinebuffer_task(void* pvParameters)
             ESP_LOGI(TAG, "offlinebuffer_task OFFLINE_BUFFER_CSV_PREPARE_EVT");
             current_step = CSV_PREPARE;
             offline_buffer_csv_prepare();
-            xEventGroupSetBits(offlinebuffer_evg, OFFLINE_BUFFER_WEB_CSV_SEND_EVT);
+            xEventGroupSetBits(offlinebuffer_evg, OFFLINE_BUFFER_READY_CSV_SEND_EVT);
 
-        } else if (uxBits & OFFLINE_BUFFER_WEB_CSV_SEND_EVT) {
-            ESP_LOGI(TAG, "offlinebuffer_task OFFLINE_BUFFER_WEB_CSV_SEND_EVT");
-            current_step = WEB_CSV_SEND;
-            // do some usefull stuff here
-            xEventGroupSetBits(offlinebuffer_evg, OFFLINE_BUFFER_WEB_CSV_SEND_EVT);
+        } else if (uxBits & OFFLINE_BUFFER_READY_CSV_SEND_EVT) {
+            ESP_LOGI(TAG, "offlinebuffer_task OFFLINE_BUFFER_READY_CSV_SEND_EVT");
+            current_step = READY_WEB_CSV_SEND;
+            buffer_download_csv_data_available = true;
 
         } else if (uxBits & OFFLINE_BUFFER_RESET_EVT) {
             ESP_LOGI(TAG, "offlinebuffer_task OFFLINE_BUFFER_RESET_EVT");
             current_step = NO_STEP;
+            xEventGroupClearBits(offlinebuffer_evg,
+                OFFLINE_BUFFER_BLE_READ_EVT | OFFLINE_BUFFER_TAKE_NEXT_AVD_EVT | OFFLINE_BUFFER_CSV_PREPARE_EVT | OFFLINE_BUFFER_READY_CSV_SEND_EVT | OFFLINE_BUFFER_RESET_EVT );
             offline_buffer_clear();
         }
     }

@@ -6,6 +6,12 @@ uint16_t uint16_decode(const uint8_t * p_encoded_data)
                  (((uint16_t)((uint8_t *)p_encoded_data)[1]) << 8 ));
 }
 
+uint16_t uint16_decode_r(const uint8_t * p_encoded_data)
+{
+        return ( (((uint16_t)((uint8_t *)p_encoded_data)[0]) << 8 ) |
+                 (((uint16_t)((uint8_t *)p_encoded_data)[1])));
+}
+
 uint32_t uint32_decode(const uint8_t * p_encoded_data)
 {
     return ( (((uint32_t)((uint8_t *)p_encoded_data)[0]) << 0)  |
