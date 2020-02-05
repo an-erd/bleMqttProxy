@@ -120,7 +120,10 @@
         "ble_mqtt.h": "c",
         "helperfunctions.h": "c",
         "beacon.h": "c",
-        "ble.h": "c"
+        "ble.h": "c",
+        "locale.h": "c",
+        "_ansi.h": "c",
+        "stddef.h": "c"
     },
 	"files.exclude": {
 		"**/.git": true,

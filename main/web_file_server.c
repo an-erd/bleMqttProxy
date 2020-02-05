@@ -26,17 +26,25 @@ static esp_err_t http_resp_csv_download(httpd_req_t *req, uint8_t idx)
 {
     char buffer[128];
 
+    httpd_resp_set_type(req, "application/csv");
+    httpd_resp_set_hdr(req, "Content-Disposition", "attachment; filename=example.csv");
     httpd_resp_sendstr_chunk(req, get_known_beacon_name(idx));
-    httpd_resp_sendstr_chunk(req, "<br />");
-    httpd_resp_sendstr_chunk(req, "Seq.nr.;EPOCH Time;Time-Date;Temperatur;Humidity <br/>");
+    httpd_resp_sendstr_chunk(req, "\n");
+    httpd_resp_sendstr_chunk(req, "Seq.nr.;EPOCH Time;Time-Date;Temperatur;Humidity \n");
 
     for (uint16_t i = 0; i < buffer_download_count; i++){
-        snprintf(buffer, 128, "%6d;%10d;%10.3f;% 2.1f;%3.1f <br />",
+        snprintf(buffer, 128, "%6d;%10d;%10.3f;% 2.1f;%3.1f\n",
             buffer_download[i].sequence_number,
             buffer_download[i].time_stamp,
             buffer_download[i].csv_date_time,
             buffer_download[i].temperature_f,
             buffer_download[i].humidity_f);
+        for (uint8_t j = 0; j < 128; j++){
+            if (buffer[j] == '.')
+                buffer[j] = ',';
+            if (buffer[j] == 0)
+                break;
+        }
         httpd_resp_sendstr_chunk(req, buffer);
     }
     httpd_resp_sendstr_chunk(req, NULL);
