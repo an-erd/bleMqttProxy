@@ -16,12 +16,12 @@ static const char *TAG = "display";
 // #ifdef CONFIG_DISPLAY_SSD1306
 
 EventGroupHandle_t s_values_evg;
-extern EventGroupHandle_t s_wifi_evg;
-extern uint16_t wifi_connections_connect;
-extern uint16_t wifi_connections_disconnect;
-extern const int CONNECTED_BIT;
+extern EventGroupHandle_t wifi_evg;
+extern uint16_t wifi_connections_count_connect;
+extern uint16_t wifi_connections_count_disconnect;
+#define WIFI_CONNECTED_BIT          (BIT0)
 
-display_status_t s_display_status = {
+display_status_t display_status = {
     .current_screen = UNKNOWN_SCREEN,
     .screen_to_show = SPLASH_SCREEN,
     .button_enabled = false,
@@ -38,75 +38,75 @@ void draw_pagenumber(ssd1306_canvas_t *canvas, uint8_t nr_act, uint8_t nr_total)
 
 void set_next_display_show()
 {
-    ESP_LOGD(TAG, "set_next_display_show: s_display_status.current_screen %d", s_display_status.current_screen);
+    ESP_LOGD(TAG, "set_next_display_show: display_status.current_screen %d", display_status.current_screen);
 
-    switch (s_display_status.current_screen)
+    switch (display_status.current_screen)
     {
     case SPLASH_SCREEN:
-        s_display_status.button_enabled = true;
-        s_display_status.screen_to_show = BEACON_SCREEN;
-        s_display_status.current_beac = UNKNOWN_BEACON;
-        s_display_status.beac_to_show = 0;
+        display_status.button_enabled = true;
+        display_status.screen_to_show = BEACON_SCREEN;
+        display_status.current_beac = UNKNOWN_BEACON;
+        display_status.beac_to_show = 0;
         set_run_idle_timer(true);
         // idle_timer_start();
         break;
 
     case BEACON_SCREEN:
-        if (s_display_status.beac_to_show < CONFIG_BLE_DEVICE_COUNT_USE - 1)
+        if (display_status.beac_to_show < CONFIG_BLE_DEVICE_COUNT_USE - 1)
         {
-            s_display_status.beac_to_show++;
+            display_status.beac_to_show++;
         }
         else
         {
-            s_display_status.current_beac = UNKNOWN_BEACON;
-            s_display_status.screen_to_show = LASTSEEN_SCREEN;
-            s_display_status.lastseen_page_to_show = 1;
+            display_status.current_beac = UNKNOWN_BEACON;
+            display_status.screen_to_show = LASTSEEN_SCREEN;
+            display_status.lastseen_page_to_show = 1;
         }
         break;
 
     case LASTSEEN_SCREEN:
-        if (s_display_status.lastseen_page_to_show < s_display_status.num_last_seen_pages)
+        if (display_status.lastseen_page_to_show < display_status.num_last_seen_pages)
         {
-            s_display_status.lastseen_page_to_show++;
+            display_status.lastseen_page_to_show++;
         }
         else
         {
 #if CONFIG_LOCAL_SENSORS_TEMPERATURE == 1
             if (s_owb_num_devices >= CONFIG_MENU_MIN_LOCAL_SENSOR)
             {
-                s_display_status.screen_to_show = LOCALTEMP_SCREEN;
-                s_display_status.localtemp_to_show = 1;
+                display_status.screen_to_show = LOCALTEMP_SCREEN;
+                display_status.localtemp_to_show = 1;
             }
             else
 #endif // CONFIG_LOCAL_SENSORS_TEMPERATURE
             {
                 // skip empty local temperature screen
-                s_display_status.screen_to_show = APPVERSION_SCREEN;
+                display_status.screen_to_show = APPVERSION_SCREEN;
             }
         }
         break;
 
     case LOCALTEMP_SCREEN:
 #if CONFIG_LOCAL_SENSORS_TEMPERATURE == 1
-        if (s_display_status.localtemp_to_show < s_display_status.num_localtemp_pages)
+        if (display_status.localtemp_to_show < display_status.num_localtemp_pages)
         {
-            s_display_status.localtemp_to_show++;
+            display_status.localtemp_to_show++;
         }
         else
 #endif // CONFIG_LOCAL_SENSORS_TEMPERATURE
         {
-            s_display_status.screen_to_show = APPVERSION_SCREEN;
+            display_status.screen_to_show = APPVERSION_SCREEN;
         }
         break;
 
     case APPVERSION_SCREEN:
-        s_display_status.screen_to_show = STATS_SCREEN;
+        display_status.screen_to_show = STATS_SCREEN;
         break;
 
     case STATS_SCREEN:
-        s_display_status.screen_to_show = BEACON_SCREEN;
-        s_display_status.current_beac = UNKNOWN_BEACON;
-        s_display_status.beac_to_show = 0;
+        display_status.screen_to_show = BEACON_SCREEN;
+        display_status.current_beac = UNKNOWN_BEACON;
+        display_status.beac_to_show = 0;
         break;
 
     default:
@@ -123,7 +123,7 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
     EventBits_t uxReturn;
 
     // ESP_LOGD(TAG, "ssd1306_update >, run_periodic_timer %d, run_idle_timer_touch %d, periodic_timer_is_running %d, ssd1306_update current_screen %d, screen_to_show %d",
-    //     run_periodic_timer, run_idle_timer_touch, periodic_timer_running, s_display_status.current_screen, s_display_status.screen_to_show);
+    //     run_periodic_timer, run_idle_timer_touch, periodic_timer_running, display_status.current_screen, display_status.screen_to_show);
 
     // ESP_ERROR_CHECK(esp_timer_dump(stdout));
 
@@ -168,36 +168,36 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
         }
     }
 
-    // ESP_LOGD(TAG, "ssd1306_update turn_display_off %d, s_display_status.display_on %d ", turn_display_off, s_display_status.display_on);
+    // ESP_LOGD(TAG, "ssd1306_update turn_display_off %d, display_status.display_on %d ", turn_display_off, display_status.display_on);
     if (turn_display_off)
     {
-        if (s_display_status.display_on)
+        if (display_status.display_on)
         {
-            s_display_status.display_on = false;
+            display_status.display_on = false;
             ssd1306_display_off();
             return ESP_OK;
         }
     }
     else
     {
-        if (!s_display_status.display_on)
+        if (!display_status.display_on)
         {
-            s_display_status.display_on = true;
+            display_status.display_on = true;
             ssd1306_display_on();
             return ESP_OK;
         }
     }
 
-    // ESP_LOGD(TAG, "ssd1306_update current_screen %d, screen_to_show %d", s_display_status.current_screen, s_display_status.screen_to_show);
+    // ESP_LOGD(TAG, "ssd1306_update current_screen %d, screen_to_show %d", display_status.current_screen, display_status.screen_to_show);
 
-    switch (s_display_status.screen_to_show)
+    switch (display_status.screen_to_show)
     {
 
     case SPLASH_SCREEN:
-        ESP_LOGD(TAG, "ssd1306_update SPLASH_SCREEN current_screen %d, screen_to_show %d", s_display_status.current_screen, s_display_status.screen_to_show);
+        ESP_LOGD(TAG, "ssd1306_update SPLASH_SCREEN current_screen %d, screen_to_show %d", display_status.current_screen, display_status.screen_to_show);
 
         memcpy((void *)canvas->s_chDisplayBuffer, (void *)blemqttproxy_splash1, canvas->w * canvas->h);
-        s_display_status.current_screen = s_display_status.screen_to_show;
+        display_status.current_screen = display_status.screen_to_show;
 
         return ssd1306_refresh_gram(canvas);
         break;
@@ -205,8 +205,8 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
     case BEACON_SCREEN:
     {
 
-        int idx = s_display_status.beac_to_show;
-        if ((s_display_status.current_screen != s_display_status.screen_to_show) || (s_display_status.current_beac != s_display_status.beac_to_show))
+        int idx = display_status.beac_to_show;
+        if ((display_status.current_screen != display_status.screen_to_show) || (display_status.current_beac != display_status.beac_to_show))
         { // TODO
             ssd1306_clear_canvas(canvas, 0x00);
             snprintf(buffer, 128, "%s", ble_beacon_data[idx].name);
@@ -234,7 +234,7 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
 
             draw_pagenumber(canvas, idx + 1, CONFIG_BLE_DEVICE_COUNT_USE);
 
-            s_display_status.current_screen = s_display_status.screen_to_show;
+            display_status.current_screen = display_status.screen_to_show;
             return ssd1306_refresh_gram(canvas);
         }
         else
@@ -248,12 +248,12 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
     case LASTSEEN_SCREEN:
     {
         uint8_t num_act_beac = num_active_beacon();
-        s_display_status.num_last_seen_pages = num_act_beac / BEAC_PER_PAGE_LASTSEEN + (num_act_beac % BEAC_PER_PAGE_LASTSEEN ? 1 : 0) + (!num_act_beac ? 1 : 0);
+        display_status.num_last_seen_pages = num_act_beac / BEAC_PER_PAGE_LASTSEEN + (num_act_beac % BEAC_PER_PAGE_LASTSEEN ? 1 : 0) + (!num_act_beac ? 1 : 0);
 
-        if (s_display_status.lastseen_page_to_show > s_display_status.num_last_seen_pages)
+        if (display_status.lastseen_page_to_show > display_status.num_last_seen_pages)
         {
             // due to deannouncment by "touching" the beacon - TODO
-            s_display_status.lastseen_page_to_show = s_display_status.num_last_seen_pages;
+            display_status.lastseen_page_to_show = display_status.num_last_seen_pages;
         }
 
         ssd1306_clear_canvas(canvas, 0x00);
@@ -262,13 +262,13 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
         ssd1306_draw_string(canvas, 0, 0, (const uint8_t *)buffer, 10, 1);
         if (!num_act_beac)
         {
-            s_display_status.lastseen_page_to_show = 1;
+            display_status.lastseen_page_to_show = 1;
             snprintf(buffer, 128, "No active beacon!");
             ssd1306_draw_string(canvas, 0, 10, (const uint8_t *)buffer, 10, 1);
         }
         else
         {
-            int skip = (s_display_status.lastseen_page_to_show - 1) * BEAC_PER_PAGE_LASTSEEN;
+            int skip = (display_status.lastseen_page_to_show - 1) * BEAC_PER_PAGE_LASTSEEN;
             int line = 1;
             for (int i = 0; i < CONFIG_BLE_DEVICE_COUNT_USE; i++)
             {
@@ -310,8 +310,8 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
                 }
             }
         }
-        draw_pagenumber(canvas, s_display_status.lastseen_page_to_show, s_display_status.num_last_seen_pages);
-        s_display_status.current_screen = s_display_status.screen_to_show;
+        draw_pagenumber(canvas, display_status.lastseen_page_to_show, display_status.num_last_seen_pages);
+        display_status.current_screen = display_status.screen_to_show;
         return ssd1306_refresh_gram(canvas);
         break;
     }
@@ -328,9 +328,9 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
         {
             // localtemp_to_show
         }
-        draw_pagenumber(canvas, s_display_status.localtemp_to_show, s_display_status.num_localtemp_pages);
+        draw_pagenumber(canvas, display_status.localtemp_to_show, display_status.num_localtemp_pages);
 
-        s_display_status.current_screen = s_display_status.screen_to_show;
+        display_status.current_screen = display_status.screen_to_show;
         return ssd1306_refresh_gram(canvas);
 #endif // CONFIG_LOCAL_SENSORS_TEMPERATURE
         break;
@@ -352,11 +352,11 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
                  mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
         ssd1306_draw_string(canvas, 0, 33, (const uint8_t *)buffer, 10, 1);
 
-        uxReturn = xEventGroupWaitBits(s_mqtt_evg, MQTT_CONNECTED_BIT, false, true, 0);
+        uxReturn = xEventGroupWaitBits(mqtt_evg, MQTT_CONNECTED_BIT, false, true, 0);
         bool mqtt_connected = uxReturn & MQTT_CONNECTED_BIT;
 
-        uxReturn = xEventGroupWaitBits(s_wifi_evg, CONNECTED_BIT, false, true, 0);
-        bool wifi_connected = uxReturn & CONNECTED_BIT;
+        uxReturn = xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, 0);
+        bool wifi_connected = uxReturn & WIFI_CONNECTED_BIT;
 
         snprintf(buffer, 128, "WIFI: %s, MQTT: %s/%s", (wifi_connected ? "y" : "n"), (CONFIG_USE_MQTT ? "y" : "n"), (mqtt_connected ? "y" : "n"));
         ssd1306_draw_string(canvas, 0, 44, (const uint8_t *)buffer, 10, 1);
@@ -373,7 +373,7 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
         }
         ssd1306_draw_string(canvas, 0, 55, (const uint8_t *)buffer, 10, 1);
 
-        s_display_status.current_screen = s_display_status.screen_to_show;
+        display_status.current_screen = display_status.screen_to_show;
         return ssd1306_refresh_gram(canvas);
     }
     break;
@@ -392,13 +392,13 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
         snprintf(buffer, 128, "%-6s:         %3d:%02d:%02d", "uptime", up_h, up_m, up_s);
         ssd1306_draw_string(canvas, 0, 11, (const uint8_t *)buffer, 10, 1);
 
-        snprintf(buffer, 128, "%-9s: %5d/%5d", "WiFi ok/fail", wifi_connections_connect, wifi_connections_disconnect);
+        snprintf(buffer, 128, "%-9s: %5d/%5d", "WiFi ok/fail", wifi_connections_count_connect, wifi_connections_count_disconnect);
         ssd1306_draw_string(canvas, 0, 22, (const uint8_t *)buffer, 10, 1);
 
         snprintf(buffer, 128, "%-9s: %5d/%5d", "MQTT ok/fail", mqtt_packets_send, mqtt_packets_fail);
         ssd1306_draw_string(canvas, 0, 33, (const uint8_t *)buffer, 10, 1);
 
-        s_display_status.current_screen = s_display_status.screen_to_show;
+        display_status.current_screen = display_status.screen_to_show;
         return ssd1306_refresh_gram(canvas);
     }
     break;

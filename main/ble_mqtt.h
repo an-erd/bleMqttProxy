@@ -9,8 +9,8 @@
 
 
 // MQTT
-extern esp_mqtt_client_handle_t s_client;
-extern EventGroupHandle_t s_mqtt_evg;
+extern esp_mqtt_client_handle_t mqtt_client;
+extern EventGroupHandle_t mqtt_evg;
 #define  MQTT_CONNECTED_BIT      (BIT0)
 
 

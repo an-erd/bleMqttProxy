@@ -39,7 +39,7 @@ typedef struct {
     bool                display_on;
 } display_status_t;
 
-extern display_status_t s_display_status;
+extern display_status_t display_status;
 extern volatile bool turn_display_off;           // switch display on/off as idle timer action, will be handled in ssd1306_update
 
 void ssd1306_task(void* pvParameters);
