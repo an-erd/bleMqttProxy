@@ -283,12 +283,12 @@ esp_err_t csv_get_handler(httpd_req_t *req)
 
         case WEBFILESERVER_CMD_RESET:
             ESP_LOGD(TAG, "csv_get_handler WEBFILESERVER_CMD_RESET");
-            status = ble_beacons[i].offline_buffer_status;
+            status = ble_beacons[idx].offline_buffer_status;
             switch(status){
                 case OFFLINE_BUFFER_STATUS_NONE:
                     break;
                 case OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED:
-                    ble_beacons[i].offline_buffer_status = OFFLINE_BUFFER_STATUS_NONE;
+                    ble_beacons[idx].offline_buffer_status = OFFLINE_BUFFER_STATUS_NONE;
                     break;
                 case OFFLINE_BUFFER_STATUS_DOWNLOAD_IN_PROGRESS:
                     ESP_LOGD(TAG, "already in progress, wait for now");
