@@ -21,6 +21,7 @@ extern const uint8_t const REMOTE_SERVICE_UUID[];
 #define INVALID_HANDLE   0
 
 extern bool gattc_connect;
+extern uint8_t gattc_connect_beacon_idx;
 extern bool get_server;
 extern bool device_notify_1401;
 extern bool device_indicate_2A52;

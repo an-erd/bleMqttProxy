@@ -123,7 +123,11 @@
         "ble.h": "c",
         "locale.h": "c",
         "_ansi.h": "c",
-        "stddef.h": "c"
+        "stddef.h": "c",
+        "chrono": "c",
+        "algorithm": "c",
+        "typeinfo": "c",
+        "ratio": "c"
     },
 	"files.exclude": {
 		"**/.git": true,

@@ -206,18 +206,20 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
     {
 
         int idx = display_status.beac_to_show;
-        if ((display_status.current_screen != display_status.screen_to_show) || (display_status.current_beac != display_status.beac_to_show))
-        { // TODO
+        if ((display_status.current_screen != display_status.screen_to_show)
+            || (display_status.current_beac != display_status.beac_to_show))
+        {
             ssd1306_clear_canvas(canvas, 0x00);
-            snprintf(buffer, 128, "%s", ble_beacon_data[idx].name);
+            snprintf(buffer, 128, "%s", ble_beacons[idx].beacon_data.name);
             ssd1306_draw_string(canvas, 0, 0, (const uint8_t *)buffer, 10, 1);
-            if (is_beacon_idx_active(idx) && (ble_adv_data[idx].last_seen != 0))
+            if (is_beacon_idx_active(idx) && (ble_beacons[idx].adv_data.last_seen != 0))
             {
-                snprintf(buffer, 128, "%5.2fC, %5.2f%%H", ble_adv_data[idx].temp, ble_adv_data[idx].humidity);
+                snprintf(buffer, 128, "%5.2fC, %5.2f%%H",
+                    ble_beacons[idx].adv_data.temp, ble_beacons[idx].adv_data.humidity);
                 ssd1306_draw_string(canvas, 0, 12, (const uint8_t *)buffer, 10, 1);
-                snprintf(buffer, 128, "Batt %4d mV", ble_adv_data[idx].battery);
+                snprintf(buffer, 128, "Batt %4d mV", ble_beacons[idx].adv_data.battery);
                 ssd1306_draw_string(canvas, 0, 24, (const uint8_t *)buffer, 10, 1);
-                snprintf(buffer, 128, "RSSI  %3d dBm", ble_adv_data[idx].measured_power);
+                snprintf(buffer, 128, "RSSI  %3d dBm", ble_beacons[idx].adv_data.measured_power);
                 ssd1306_draw_string(canvas, 0, 36, (const uint8_t *)buffer, 10, 1);
             }
             else
@@ -280,25 +282,25 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
                     }
                     else
                     {
-                        bool never_seen = (ble_adv_data[i].last_seen == 0);
+                        bool never_seen = (ble_beacons[i].adv_data.last_seen == 0);
                         if (never_seen)
                         {
-                            snprintf(buffer, 128, "%s: %c", ble_beacon_data[i].name, '/');
+                            snprintf(buffer, 128, "%s: %c", ble_beacons[i].beacon_data.name, '/');
                         }
                         else
                         {
-                            uint16_t last_seen_sec_gone = (esp_timer_get_time() - ble_adv_data[i].last_seen) / 1000000;
-                            uint16_t mqtt_last_send_sec_gone = (esp_timer_get_time() - ble_adv_data[i].mqtt_last_send) / 1000000;
+                            uint16_t last_seen_sec_gone = (esp_timer_get_time() - ble_beacons[i].adv_data.last_seen) / 1000000;
+                            uint16_t mqtt_last_send_sec_gone = (esp_timer_get_time() - ble_beacons[i].adv_data.mqtt_last_send) / 1000000;
                             uint8_t h, m, s, hq, mq, sq;
                             convert_s_hhmmss(last_seen_sec_gone, &h, &m, &s);
                             convert_s_hhmmss(mqtt_last_send_sec_gone, &hq, &mq, &sq);
                             if (h > 99)
                             {
-                                snprintf(buffer, 128, "%s: %s", ble_beacon_data[i].name, "seen >99h");
+                                snprintf(buffer, 128, "%s: %s", ble_beacons[i].beacon_data.name, "seen >99h");
                             }
                             else
                             {
-                                snprintf(buffer, 128, "%s: %02d:%02d:%02d %02d:%02d:%02d", ble_beacon_data[i].name, h, m, s, hq, mq, sq);
+                                snprintf(buffer, 128, "%s: %02d:%02d:%02d %02d:%02d:%02d", ble_beacons[i].beacon_data.name, h, m, s, hq, mq, sq);
                             }
                         }
                         ssd1306_draw_string(canvas, 0, line * 10, (const uint8_t *)buffer, 10, 1);

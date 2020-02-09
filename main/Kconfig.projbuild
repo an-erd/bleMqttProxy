@@ -322,6 +322,15 @@ menu "BLE-MQTT Proxy"
             help
                 Lower limit for RSSI to initiate an beacon announcement by getting close to the proxy.
 
+        menu "OFfline Buffer"
+
+            config OFFLINE_BUFFER_SIZE
+            int "Max. number of offline buffer entries provided by beacon"
+            range 0 5000
+            default 1250
+
+        endmenu
+
     endmenu
 
     menu "Button"

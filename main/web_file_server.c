@@ -12,33 +12,36 @@
 #include "web_file_server.h"
 #include "beacon.h"
 #include "offlinebuffer.h"
+#include "helperfunctions.h"
 
 static const char *TAG = "web_file_server";
 static const char *web_file_server_commands[WEBFILESERVER_NUM_ENTRIES] = {
     "stat",
-    "prep",
+    "req",
     "dl",
     "reset",
     "list",
 };
 
+
 static esp_err_t http_resp_csv_download(httpd_req_t *req, uint8_t idx)
 {
     char buffer[128];
+    uint16_t count = ble_beacons[idx].offline_buffer_count;
 
     httpd_resp_set_type(req, "application/csv");
     httpd_resp_set_hdr(req, "Content-Disposition", "attachment; filename=example.csv");
-    httpd_resp_sendstr_chunk(req, get_known_beacon_name(idx));
+    httpd_resp_sendstr_chunk(req, ble_beacons[idx].beacon_data.name);
     httpd_resp_sendstr_chunk(req, "\n");
     httpd_resp_sendstr_chunk(req, "Seq.nr.;EPOCH Time;Time-Date;Temperatur;Humidity \n");
 
-    for (uint16_t i = 0; i < buffer_download_count; i++){
-        snprintf(buffer, 128, "%6d;%10d;%10.3f;% 2.1f;%3.1f\n",
-            buffer_download[i].sequence_number,
-            buffer_download[i].time_stamp,
-            buffer_download[i].csv_date_time,
-            buffer_download[i].temperature_f,
-            buffer_download[i].humidity_f);
+    for (uint16_t i = 0; i < count; i++){
+        snprintf(buffer, 128, "%6d;%10d;%10.5f;% 2.1f;%3.1f\n",
+            ble_beacons[idx].p_buffer_download[i].sequence_number,
+            ble_beacons[idx].p_buffer_download[i].time_stamp,
+            ble_beacons[idx].p_buffer_download[i].csv_date_time,
+            ble_beacons[idx].p_buffer_download[i].temperature_f,
+            ble_beacons[idx].p_buffer_download[i].humidity_f);
         for (uint8_t j = 0; j < 128; j++){
             if (buffer[j] == '.')
                 buffer[j] = ',';
@@ -51,15 +54,107 @@ static esp_err_t http_resp_csv_download(httpd_req_t *req, uint8_t idx)
 
     return ESP_OK;
 }
+
 static esp_err_t http_resp_list_devices(httpd_req_t *req)
 {
-    uint8_t num_devices = num_beacon_name_known();
-    ESP_LOGI(TAG, "http_resp_list_devices, count = %d", num_devices);
-    httpd_resp_sendstr_chunk(req, "<!DOCTYPE html><html><body>");
+    uint8_t h, m, s;
+    uint16_t last_seen_sec_gone;
+    char buffer[128];
+    uint8_t num_devices = CONFIG_BLE_DEVICE_COUNT_CONFIGURED;
+    offline_buffer_status_t status;
+
+
+    ESP_LOGD(TAG, "http_resp_list_devices, count = %d", num_devices);
+
+    httpd_resp_sendstr_chunk(req, "<!DOCTYPE html><html><body style=\"font-family:Arial\">\n");
+    httpd_resp_sendstr_chunk(req, "<h1 style=\"text-align: center;\">Beacon List</h1>\n");
+    httpd_resp_sendstr_chunk(req, "<table style=\"margin-left: auto; margin-right: auto;\" border=\"0\" width=\"600\" bgcolor=\"#e0e0e0\">\n");
+    httpd_resp_sendstr_chunk(req, "<tbody>\n");
+    httpd_resp_sendstr_chunk(req, "<tr bgcolor=\"#c0c0c0\">\n");
+    httpd_resp_sendstr_chunk(req, "<td style=\"text-align: center;\">Name</td>\n");
+    httpd_resp_sendstr_chunk(req, "<td style=\"text-align: center;\">Last seen ago</td>\n");
+    httpd_resp_sendstr_chunk(req, "<td style=\"text-align: center;\">Status</td>\n");
+    httpd_resp_sendstr_chunk(req, "<td style=\"text-align: center;\">Command</td>\n");
+    httpd_resp_sendstr_chunk(req, "<td style=\"text-align: center;\">Download file</td>\n");
+    httpd_resp_sendstr_chunk(req, "</tr>\n");
+
     for (int i = 0; i < num_devices; i++){
-        httpd_resp_sendstr_chunk(req, get_known_beacon_name(i));
-        httpd_resp_sendstr_chunk(req, "\n");
+
+        // Name
+        httpd_resp_sendstr_chunk(req, "<tr>\n<td>\n");
+        httpd_resp_sendstr_chunk(req, ble_beacons[i].beacon_data.name);
+        httpd_resp_sendstr_chunk(req, "</td>\n");
+
+        // Last seen
+        if(is_beacon_idx_active(i)){
+            httpd_resp_sendstr_chunk(req, "<td>");
+            if(ble_beacons[i].adv_data.last_seen == 0){
+                httpd_resp_sendstr_chunk(req, "never");
+            } else {
+                last_seen_sec_gone = (esp_timer_get_time() - ble_beacons[i].adv_data.last_seen) / 1000000;
+                convert_s_hhmmss(last_seen_sec_gone, &h, &m, &s);
+                snprintf(buffer, 128, "%02d:%02d:%02d", h, m, s);
+                httpd_resp_sendstr_chunk(req, buffer);
+            }
+            httpd_resp_sendstr_chunk(req, "</td>\n<td>");
+
+            // Download Status
+            status = ble_beacons[i].offline_buffer_status;
+            httpd_resp_sendstr_chunk(req, offline_buffer_descr_status_to_str(status));
+            httpd_resp_sendstr_chunk(req, "</td>\n");
+
+            // Command
+            switch (status){
+                case OFFLINE_BUFFER_STATUS_NONE:
+                    httpd_resp_sendstr_chunk(req, "<td><a href=\"/csv?beac=");
+                    httpd_resp_sendstr_chunk(req, ble_beacons[i].beacon_data.name);
+                    httpd_resp_sendstr_chunk(req, "&amp;cmd=req\">request</a></td>\n");
+                    break;
+                case OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED:
+                    httpd_resp_sendstr_chunk(req, "<td><a href=\"/csv?beac=");
+                    httpd_resp_sendstr_chunk(req, ble_beacons[i].beacon_data.name);
+                    httpd_resp_sendstr_chunk(req, "&amp;cmd=rst\">cancel</a></td>\n");
+                    break;
+                case OFFLINE_BUFFER_STATUS_DOWNLOAD_IN_PROGRESS:
+                    httpd_resp_sendstr_chunk(req, "<td><a href=\"/csv?beac=");
+                    httpd_resp_sendstr_chunk(req, ble_beacons[i].beacon_data.name);
+                    httpd_resp_sendstr_chunk(req, "&amp;cmd=rst\">cancel</a></td>\n");
+                    break;
+                case OFFLINE_BUFFER_STATUS_DOWNLOAD_AVAILABLE:
+                    httpd_resp_sendstr_chunk(req, "<td><a href=\"/csv?beac=");
+                    httpd_resp_sendstr_chunk(req, ble_beacons[i].beacon_data.name);
+                    httpd_resp_sendstr_chunk(req, "&amp;cmd=rst\">Clear</a></td>\n");
+                    break;
+                case OFFLINE_BUFFER_STATUS_UNKNOWN:
+                    httpd_resp_sendstr_chunk(req, "<td>none</td>\n");
+                    break;
+            }
+
+            // Download
+            switch (status){
+                case OFFLINE_BUFFER_STATUS_NONE:
+                    break;
+                case OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED:
+                    break;
+                case OFFLINE_BUFFER_STATUS_DOWNLOAD_IN_PROGRESS:
+                    break;
+                case OFFLINE_BUFFER_STATUS_DOWNLOAD_AVAILABLE:
+                    httpd_resp_sendstr_chunk(req, "<td><a href=\"/csv?beac=");
+                    httpd_resp_sendstr_chunk(req, ble_beacons[i].beacon_data.name);
+                    httpd_resp_sendstr_chunk(req, "&amp;cmd=dl\">Download</a></td>\n");
+                    break;
+                case OFFLINE_BUFFER_STATUS_UNKNOWN:
+                    break;
+            }
+
+            httpd_resp_sendstr_chunk(req, "</tr>\n");
+        } else {
+            httpd_resp_sendstr_chunk(req, "<td>");
+            httpd_resp_sendstr_chunk(req, "inactive");
+            httpd_resp_sendstr_chunk(req, "</td>\n");
+        }
     }
+    httpd_resp_sendstr_chunk(req, "</tbody></table>");
     httpd_resp_sendstr_chunk(req, "</body></html>");
     httpd_resp_sendstr_chunk(req, NULL);
 
@@ -76,30 +171,31 @@ esp_err_t csv_get_handler(httpd_req_t *req)
     char device_name[32];
     char param[32];
     char resp_str[128];
-
+    uint8_t idx = UNKNOWN_BEACON;
+    offline_buffer_status_t status;
     web_file_server_cmd_t cmd = WEBFILESERVER_NO_CMD;
 
-    ESP_LOGI(TAG, "csv_get_handler >");
+    ESP_LOGD(TAG, "csv_get_handler >");
 
     buf_len = httpd_req_get_url_query_len(req) + 1;
     if (buf_len > 1) {
         buf = malloc(buf_len);
         if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
-            ESP_LOGI(TAG, "    URL query=%s", buf);
+            ESP_LOGD(TAG, "    URL query=%s", buf);
 
             // get device_name out of query
             ret = httpd_query_key_value(buf, "beac", device_name, sizeof(device_name));
             switch (ret){
                 case ESP_OK:
-                    ESP_LOGI(TAG, "    beac=%s", device_name);
+                    ESP_LOGD(TAG, "    beac=%s", device_name);
                     device_name_set = true;
                     break;
                 case ESP_ERR_HTTPD_RESULT_TRUNC:
-                    ESP_LOGI(TAG, "    beac=%s, truncated!", device_name);
+                    ESP_LOGD(TAG, "    beac=%s, truncated!", device_name);
                     device_name_set = true;
                     break;
                 default:
-                    ESP_LOGI(TAG, "    beac=not set");
+                    ESP_LOGD(TAG, "    beac=not set");
                     break;
             }
 
@@ -107,7 +203,7 @@ esp_err_t csv_get_handler(httpd_req_t *req)
             ret = httpd_query_key_value(buf, "cmd", param, sizeof(param));
             switch (ret){
                 case ESP_OK:
-                    ESP_LOGI(TAG, "    cmd=%s", param);
+                    ESP_LOGD(TAG, "    cmd=%s", param);
                     int cmd_len = strlen(param);
                     for (int i = 0; i < WEBFILESERVER_NUM_ENTRIES; i++) {
                         if ( (cmd_len == strlen(web_file_server_commands[i])) && (strncmp((char *) param, web_file_server_commands[i], cmd_len) == 0) ) {
@@ -117,48 +213,101 @@ esp_err_t csv_get_handler(httpd_req_t *req)
                     }
                     break;
                 default:
-                    ESP_LOGI(TAG, "    cmd=not set");
+                    ESP_LOGD(TAG, "    cmd=not set");
                     break;
             }
         }
         free(buf);
     }
 
-    bool is_available = buffer_download_csv_data_available && device_name_set
-        && (strlen(buffer_download_device_name) == strlen(device_name))
-        && (strncmp((char *) buffer_download_device_name, device_name, strlen(device_name)) == 0);
+    if (device_name_set){
+        idx = beacon_name_to_idx(device_name);
+    }
+
+    bool is_available = (idx != UNKNOWN_BEACON)
+        && (ble_beacons[idx].offline_buffer_status == OFFLINE_BUFFER_STATUS_DOWNLOAD_AVAILABLE);
 
     switch (cmd) {
         case WEBFILESERVER_CMD_STAT:
-            ESP_LOGI(TAG, "csv_get_handler WEBFILESERVER_CMD_STAT");
-            snprintf(resp_str, 128, "Status requested for device %s, available %s",  device_name_set?device_name:"n/a", is_available?"y":"n");
+            ESP_LOGD(TAG, "csv_get_handler WEBFILESERVER_CMD_STAT");
+
+
+            snprintf(resp_str, 128, "Status requested for device %s, device known %s, available %s, offline_buffer_status = %s",
+                device_name_set ? device_name : "n/a",
+                idx != UNKNOWN_BEACON ? "y" : "n",
+                is_available ? "y" : "n",
+                offline_buffer_status_to_str(ble_beacons[idx].offline_buffer_status) );
+
             httpd_resp_send(req, resp_str, strlen(resp_str));
             break;
-        case WEBFILESERVER_CMD_PREP:
-            ESP_LOGI(TAG, "csv_get_handler WEBFILESERVER_CMD_PREP");
-            snprintf(resp_str, 128, "Prepare requested for device %s",  device_name_set?device_name:"n/a");
-            strncpy(buffer_download_device_name, device_name, 20);
+
+        case WEBFILESERVER_CMD_REQ:
+            ESP_LOGD(TAG, "csv_get_handler WEBFILESERVER_CMD_REQ");
+            ESP_LOGD(TAG, "Data requested for device %s, idx %d",  device_name_set ? device_name : "n/a", idx );
+            if( idx == UNKNOWN_BEACON ){
+                ESP_LOGD(TAG, "unknown device");
+            } else {
+                switch(ble_beacons[idx].offline_buffer_status){
+                    case OFFLINE_BUFFER_STATUS_NONE:
+                        ble_beacons[idx].p_buffer_download = (ble_os_meas_t *) malloc(sizeof(ble_os_meas_t) * CONFIG_OFFLINE_BUFFER_SIZE);
+                        ble_beacons[idx].offline_buffer_count = 0;
+                        ble_beacons[idx].offline_buffer_status = OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED;
+                        break;
+                    case OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED:
+                        ESP_LOGD(TAG, "already requested");
+                        break;
+                    case OFFLINE_BUFFER_STATUS_DOWNLOAD_IN_PROGRESS:
+                        ESP_LOGD(TAG, "already in progress");
+                        break;
+                    case OFFLINE_BUFFER_STATUS_DOWNLOAD_AVAILABLE:
+                        ESP_LOGD(TAG, "already available for download");
+                        break;
+                    default:
+                        ESP_LOGD(TAG, "unhandled switch case");
+                        break;
+                }
+            }
             xEventGroupSetBits(offlinebuffer_evg, OFFLINE_BUFFER_BLE_READ_EVT);
-            httpd_resp_send(req, resp_str, strlen(resp_str));
             break;
+
         case WEBFILESERVER_CMD_DL:
-            ESP_LOGI(TAG, "csv_get_handler WEBFILESERVER_CMD_DL");
+            ESP_LOGD(TAG, "csv_get_handler WEBFILESERVER_CMD_DL");
             if (!is_available){
                 snprintf(resp_str, 128, "Download requested for device %s, not available",  device_name_set?device_name:"n/a");
                 httpd_resp_send(req, resp_str, strlen(resp_str));
             } else {
-                http_resp_csv_download(req, is_beacon_name_known(device_name));
+                http_resp_csv_download(req, idx);
                 xEventGroupSetBits(offlinebuffer_evg, OFFLINE_BUFFER_RESET_EVT);
             }
+            break;
 
-            break;
         case WEBFILESERVER_CMD_RESET:
-            ESP_LOGI(TAG, "csv_get_handler WEBFILESERVER_CMD_RESET");
-            break;
-        case WEBFILESERVER_CMD_LIST:
-            ESP_LOGI(TAG, "csv_get_handler WEBFILESERVER_CMD_LIST");
+            ESP_LOGD(TAG, "csv_get_handler WEBFILESERVER_CMD_RESET");
+            status = ble_beacons[i].offline_buffer_status;
+            switch(status){
+                case OFFLINE_BUFFER_STATUS_NONE:
+                    break;
+                case OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED:
+                    ble_beacons[i].offline_buffer_status = OFFLINE_BUFFER_STATUS_NONE;
+                    break;
+                case OFFLINE_BUFFER_STATUS_DOWNLOAD_IN_PROGRESS:
+                    ESP_LOGD(TAG, "already in progress, wait for now");
+                    break;
+                case OFFLINE_BUFFER_STATUS_DOWNLOAD_AVAILABLE:
+                    ESP_LOGD(TAG, "already available for download");
+                    break;
+                default:
+                    ESP_LOGD(TAG, "unhandled switch case");
+                    break;
+            }
             http_resp_list_devices(req);
             break;
+
+        case WEBFILESERVER_CMD_LIST:
+            ESP_LOGD(TAG, "csv_get_handler WEBFILESERVER_CMD_LIST");
+            http_resp_list_devices(req);
+            break;
+
         default:
             break;
     }
@@ -187,7 +336,7 @@ httpd_handle_t start_webserver(void)
         return server;
     }
 
-    ESP_LOGI(TAG, "Error starting server!");
+    ESP_LOGE(TAG, "Error starting server!");
     return NULL;
 }
 

@@ -38,9 +38,9 @@ bool send_to_mqtt(uint8_t idx, uint16_t maj, uint16_t min, float temp, float hum
 
     if(wifi_connected && mqtt_connected){
 
-        uint16_t mqtt_last_send_sec_gone = (esp_timer_get_time() - ble_adv_data[idx].mqtt_last_send)/1000000;
+        uint16_t mqtt_last_send_sec_gone = (esp_timer_get_time() - ble_beacons[idx].adv_data.mqtt_last_send)/1000000;
         if( (mqtt_last_send_sec_gone > CONFIG_MQTT_MIN_TIME_INTERVAL_BETWEEN_MESSAGES)
-            || (ble_adv_data[idx].mqtt_last_send == 0)){
+            || (ble_beacons[idx].adv_data.mqtt_last_send == 0)){
             int msg_id = 0;
             char buffer_topic[128];
             char buffer_payload[128];

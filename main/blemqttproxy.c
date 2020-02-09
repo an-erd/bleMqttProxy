@@ -240,7 +240,7 @@ void periodic_wdt_timer_callback(void* arg)
 
     for(int i=0; i < CONFIG_BLE_DEVICE_COUNT_USE; i++){
         if(is_beacon_idx_active(i)){
-            temp_last_seen_sec = (esp_timer_get_time() - ble_adv_data[i].last_seen)/1000000;
+            temp_last_seen_sec = (esp_timer_get_time() - ble_beacons[i].adv_data.last_seen)/1000000;
             if(temp_last_seen_sec < lowest_last_seen_sec){
                 beacon_to_take = i;
                 lowest_last_seen_sec = temp_last_seen_sec;
@@ -363,7 +363,7 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
             ESP_LOGD(TAG, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
             break;
         case MQTT_EVENT_PUBLISHED:
-            ESP_LOGD(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
+            // ESP_LOGD(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
             break;
         case MQTT_EVENT_DATA:
             ESP_LOGD(TAG, "MQTT_EVENT_DATA");
@@ -395,15 +395,15 @@ void update_adv_data(uint16_t maj, uint16_t min, int8_t measured_power,
 {
     uint8_t idx = beacon_maj_min_to_idx(maj, min);
 
-    ble_adv_data[idx].measured_power = measured_power;
-    ble_adv_data[idx].temp           = temp;
-    ble_adv_data[idx].humidity       = humidity;
-    ble_adv_data[idx].battery        = battery;
-    ble_adv_data[idx].last_seen      = esp_timer_get_time();
+    ble_beacons[idx].adv_data.measured_power = measured_power;
+    ble_beacons[idx].adv_data.temp           = temp;
+    ble_beacons[idx].adv_data.humidity       = humidity;
+    ble_beacons[idx].adv_data.battery        = battery;
+    ble_beacons[idx].adv_data.last_seen      = esp_timer_get_time();
 
     if(mqtt_send){
         ESP_LOGD(TAG, "update_adv_data, update mqtt_last_send");
-        ble_adv_data[idx].mqtt_last_send = esp_timer_get_time();
+        ble_beacons[idx].adv_data.mqtt_last_send = esp_timer_get_time();
     }
 
     display_status.current_beac = UNKNOWN_BEACON;
@@ -741,26 +741,36 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         break;
     }
     case ESP_GATTC_NOTIFY_EVT: {
-        ESP_LOGD(TAG, "ESP_GATTC_NOTIFY_EVT");
+        // ESP_LOGD(TAG, "ESP_GATTC_NOTIFY_EVT");
 
         static int64_t time_measure = 0;
         uint8_t len = 0;
+        uint16_t count = 0;
+        uint8_t idx = gattc_connect_beacon_idx;
 
         if (p_data->notify.is_notify){
-            if(!buffer_download_count){
+            count = ble_beacons[idx].offline_buffer_count;
+            if(!count){
                 ESP_LOGD(TAG, "ESP_GATTC_NOTIFY_EVT, first");
                 time_measure = esp_timer_get_time();
+                ble_beacons[idx].offline_buffer_status = OFFLINE_BUFFER_STATUS_DOWNLOAD_IN_PROGRESS;
             }
-
-            buffer_download[buffer_download_count].sequence_number  = uint16_decode(&p_data->notify.value[len]); len += 2; // uint16_t
-            buffer_download[buffer_download_count].time_stamp       = uint32_decode(&p_data->notify.value[len]); len += 4; // time_t
-            buffer_download[buffer_download_count].temperature      = uint16_decode_r(&p_data->notify.value[len]); len += 2; // uint16_t
-            buffer_download[buffer_download_count].humidity         = uint16_decode_r(&p_data->notify.value[len]); len += 2; // uint16_t
-            ESP_LOG_BUFFER_HEX_LEVEL(TAG, &buffer_download[buffer_download_count], p_data->notify.value_len, ESP_LOG_DEBUG);
-            buffer_download_count++;
-        }else{
+            ble_beacons[idx].p_buffer_download[count].sequence_number  = uint16_decode(&p_data->notify.value[len]); len += 2; // uint16_t
+            ble_beacons[idx].p_buffer_download[count].time_stamp       = uint32_decode(&p_data->notify.value[len]); len += 4; // time_t
+            ble_beacons[idx].p_buffer_download[count].temperature_f
+                = SHT3_GET_TEMPERATURE_VALUE(p_data->notify.value[len], p_data->notify.value[len+1]);
+            len += 2;
+            ble_beacons[idx].p_buffer_download[count].humidity_f
+                = SHT3_GET_HUMIDITY_VALUE(p_data->notify.value[len], p_data->notify.value[len+1]);
+            len += 2;
+            ble_beacons[idx].p_buffer_download[count].csv_date_time
+                = ble_beacons[idx].p_buffer_download[count].time_stamp / 86400. + 25569;
+            // ESP_LOG_BUFFER_HEX_LEVEL(TAG, &ble_beacons[idx].p_buffer_download[count], p_data->notify.value_len, ESP_LOG_DEBUG);
+            ble_beacons[idx].offline_buffer_count++;
+        } else {
             ESP_LOGD(TAG, "ESP_GATTC_NOTIFY_EVT, receive indicate value:");
-            ESP_LOGD(TAG, "buffer_download_count %d, time difference %d", buffer_download_count, (uint16_t) (esp_timer_get_time() - time_measure));
+            ESP_LOGI(TAG, "ESP_GATTC_NOTIFY_EVT done, received %d, time difference %d",
+                ble_beacons[idx].offline_buffer_count, (uint16_t) (esp_timer_get_time() - time_measure));
         }
 
         if (!p_data->notify.is_notify){
@@ -770,7 +780,8 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
                 ESP_LOGE(TAG, "esp_ble_gattc_close, error status %d", ret_status);
             }
 
-            xEventGroupSetBits(offlinebuffer_evg, OFFLINE_BUFFER_CSV_PREPARE_EVT);
+            ble_beacons[idx].offline_buffer_status = OFFLINE_BUFFER_STATUS_DOWNLOAD_AVAILABLE;
+            xEventGroupSetBits(offlinebuffer_evg, OFFLINE_BUFFER_READY_EVT);
         }
         break;
     }
@@ -822,6 +833,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
     case ESP_GATTC_DISCONNECT_EVT:
         ESP_LOGD(TAG, "ESP_GATTC_DISCONNECT_EVT");
         gattc_connect = false;
+        gattc_connect_beacon_idx = UNKNOWN_BEACON;
         get_server = false;
         ESP_LOGI(TAG, "ESP_GATTC_DISCONNECT_EVT, reason = %d", p_data->disconnect.reason);
 
@@ -937,7 +949,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         }
         break;
     case ESP_GAP_BLE_SCAN_RESULT_EVT: {
-        ESP_LOGD(TAG, "ESP_GAP_BLE_SCAN_RESULT_EVT");
+        // ESP_LOGD(TAG, "ESP_GAP_BLE_SCAN_RESULT_EVT");
         esp_ble_gap_cb_param_t *scan_result = (esp_ble_gap_cb_param_t *)param;
 
         beacon_type_t beacon_type = UNKNOWN_BEACON;
@@ -953,13 +965,13 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
 
         switch (scan_result->scan_rst.search_evt) {
         case ESP_GAP_SEARCH_INQ_RES_EVT:
-            ESP_LOGD(TAG, "ESP_GAP_SEARCH_INQ_RES_EVT");
+            // ESP_LOGD(TAG, "ESP_GAP_SEARCH_INQ_RES_EVT");
 
-            ESP_LOGD(TAG, "searched Adv Data Len %d, Scan Response Len %d", scan_result->scan_rst.adv_data_len, scan_result->scan_rst.scan_rsp_len);
+            // ESP_LOGD(TAG, "searched Adv Data Len %d, Scan Response Len %d", scan_result->scan_rst.adv_data_len, scan_result->scan_rst.scan_rsp_len);
             adv_name = esp_ble_resolve_adv_data(scan_result->scan_rst.ble_adv,
                                                 ESP_BLE_AD_TYPE_NAME_CMPL, &adv_name_len);
-            ESP_LOGD(TAG, "searched Device Name Len %d", adv_name_len);
-            ESP_LOG_BUFFER_CHAR_LEVEL(TAG, adv_name, adv_name_len, ESP_LOG_DEBUG);
+            // ESP_LOGD(TAG, "searched Device Name Len %d", adv_name_len);
+            // ESP_LOG_BUFFER_CHAR_LEVEL(TAG, adv_name, adv_name_len, ESP_LOG_DEBUG);
 
 #if CONFIG_EXAMPLE_DUMP_ADV_DATA_AND_SCAN_RESP
             if (scan_result->scan_rst.adv_data_len > 0) {
@@ -976,7 +988,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
 
             if( (beacon_type == BEACON_V3) || (beacon_type == BEACON_V4) || (beacon_type == BEACON_V4_SR) ){
 
-                ESP_LOGD(TAG, "mybeacon found, type %d", beacon_type);
+                // ESP_LOGD(TAG, "mybeacon found, type %d", beacon_type);
                 switch(beacon_type){
 
                 case BEACON_V3: {
@@ -1011,24 +1023,21 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 update_adv_data(maj, min, scan_result->scan_rst.rssi, temp, humidity, battery, mqtt_send_adv);
                 check_update_display(maj, min);
 
-                if (adv_name != NULL) {
-                    uint8_t idx = add_known_beacon_name((char*)adv_name);
-                    UNUSED(idx);
-                    uxBits = xEventGroupWaitBits(offlinebuffer_evg, OFFLINE_BUFFER_TAKE_NEXT_AVD_EVT, pdFALSE, pdFALSE, 0);
-                    if ( (uxBits & OFFLINE_BUFFER_TAKE_NEXT_AVD_EVT)
-                            && strlen(buffer_download_device_name) == adv_name_len && strncmp((char *)adv_name, buffer_download_device_name, adv_name_len) == 0) {
-                        ESP_LOGD(TAG, "searched device %s", buffer_download_device_name);
-                        if (gattc_connect == false) {
-                            gattc_connect = true;
-                            xEventGroupClearBits(offlinebuffer_evg, OFFLINE_BUFFER_TAKE_NEXT_AVD_EVT);
-                            ESP_LOGD(TAG, "connect to the remote device.");
-                            esp_ble_gap_stop_scanning();
-                            esp_ble_gattc_open(gl_profile_tab[PROFILE_A_APP_ID].gattc_if, scan_result->scan_rst.bda, scan_result->scan_rst.ble_addr_type, true);
-                        }
+                uxBits = xEventGroupWaitBits(offlinebuffer_evg, OFFLINE_BUFFER_TAKE_NEXT_AVD_EVT, pdFALSE, pdFALSE, 0);
+                if ( (uxBits & OFFLINE_BUFFER_TAKE_NEXT_AVD_EVT)
+                    && (ble_beacons[idx].offline_buffer_status == OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED)) {
+                    // ESP_LOGD(TAG, "searched device %s", ble_beacons[idx].beacon_data.name);
+                    if (gattc_connect == false) {
+                        gattc_connect = true;
+                        gattc_connect_beacon_idx = idx;
+                        xEventGroupClearBits(offlinebuffer_evg, OFFLINE_BUFFER_TAKE_NEXT_AVD_EVT);
+                        ESP_LOGD(TAG, "connect to the remote device.");
+                        esp_ble_gap_stop_scanning();
+                        esp_ble_gattc_open(gl_profile_tab[PROFILE_A_APP_ID].gattc_if, scan_result->scan_rst.bda, scan_result->scan_rst.ble_addr_type, true);
                     }
                 }
             } else {
-                ESP_LOGD(TAG, "mybeacon not found");
+                // ESP_LOGD(TAG, "mybeacon not found");
             }
             break;
         case ESP_GAP_SEARCH_INQ_CMPL_EVT:
@@ -1208,7 +1217,8 @@ static void wdt_task(void* pvParameters)
             uptime_sec = esp_timer_get_time()/1000000;
 
             snprintf(buffer_topic, 128,  CONFIG_MQTT_FORMAT, "beac",
-                ble_beacon_data[esp_restart_mqtt_beacon_to_take].major, ble_beacon_data[esp_restart_mqtt_beacon_to_take].minor, "reboot");
+                ble_beacons[esp_restart_mqtt_beacon_to_take].beacon_data.major,
+                ble_beacons[esp_restart_mqtt_beacon_to_take].beacon_data.minor, "reboot");
             snprintf(buffer_payload, 128, "%d", uptime_sec);
             msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
             ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
@@ -1259,7 +1269,7 @@ void adjust_log_level()
     esp_log_level_set("httpd_uri", ESP_LOG_INFO);
     esp_log_level_set("BTDM_INIT", ESP_LOG_INFO);
     esp_log_level_set("timer", ESP_LOG_INFO);
-    esp_log_level_set("BLEMQTTPROXY", ESP_LOG_INFO);
+    // esp_log_level_set("BLEMQTTPROXY", ESP_LOG_INFO);
     esp_log_level_set("beacon", ESP_LOG_INFO);
     esp_log_level_set("ble_mqtt", ESP_LOG_INFO);
 }

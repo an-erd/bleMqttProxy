@@ -31,24 +31,21 @@ esp_ble_mybeacon_vendor_t mybeacon_common_vendor_v3 = {
     .proximity_uuid ={CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4},
 };
 
-ble_beacon_data_t ble_beacon_data[CONFIG_BLE_DEVICE_COUNT_CONFIGURED] = {
-    { {CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_1_MAJ,  CONFIG_BLE_DEVICE_1_MIN,  CONFIG_BLE_DEVICE_1_NAME},
-    { {CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_2_MAJ,  CONFIG_BLE_DEVICE_2_MIN,  CONFIG_BLE_DEVICE_2_NAME},
-    { {CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_3_MAJ,  CONFIG_BLE_DEVICE_3_MIN,  CONFIG_BLE_DEVICE_3_NAME},
-    { {CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_4_MAJ,  CONFIG_BLE_DEVICE_4_MIN,  CONFIG_BLE_DEVICE_4_NAME},
-    { {CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_5_MAJ,  CONFIG_BLE_DEVICE_5_MIN,  CONFIG_BLE_DEVICE_5_NAME},
-    { {CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_6_MAJ,  CONFIG_BLE_DEVICE_6_MIN,  CONFIG_BLE_DEVICE_6_NAME},
-    { {CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_7_MAJ,  CONFIG_BLE_DEVICE_7_MIN,  CONFIG_BLE_DEVICE_7_NAME},
-    { {CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_8_MAJ,  CONFIG_BLE_DEVICE_8_MIN,  CONFIG_BLE_DEVICE_8_NAME},
-    { {CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_9_MAJ,  CONFIG_BLE_DEVICE_9_MIN,  CONFIG_BLE_DEVICE_9_NAME},
-    { {CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_10_MAJ, CONFIG_BLE_DEVICE_10_MIN, CONFIG_BLE_DEVICE_10_NAME},
+ble_beacon_t ble_beacons[CONFIG_BLE_DEVICE_COUNT_CONFIGURED] =
+{
+    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_1_MAJ,  CONFIG_BLE_DEVICE_1_MIN,  CONFIG_BLE_DEVICE_1_NAME}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
+    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_2_MAJ,  CONFIG_BLE_DEVICE_2_MIN,  CONFIG_BLE_DEVICE_2_NAME}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
+    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_3_MAJ,  CONFIG_BLE_DEVICE_3_MIN,  CONFIG_BLE_DEVICE_3_NAME}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
+    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_4_MAJ,  CONFIG_BLE_DEVICE_4_MIN,  CONFIG_BLE_DEVICE_4_NAME}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
+    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_5_MAJ,  CONFIG_BLE_DEVICE_5_MIN,  CONFIG_BLE_DEVICE_5_NAME}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
+    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_6_MAJ,  CONFIG_BLE_DEVICE_6_MIN,  CONFIG_BLE_DEVICE_6_NAME}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
+    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_7_MAJ,  CONFIG_BLE_DEVICE_7_MIN,  CONFIG_BLE_DEVICE_7_NAME}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
+    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_8_MAJ,  CONFIG_BLE_DEVICE_8_MIN,  CONFIG_BLE_DEVICE_8_NAME}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
+    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_9_MAJ,  CONFIG_BLE_DEVICE_9_MIN,  CONFIG_BLE_DEVICE_9_NAME}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
+    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_10_MAJ, CONFIG_BLE_DEVICE_10_MIN, CONFIG_BLE_DEVICE_10_NAME}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
 };
-ble_adv_data_t    ble_adv_data[CONFIG_BLE_DEVICE_COUNT_CONFIGURED] = { 0 };
-
 
 uint16_t s_active_beacon_mask = 0;
-char ble_beacon_names_seen[CONFIG_BLE_DEVICE_COUNT_CONFIGURED][8];
-
 
 uint8_t beacon_maj_min_to_idx(uint16_t maj, uint16_t min)
 {
@@ -66,6 +63,22 @@ uint8_t beacon_maj_min_to_idx(uint16_t maj, uint16_t min)
     ESP_LOGE(TAG, "beacon_maj_min_to_idx: unknown maj %d min %d", maj, min);
 
     return UNKNOWN_BEACON;
+}
+
+uint8_t beacon_name_to_idx(char *adv_name)
+{
+    uint8_t temp_idx = UNKNOWN_BEACON;
+
+    for (int i = 0; i < CONFIG_BLE_DEVICE_COUNT_CONFIGURED; i++){
+        if ( (strlen(adv_name) > 0)
+            && (strlen(adv_name) == strlen(ble_beacons[i].beacon_data.name))
+            && (strncmp((char *) adv_name, (char *) ble_beacons[i].beacon_data.name, strlen(adv_name)) == 0) ){
+            temp_idx = i;
+            break;
+        }
+    }
+
+    return temp_idx;
 }
 
 __attribute__((unused)) uint8_t num_active_beacon()
@@ -90,6 +103,20 @@ __attribute__((unused)) uint8_t first_active_beacon()
     }
 
     return first_act_beac;
+}
+
+uint8_t get_idx_first_beacon_with_download_status(offline_buffer_status_t status)
+{
+    uint8_t temp_idx = UNKNOWN_BEACON;
+
+    for (int i = 0; i < CONFIG_BLE_DEVICE_COUNT_CONFIGURED; i++){
+        if ( ble_beacons[i].offline_buffer_status == status ){
+            temp_idx = i;
+            break;
+        }
+    }
+
+    return temp_idx;
 }
 
 bool is_beacon_idx_active(uint16_t idx)
@@ -215,53 +242,4 @@ void decode_mybeacon_packet_v4(esp_ble_mybeacon_payload_t *mybeacon_payload, uin
     *x          = (int16_t)(mybeacon_payload->x);
     *y          = (int16_t)(mybeacon_payload->y);
     *z          = (int16_t)(mybeacon_payload->z);
-}
-
-uint8_t num_beacon_name_known()
-{
-    for (int i = 0; i < CONFIG_BLE_DEVICE_COUNT_CONFIGURED; i++){
-        if (strlen(ble_beacon_names_seen[i]) == 0){
-            return i;
-            break;
-        }
-    }
-    return UNKNOWN_BEACON;
-}
-
-uint8_t is_beacon_name_known(char* adv_name)
-{
-    uint8_t temp_idx = UNKNOWN_BEACON;
-
-    for (int i = 0; i < CONFIG_BLE_DEVICE_COUNT_CONFIGURED; i++){
-        if ( (strlen(adv_name) > 0)
-            && (strlen(adv_name) == strlen(ble_beacon_names_seen[i]))
-            && (strncmp((char *) adv_name, (char *) ble_beacon_names_seen[i], strlen(adv_name)) == 0) ){
-            temp_idx = i;
-            break;
-        }
-    }
-
-    return temp_idx;
-}
-
-uint8_t add_known_beacon_name(char* adv_name)
-{
-    uint8_t temp_idx = UNKNOWN_BEACON;
-
-    if (is_beacon_name_known(adv_name) == UNKNOWN_BEACON){
-        for (int i = 0; i < CONFIG_BLE_DEVICE_COUNT_CONFIGURED; i++){
-            if (strlen(ble_beacon_names_seen[i]) == 0){
-                strncpy(ble_beacon_names_seen[i], adv_name, 8);
-                temp_idx = i;
-                break;
-            }
-        }
-    }
-
-    return temp_idx;
-}
-
-char* get_known_beacon_name(uint8_t idx)
-{
-    return ble_beacon_names_seen[idx];
 }
