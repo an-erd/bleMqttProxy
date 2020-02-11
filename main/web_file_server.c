@@ -23,26 +23,39 @@ static const char *web_file_server_commands[WEBFILESERVER_NUM_ENTRIES] = {
     "list",
 };
 
+static esp_err_t redirect_handler(httpd_req_t *req)
+{
+    httpd_resp_set_type(req, "text/html");
+    httpd_resp_set_status(req, "303 See Other");
+    httpd_resp_set_hdr(req, "Location", "/csv?cmd=list");
+    httpd_resp_send(req, NULL, 0);
+
+    return ESP_OK;
+}
 
 static esp_err_t http_resp_csv_download(httpd_req_t *req, uint8_t idx)
 {
-    char buffer[128];
+    char buffer[128], buffer2[32];
+    struct tm ts;
     uint16_t count = ble_beacons[idx].offline_buffer_count;
 
     httpd_resp_set_type(req, "application/csv");
     httpd_resp_set_hdr(req, "Content-Disposition", "attachment; filename=example.csv");
     httpd_resp_sendstr_chunk(req, ble_beacons[idx].beacon_data.name);
     httpd_resp_sendstr_chunk(req, "\n");
-    httpd_resp_sendstr_chunk(req, "Seq.nr.;EPOCH Time;Time-Date;Temperatur;Humidity \n");
+    httpd_resp_sendstr_chunk(req, "Seq.nr.;EPOCH Time;Time-Date;Temperature;Humidity\n");
 
     for (uint16_t i = 0; i < count; i++){
-        snprintf(buffer, 128, "%6d;%10d;%10.5f;% 2.1f;%3.1f\n",
+        // memcpy(&epoch_time, localtime((time_t*)&ble_beacons[idx].p_buffer_download[i].time_stamp, sizeof (struct tm));
+        ts = *localtime((time_t*)&ble_beacons[idx].p_buffer_download[i].time_stamp);
+        strftime(buffer2, sizeof(buffer2), "%d.%m.%y %H:%M:%S", &ts);
+        snprintf(buffer, 128, "%6d;%10d;%s;% 2.1f;%3.1f\n",
             ble_beacons[idx].p_buffer_download[i].sequence_number,
             ble_beacons[idx].p_buffer_download[i].time_stamp,
-            ble_beacons[idx].p_buffer_download[i].csv_date_time,
+            buffer2,
             ble_beacons[idx].p_buffer_download[i].temperature_f,
             ble_beacons[idx].p_buffer_download[i].humidity_f);
-        for (uint8_t j = 0; j < 128; j++){
+        for (uint8_t j = 36; j < 128; j++){
             if (buffer[j] == '.')
                 buffer[j] = ',';
             if (buffer[j] == 0)
@@ -66,7 +79,10 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
 
     ESP_LOGD(TAG, "http_resp_list_devices, count = %d", num_devices);
 
-    httpd_resp_sendstr_chunk(req, "<!DOCTYPE html><html><body style=\"font-family:Arial\">\n");
+    httpd_resp_sendstr_chunk(req, "<!DOCTYPE html><html><head>\n");
+    httpd_resp_sendstr_chunk(req, "<title>Beacon List</title>\n");
+    httpd_resp_sendstr_chunk(req, "<meta http-equiv=\"refresh\" content=\"5\">\n");
+    httpd_resp_sendstr_chunk(req, "<body style=\"font-family:Arial\">\n");
     httpd_resp_sendstr_chunk(req, "<h1 style=\"text-align: center;\">Beacon List</h1>\n");
     httpd_resp_sendstr_chunk(req, "<table style=\"margin-left: auto; margin-right: auto;\" border=\"0\" width=\"600\" bgcolor=\"#e0e0e0\">\n");
     httpd_resp_sendstr_chunk(req, "<tbody>\n");
@@ -267,6 +283,7 @@ esp_err_t csv_get_handler(httpd_req_t *req)
                         break;
                 }
             }
+            redirect_handler(req);
             break;
 
         case WEBFILESERVER_CMD_DL:
@@ -304,7 +321,7 @@ esp_err_t csv_get_handler(httpd_req_t *req)
                     ESP_LOGD(TAG, "unhandled switch case");
                     break;
             }
-            http_resp_list_devices(req);
+            redirect_handler(req);
             break;
 
         case WEBFILESERVER_CMD_LIST:

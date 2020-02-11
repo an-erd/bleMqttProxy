@@ -22,8 +22,6 @@ typedef struct
 {
     uint16_t        sequence_number;                            /**< Sequence number */
     uint32_t        time_stamp;                                 /**< EPOCH Time stamp */
-
-    float           csv_date_time;                              /**< = EPOCH time / 86400. + 25569 */
     float           temperature_f;
     float           humidity_f;
 } __attribute__ ((packed)) ble_os_meas_t;

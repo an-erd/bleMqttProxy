@@ -764,8 +764,6 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
             ble_beacons[idx].p_buffer_download[count].humidity_f
                 = SHT3_GET_HUMIDITY_VALUE(p_data->notify.value[len], p_data->notify.value[len+1]);
             len += 2;
-            ble_beacons[idx].p_buffer_download[count].csv_date_time
-                = ble_beacons[idx].p_buffer_download[count].time_stamp / 86400. + 25569;
             // ESP_LOG_BUFFER_HEX_LEVEL(TAG, &ble_beacons[idx].p_buffer_download[count], p_data->notify.value_len, ESP_LOG_DEBUG);
             ble_beacons[idx].offline_buffer_count++;
         } else {
