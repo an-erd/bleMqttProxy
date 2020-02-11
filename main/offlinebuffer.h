@@ -9,12 +9,6 @@
 #include "freertos/event_groups.h"
 #include "esp_http_server.h"
 
-#define OFFLINE_BUFFER_BLE_READ_EVT         (BIT0)
-#define OFFLINE_BUFFER_TAKE_NEXT_AVD_EVT    (BIT1)               /**< Take next appropriate BLE advertisement to connect */
-#define OFFLINE_BUFFER_READY_EVT            (BIT2)
-#define OFFLINE_BUFFER_RESET_EVT            (BIT3)
-extern EventGroupHandle_t offlinebuffer_evg;
-
 typedef enum
 {
     OFFLINE_BUFFER_STATUS_NONE = 0,                             /**< Not requested, not available */
@@ -34,15 +28,7 @@ typedef struct
     float           humidity_f;
 } __attribute__ ((packed)) ble_os_meas_t;
 
-typedef struct
-{
-    httpd_handle_t server;
-    char device_name[20];
-} offline_buffer_params_t;
-
 char * offline_buffer_status_to_str(offline_buffer_status_t status);
 char * offline_buffer_descr_status_to_str(offline_buffer_status_t status);
-void offline_buffer_clear();
-void offlinebuffer_task(void* pvParameters);
 
 #endif // __OFFLINE_BUFFER_H__

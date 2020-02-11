@@ -19,7 +19,7 @@ static const char *web_file_server_commands[WEBFILESERVER_NUM_ENTRIES] = {
     "stat",
     "req",
     "dl",
-    "reset",
+    "rst",
     "list",
 };
 
@@ -267,7 +267,6 @@ esp_err_t csv_get_handler(httpd_req_t *req)
                         break;
                 }
             }
-            xEventGroupSetBits(offlinebuffer_evg, OFFLINE_BUFFER_BLE_READ_EVT);
             break;
 
         case WEBFILESERVER_CMD_DL:
@@ -277,7 +276,6 @@ esp_err_t csv_get_handler(httpd_req_t *req)
                 httpd_resp_send(req, resp_str, strlen(resp_str));
             } else {
                 http_resp_csv_download(req, idx);
-                xEventGroupSetBits(offlinebuffer_evg, OFFLINE_BUFFER_RESET_EVT);
             }
             break;
 
@@ -288,13 +286,19 @@ esp_err_t csv_get_handler(httpd_req_t *req)
                 case OFFLINE_BUFFER_STATUS_NONE:
                     break;
                 case OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED:
+                    ESP_LOGD(TAG, "set to status none");
                     ble_beacons[idx].offline_buffer_status = OFFLINE_BUFFER_STATUS_NONE;
+                    ble_beacons[idx].offline_buffer_count = 0;
+                    free(ble_beacons[idx].p_buffer_download);
                     break;
                 case OFFLINE_BUFFER_STATUS_DOWNLOAD_IN_PROGRESS:
-                    ESP_LOGD(TAG, "already in progress, wait for now");
+                    ESP_LOGD(TAG, "already in progress, wait for now, cannot be stopped yet");
                     break;
                 case OFFLINE_BUFFER_STATUS_DOWNLOAD_AVAILABLE:
                     ESP_LOGD(TAG, "already available for download");
+                    ble_beacons[idx].offline_buffer_status = OFFLINE_BUFFER_STATUS_NONE;
+                    ble_beacons[idx].offline_buffer_count = 0;
+                    free(ble_beacons[idx].p_buffer_download);
                     break;
                 default:
                     ESP_LOGD(TAG, "unhandled switch case");

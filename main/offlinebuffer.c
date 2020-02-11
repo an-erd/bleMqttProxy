@@ -60,37 +60,3 @@ char *offline_buffer_descr_status_to_str(offline_buffer_status_t status)
 
    return status_str;
 }
-
-
-void offline_buffer_clear()
-{
-    // TODO
-}
-
-
-void offlinebuffer_task(void* pvParameters)
-{
-    // static httpd_handle_t server = NULL;
-    EventBits_t uxBits;
-
-    while (1)
-    {
-        uxBits = xEventGroupWaitBits(offlinebuffer_evg,
-            OFFLINE_BUFFER_BLE_READ_EVT | OFFLINE_BUFFER_READY_EVT | OFFLINE_BUFFER_RESET_EVT,
-            pdTRUE, pdFALSE, portMAX_DELAY);
-
-        if (uxBits & OFFLINE_BUFFER_BLE_READ_EVT) {
-            ESP_LOGD(TAG, "offlinebuffer_task OFFLINE_BUFFER_BLE_READ_EVT");
-            xEventGroupSetBits(offlinebuffer_evg, OFFLINE_BUFFER_TAKE_NEXT_AVD_EVT);
-        } else if (uxBits & OFFLINE_BUFFER_READY_EVT) {
-            ESP_LOGD(TAG, "offlinebuffer_task OFFLINE_BUFFER_READY_EVT");
-        } else if (uxBits & OFFLINE_BUFFER_RESET_EVT) {
-            ESP_LOGD(TAG, "offlinebuffer_task OFFLINE_BUFFER_RESET_EVT");
-            xEventGroupClearBits(offlinebuffer_evg,
-                OFFLINE_BUFFER_BLE_READ_EVT | OFFLINE_BUFFER_TAKE_NEXT_AVD_EVT | OFFLINE_BUFFER_READY_EVT | OFFLINE_BUFFER_RESET_EVT );
-            offline_buffer_clear();
-        }
-    }
-
-    vTaskDelete(NULL);
-}

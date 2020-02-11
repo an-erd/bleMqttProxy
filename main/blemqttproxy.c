@@ -165,6 +165,8 @@ void button_release_cb(void* arg)
     char* pstr = (char*) arg;
     UNUSED(pstr);
 
+    ESP_LOGI(TAG, "heap: %d\n", esp_get_free_heap_size());
+
     if(!display_status.button_enabled){
         ESP_LOGD(TAG, "button_release_cb: button not enabled");
         return;
@@ -753,7 +755,6 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
             if(!count){
                 ESP_LOGD(TAG, "ESP_GATTC_NOTIFY_EVT, first");
                 time_measure = esp_timer_get_time();
-                ble_beacons[idx].offline_buffer_status = OFFLINE_BUFFER_STATUS_DOWNLOAD_IN_PROGRESS;
             }
             ble_beacons[idx].p_buffer_download[count].sequence_number  = uint16_decode(&p_data->notify.value[len]); len += 2; // uint16_t
             ble_beacons[idx].p_buffer_download[count].time_stamp       = uint32_decode(&p_data->notify.value[len]); len += 4; // time_t
@@ -779,9 +780,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
             if (ret_status != ESP_GATT_OK){
                 ESP_LOGE(TAG, "esp_ble_gattc_close, error status %d", ret_status);
             }
-
             ble_beacons[idx].offline_buffer_status = OFFLINE_BUFFER_STATUS_DOWNLOAD_AVAILABLE;
-            xEventGroupSetBits(offlinebuffer_evg, OFFLINE_BUFFER_READY_EVT);
         }
         break;
     }
@@ -825,7 +824,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
     case ESP_GATTC_WRITE_CHAR_EVT:
         ESP_LOGD(TAG, "ESP_GATTC_WRITE_CHAR_EVT");
         if (p_data->write.status != ESP_GATT_OK){
-            ESP_LOGE(TAG, "write char failed, error status = %x", p_data->write.status);
+            ESP_LOGE(TAG, "write char failed, error status = %x, error = %s", p_data->write.status, esp_err_to_name(p_data->write.status) );
             break;
         }
         ESP_LOGD(TAG, "write char success ");
@@ -835,6 +834,9 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         gattc_connect = false;
         gattc_connect_beacon_idx = UNKNOWN_BEACON;
         get_server = false;
+        device_notify_1401 = false;
+        device_indicate_2A52 = false;
+
         ESP_LOGI(TAG, "ESP_GATTC_DISCONNECT_EVT, reason = %d", p_data->disconnect.reason);
 
         uint32_t duration = 0;  // scan permanently
@@ -847,8 +849,6 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
 
 static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
 {
-    uint8_t *adv_name = NULL;
-    uint8_t adv_name_len = 0;
     esp_err_t err;
 
     switch (event) {
@@ -961,17 +961,9 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         bool is_beacon_active = true;
         bool mqtt_send_adv = false;
 
-        EventBits_t uxBits;
-
         switch (scan_result->scan_rst.search_evt) {
         case ESP_GAP_SEARCH_INQ_RES_EVT:
             // ESP_LOGD(TAG, "ESP_GAP_SEARCH_INQ_RES_EVT");
-
-            // ESP_LOGD(TAG, "searched Adv Data Len %d, Scan Response Len %d", scan_result->scan_rst.adv_data_len, scan_result->scan_rst.scan_rsp_len);
-            adv_name = esp_ble_resolve_adv_data(scan_result->scan_rst.ble_adv,
-                                                ESP_BLE_AD_TYPE_NAME_CMPL, &adv_name_len);
-            // ESP_LOGD(TAG, "searched Device Name Len %d", adv_name_len);
-            // ESP_LOG_BUFFER_CHAR_LEVEL(TAG, adv_name, adv_name_len, ESP_LOG_DEBUG);
 
 #if CONFIG_EXAMPLE_DUMP_ADV_DATA_AND_SCAN_RESP
             if (scan_result->scan_rst.adv_data_len > 0) {
@@ -1023,18 +1015,13 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 update_adv_data(maj, min, scan_result->scan_rst.rssi, temp, humidity, battery, mqtt_send_adv);
                 check_update_display(maj, min);
 
-                uxBits = xEventGroupWaitBits(offlinebuffer_evg, OFFLINE_BUFFER_TAKE_NEXT_AVD_EVT, pdFALSE, pdFALSE, 0);
-                if ( (uxBits & OFFLINE_BUFFER_TAKE_NEXT_AVD_EVT)
-                    && (ble_beacons[idx].offline_buffer_status == OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED)) {
-                    // ESP_LOGD(TAG, "searched device %s", ble_beacons[idx].beacon_data.name);
-                    if (gattc_connect == false) {
-                        gattc_connect = true;
-                        gattc_connect_beacon_idx = idx;
-                        xEventGroupClearBits(offlinebuffer_evg, OFFLINE_BUFFER_TAKE_NEXT_AVD_EVT);
-                        ESP_LOGD(TAG, "connect to the remote device.");
-                        esp_ble_gap_stop_scanning();
-                        esp_ble_gattc_open(gl_profile_tab[PROFILE_A_APP_ID].gattc_if, scan_result->scan_rst.bda, scan_result->scan_rst.ble_addr_type, true);
-                    }
+                if ((ble_beacons[idx].offline_buffer_status == OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED) && (gattc_connect == false)) {
+                    gattc_connect = true;
+                    gattc_connect_beacon_idx = idx;
+                    ble_beacons[idx].offline_buffer_status = OFFLINE_BUFFER_STATUS_DOWNLOAD_IN_PROGRESS;
+                    ESP_LOGD(TAG, "connect to the remote device.");
+                    esp_ble_gap_stop_scanning();
+                    esp_ble_gattc_open(gl_profile_tab[PROFILE_A_APP_ID].gattc_if, scan_result->scan_rst.bda, scan_result->scan_rst.ble_addr_type, true);
                 }
             } else {
                 // ESP_LOGD(TAG, "mybeacon not found");
@@ -1274,11 +1261,6 @@ void adjust_log_level()
     esp_log_level_set("ble_mqtt", ESP_LOG_INFO);
 }
 
-void initialize_offline_buffer()
-{
-    offline_buffer_clear();
-}
-
 void initialize_ble()
 {
     remote_filter_service_uuid.len = ESP_UUID_LEN_128;
@@ -1329,7 +1311,6 @@ void app_main()
     wifi_evg   = xEventGroupCreate();
     mqtt_evg   = xEventGroupCreate();
     s_wdt_evg    = xEventGroupCreate();
-    offlinebuffer_evg = xEventGroupCreate();
 
     create_timer();
 
@@ -1352,10 +1333,8 @@ void app_main()
 
     xTaskCreate(&wifi_mqtt_task, "wifi_mqtt_task", 2048 * 2, NULL, 5, NULL);
 
-    initialize_offline_buffer();
     initialize_ble();
     initialize_ble_security();
-    xTaskCreate(&offlinebuffer_task, "offlinebuffer_task", 2048 * 2, NULL, 5, NULL);
 
 #if CONFIG_LOCAL_SENSORS_TEMPERATURE==1
     init_owb_tempsensor();
