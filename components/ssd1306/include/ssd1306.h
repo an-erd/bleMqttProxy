@@ -135,6 +135,30 @@ void i2c_master_init();
 void ssd1306_init();
 
 /**
+ * @brief   ssd1306 device display on
+ *
+ * @param   none
+ *
+ * @return
+ *     -
+ *
+ */
+void ssd1306_display_on();
+
+/**
+ * @brief   ssd1306 device display off
+ *
+ * @param   none
+ *
+ * @return
+ *     -
+ *
+ */
+void ssd1306_display_off();
+
+
+
+/**
  * @brief   draw point on (x, y)
  *
  * @param   canvas Specifies the display canvas object

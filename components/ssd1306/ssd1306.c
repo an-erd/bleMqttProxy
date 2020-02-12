@@ -87,7 +87,51 @@ void ssd1306_init() {
 		ESP_LOGE(TAG, "OLED configuration failed. code: 0x%.2X", espRc);
 	}
 	i2c_cmd_link_delete(cmd);
-    // iot_ssd1306_refresh_gram(dev);
+}
+
+
+void ssd1306_display_on()
+{
+    esp_err_t espRc;
+
+	i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+
+	i2c_master_start(cmd);
+	i2c_master_write_byte(cmd, (OLED_I2C_ADDRESS << 1) | I2C_MASTER_WRITE, true);
+	i2c_master_write_byte(cmd, OLED_CONTROL_BYTE_CMD_STREAM, true);
+
+	i2c_master_write_byte(cmd, OLED_CMD_DISPLAY_ON, true);
+	i2c_master_stop(cmd);
+
+	espRc = i2c_master_cmd_begin(I2C_NUM_0, cmd, 10/portTICK_PERIOD_MS);
+	if (espRc == ESP_OK) {
+		// ESP_LOGD(TAG, "ssd1306_display_on configured successfully");
+	} else {
+		ESP_LOGE(TAG, "ssd1306_display_on configuration failed. code: 0x%.2X", espRc);
+	}
+	i2c_cmd_link_delete(cmd);
+}
+
+void ssd1306_display_off()
+{
+    esp_err_t espRc;
+
+	i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+
+	i2c_master_start(cmd);
+	i2c_master_write_byte(cmd, (OLED_I2C_ADDRESS << 1) | I2C_MASTER_WRITE, true);
+	i2c_master_write_byte(cmd, OLED_CONTROL_BYTE_CMD_STREAM, true);
+
+	i2c_master_write_byte(cmd, OLED_CMD_DISPLAY_OFF, true);
+	i2c_master_stop(cmd);
+
+	espRc = i2c_master_cmd_begin(I2C_NUM_0, cmd, 10/portTICK_PERIOD_MS);
+	if (espRc == ESP_OK) {
+		// ESP_LOGD(TAG, "ssd1306_display_off configured successfully");
+	} else {
+		ESP_LOGE(TAG, "ssd1306_display_off configuration failed. code: 0x%.2X", espRc);
+	}
+	i2c_cmd_link_delete(cmd);
 }
 
 void ssd1306_fill_point(ssd1306_canvas_t *canvas, uint8_t chXpos, uint8_t chYpos,

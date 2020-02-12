@@ -30,6 +30,17 @@ menu "BLE-MQTT Proxy"
         config WDT_REBOOT_LAST_SEEN_THRESHOLD
             int "Reboot if the last seen threshold applies."
             default 1
+
+        config WDT_SEND_MQTT_BEFORE_REBOOT
+            int "Send a last MQTT message if last seen threshold applies (just before reboot, if configured)"
+            default 1
+
+        config WDT_MQTT_FORMAT
+            string
+            default "/%s/%s"
+            help
+                ip -> data
+
     endmenu
 
     menu "Display"
@@ -64,6 +75,13 @@ menu "BLE-MQTT Proxy"
             int "MQTT"
             default 1
             range 0 1
+
+        config MQTT_MIN_TIME_INTERVAL_BETWEEN_MESSAGES
+            int "Wait time between MQTT messages for same device (sec)"
+            default 60
+            range 0 3600
+            help
+                Only send a MQTT message to the same device only once during this time interval.
 
         config MQTT_HOST
             string "MQTT Broker Host"
@@ -309,6 +327,15 @@ menu "BLE-MQTT Proxy"
             default -27
             help
                 Lower limit for RSSI to initiate an beacon announcement by getting close to the proxy.
+
+        menu "OFfline Buffer"
+
+            config OFFLINE_BUFFER_SIZE
+            int "Max. number of offline buffer entries provided by beacon"
+            range 0 5000
+            default 1250
+
+        endmenu
 
     endmenu
 
