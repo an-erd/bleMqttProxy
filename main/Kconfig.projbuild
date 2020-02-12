@@ -35,6 +35,12 @@ menu "BLE-MQTT Proxy"
             int "Send a last MQTT message if last seen threshold applies (just before reboot, if configured)"
             default 1
 
+        config WDT_MQTT_FORMAT
+            string
+            default "/%s/%s"
+            help
+                ip -> data
+
     endmenu
 
     menu "Display"

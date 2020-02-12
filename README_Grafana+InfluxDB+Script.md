@@ -74,9 +74,21 @@ Remove the `#` at the beginning of the following line:
 
 #### Useful Commands
 
+##### Schema Exploration
+
+[Schema Exploration ](https://docs.influxdata.com/influxdb/v1.7/query_language/schema_exploration/)
+
+
 ##### List Databases
 
 ```bash
 $ influx -execute 'SHOW DATABASES'
+```
+
+##### Get Data
+
+```
+$ SHOW MEASUREMENTS
+$ select * from "/beac/0x0007/x0006/reboot"
 ```
 

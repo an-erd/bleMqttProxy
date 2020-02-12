@@ -26,6 +26,7 @@
 #include "esp_ota_ops.h"
 #include "esp_timer.h"
 #include "lwip/sockets.h"
+#include <tcpip_adapter.h>
 #include "lwip/dns.h"
 #include "lwip/netdb.h"
 #include "mqtt_client.h"
@@ -239,6 +240,28 @@ void periodic_wdt_timer_callback(void* arg)
     uint8_t beacon_to_take = UNKNOWN_BEACON;
     uint16_t lowest_last_seen_sec = CONFIG_WDT_LAST_SEEN_THRESHOLD;
     uint16_t temp_last_seen_sec;
+    uint32_t uptime_sec;
+    tcpip_adapter_ip_info_t ipinfo;
+    int msg_id = 0;
+    char buffer[128];
+    char buffer_topic[128];
+    char buffer_payload[128];
+    bool wifi_connected;
+    bool mqtt_connected;
+
+    // send uptime to MQTT
+    uxReturn = xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, 0);
+    wifi_connected = uxReturn & WIFI_CONNECTED_BIT;
+    if(wifi_connected){
+        tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ipinfo);
+        sprintf(buffer, IPSTR, IP2STR(&ipinfo.ip));
+        snprintf(buffer_topic, 128,  CONFIG_WDT_MQTT_FORMAT, buffer, "uptime");
+        uptime_sec = esp_timer_get_time()/1000000;
+        snprintf(buffer_payload, 128, "%d", uptime_sec);
+        ESP_LOGI(TAG, "MQTT %s -> uptime %s", buffer_topic, buffer_payload);
+        msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
+        ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+    }
 
     for(int i=0; i < CONFIG_BLE_DEVICE_COUNT_USE; i++){
         if(is_beacon_idx_active(i)){
@@ -257,10 +280,10 @@ void periodic_wdt_timer_callback(void* arg)
     if(lowest_last_seen_sec >= CONFIG_WDT_LAST_SEEN_THRESHOLD){
 
         uxReturn = xEventGroupWaitBits(mqtt_evg, MQTT_CONNECTED_BIT, false, true, 0);
-        bool mqtt_connected = uxReturn & MQTT_CONNECTED_BIT;
+        mqtt_connected = uxReturn & MQTT_CONNECTED_BIT;
 
-        uxReturn = xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, 0);
-        bool wifi_connected = uxReturn & WIFI_CONNECTED_BIT;
+        // uxReturn = xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, 0);
+        // wifi_connected = uxReturn & WIFI_CONNECTED_BIT;
 
         ESP_LOGE(TAG, "periodic_wdt_timer_callback: last seen > threshold: %d sec, WIFI: %s, MQTT (enabled/onnected): %s/%s", lowest_last_seen_sec,
             (wifi_connected ? "y" : "n"), (CONFIG_USE_MQTT ? "y" : "n"), (mqtt_connected ? "y" : "n"));

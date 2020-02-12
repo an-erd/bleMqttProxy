@@ -127,7 +127,8 @@
         "chrono": "c",
         "algorithm": "c",
         "typeinfo": "c",
-        "ratio": "c"
+        "ratio": "c",
+        "sstream": "c"
     },
 	"files.exclude": {
 		"**/.git": true,
