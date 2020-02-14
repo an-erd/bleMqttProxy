@@ -166,7 +166,7 @@ void button_release_cb(void* arg)
     char* pstr = (char*) arg;
     UNUSED(pstr);
 
-    ESP_LOGI(TAG, "heap: %d\n", esp_get_free_heap_size());
+    ESP_LOGD(TAG, "heap: %d\n", esp_get_free_heap_size());
 
     if(!display_status.button_enabled){
         ESP_LOGD(TAG, "button_release_cb: button not enabled");
@@ -249,7 +249,7 @@ void periodic_wdt_timer_callback(void* arg)
     bool wifi_connected;
     bool mqtt_connected;
 
-    // send uptime to MQTT
+    // send uptime and free heap to MQTT
     uxReturn = xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, 0);
     wifi_connected = uxReturn & WIFI_CONNECTED_BIT;
     if(wifi_connected){
@@ -258,7 +258,13 @@ void periodic_wdt_timer_callback(void* arg)
         snprintf(buffer_topic, 128,  CONFIG_WDT_MQTT_FORMAT, buffer, "uptime");
         uptime_sec = esp_timer_get_time()/1000000;
         snprintf(buffer_payload, 128, "%d", uptime_sec);
-        ESP_LOGI(TAG, "MQTT %s -> uptime %s", buffer_topic, buffer_payload);
+        ESP_LOGD(TAG, "MQTT %s -> uptime %s", buffer_topic, buffer_payload);
+        msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
+        ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+
+        snprintf(buffer_topic, 128,  CONFIG_WDT_MQTT_FORMAT, buffer, "free_heap");
+        snprintf(buffer_payload, 128, "%d", esp_get_free_heap_size());
+        ESP_LOGD(TAG, "MQTT %s -> free_heap %s", buffer_topic, buffer_payload);
         msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
         ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
     }

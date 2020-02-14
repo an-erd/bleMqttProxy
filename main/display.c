@@ -382,7 +382,8 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
 
     case STATS_SCREEN:
     {
-        uint16_t uptime_sec = esp_timer_get_time() / 1000000;
+        uint32_t uptime_sec = esp_timer_get_time() / 1000000;
+        uint16_t up_d;
         uint8_t up_h, up_m, up_s;
 
         ssd1306_clear_canvas(canvas, 0x00);
@@ -390,8 +391,8 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
         snprintf(buffer, 128, "%s", "Statistics:");
         ssd1306_draw_string(canvas, 0, 0, (const uint8_t *)buffer, 10, 1);
 
-        convert_s_hhmmss(uptime_sec, &up_h, &up_m, &up_s);
-        snprintf(buffer, 128, "%-6s:         %3d:%02d:%02d", "uptime", up_h, up_m, up_s);
+        convert_s_ddhhmmss(uptime_sec, &up_d, &up_h, &up_m, &up_s);
+        snprintf(buffer, 128, "%-6s:     %3dd %2d:%02d:%02d", "uptime", up_d, up_h, up_m, up_s);
         ssd1306_draw_string(canvas, 0, 11, (const uint8_t *)buffer, 10, 1);
 
         snprintf(buffer, 128, "%-9s: %5d/%5d", "WiFi ok/fail", wifi_connections_count_connect, wifi_connections_count_disconnect);

@@ -18,7 +18,8 @@
 uint16_t uint16_decode(const uint8_t * p_encoded_data);
 uint16_t uint16_decode_r(const uint8_t * p_encoded_data);
 uint32_t uint32_decode(const uint8_t * p_encoded_data);
-void convert_s_hhmmss(uint16_t sec, uint8_t *h, uint8_t *m, uint8_t *s);
-void convert_s_mmss(uint16_t sec, uint8_t *m, uint8_t *s);
+void convert_s_ddhhmmss(uint32_t sec, uint16_t *d, uint8_t *h, uint8_t *m, uint8_t *s);
+void convert_s_hhmmss(uint32_t sec, uint8_t *h, uint8_t *m, uint8_t *s);
+void convert_s_mmss(uint32_t sec, uint8_t *m, uint8_t *s);
 
 #endif // __HELPERFUNCTIONS_H__
