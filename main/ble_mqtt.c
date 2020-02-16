@@ -13,8 +13,8 @@
 
 static const char *TAG = "ble_mqtt";
 
-uint16_t mqtt_packets_send = 0;
-uint16_t mqtt_packets_fail = 0;
+uint32_t mqtt_packets_send = 0;
+uint32_t mqtt_packets_fail = 0;
 
 esp_mqtt_client_handle_t mqtt_client;
 EventGroupHandle_t mqtt_evg;

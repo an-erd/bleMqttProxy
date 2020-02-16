@@ -11,6 +11,7 @@
 #include "esp_http_server.h"
 #include "web_file_server.h"
 #include "beacon.h"
+#include "ble.h"
 #include "offlinebuffer.h"
 #include "helperfunctions.h"
 
@@ -171,6 +172,12 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
         }
     }
     httpd_resp_sendstr_chunk(req, "</tbody></table>");
+
+    httpd_resp_sendstr_chunk(req, (gattc_connect == true ? "gattc_connect == true<br />\n":"gattc_connect == false<br />\n"));
+    httpd_resp_sendstr_chunk(req, (gattc_scanning == true ? "gattc_scanning == true<br />\n":"gattc_scanning == false<br />\n"));
+    snprintf(buffer, 128, "%s: %d<br />\n", "gattc_connect_beacon_idx", gattc_connect_beacon_idx);
+    httpd_resp_sendstr_chunk(req, buffer);
+
     httpd_resp_sendstr_chunk(req, "</body></html>");
     httpd_resp_sendstr_chunk(req, NULL);
 
@@ -265,9 +272,7 @@ esp_err_t csv_get_handler(httpd_req_t *req)
             } else {
                 switch(ble_beacons[idx].offline_buffer_status){
                     case OFFLINE_BUFFER_STATUS_NONE:
-                        ble_beacons[idx].p_buffer_download = (ble_os_meas_t *) malloc(sizeof(ble_os_meas_t) * CONFIG_OFFLINE_BUFFER_SIZE);
-                        ble_beacons[idx].offline_buffer_count = 0;
-                        ble_beacons[idx].offline_buffer_status = OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED;
+                        alloc_offline_buffer(idx, OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED);
                         break;
                     case OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED:
                         ESP_LOGD(TAG, "already requested");
@@ -304,18 +309,14 @@ esp_err_t csv_get_handler(httpd_req_t *req)
                     break;
                 case OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED:
                     ESP_LOGD(TAG, "set to status none");
-                    ble_beacons[idx].offline_buffer_status = OFFLINE_BUFFER_STATUS_NONE;
-                    ble_beacons[idx].offline_buffer_count = 0;
-                    free(ble_beacons[idx].p_buffer_download);
+                    free_offline_buffer(idx, OFFLINE_BUFFER_STATUS_NONE);
                     break;
                 case OFFLINE_BUFFER_STATUS_DOWNLOAD_IN_PROGRESS:
                     ESP_LOGD(TAG, "already in progress, wait for now, cannot be stopped yet");
                     break;
                 case OFFLINE_BUFFER_STATUS_DOWNLOAD_AVAILABLE:
                     ESP_LOGD(TAG, "already available for download");
-                    ble_beacons[idx].offline_buffer_status = OFFLINE_BUFFER_STATUS_NONE;
-                    ble_beacons[idx].offline_buffer_count = 0;
-                    free(ble_beacons[idx].p_buffer_download);
+                    free_offline_buffer(idx, OFFLINE_BUFFER_STATUS_NONE);
                     break;
                 default:
                     ESP_LOGD(TAG, "unhandled switch case");

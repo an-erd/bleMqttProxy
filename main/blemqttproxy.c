@@ -166,7 +166,7 @@ void button_release_cb(void* arg)
     char* pstr = (char*) arg;
     UNUSED(pstr);
 
-    ESP_LOGD(TAG, "heap: %d\n", esp_get_free_heap_size());
+    ESP_LOGD(TAG, "heap: %d", esp_get_free_heap_size());
 
     if(!display_status.button_enabled){
         ESP_LOGD(TAG, "button_release_cb: button not enabled");
@@ -233,41 +233,61 @@ __attribute__((unused)) void periodic_wdt_timer_start(){
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_wdt_timer, WDT_TIMER_DURATION));
 }
 
-void periodic_wdt_timer_callback(void* arg)
-{
-    EventBits_t uxSet, uxReturn;
-
-    uint8_t beacon_to_take = UNKNOWN_BEACON;
-    uint16_t lowest_last_seen_sec = CONFIG_WDT_LAST_SEEN_THRESHOLD;
-    uint16_t temp_last_seen_sec;
+static __attribute__((unused)) void send_mqtt_uptime_heap(){
+    EventBits_t uxReturn;
+    int msg_id = 0;
+    char buffer[32], buffer_topic[32], buffer_payload[32];
+    bool wifi_connected, mqtt_connected;
     uint32_t uptime_sec;
     tcpip_adapter_ip_info_t ipinfo;
-    int msg_id = 0;
-    char buffer[128];
-    char buffer_topic[128];
-    char buffer_payload[128];
-    bool wifi_connected;
-    bool mqtt_connected;
 
     // send uptime and free heap to MQTT
     uxReturn = xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, 0);
     wifi_connected = uxReturn & WIFI_CONNECTED_BIT;
-    if(wifi_connected){
+
+    uxReturn = xEventGroupWaitBits(mqtt_evg, MQTT_CONNECTED_BIT, false, true, 0);
+    mqtt_connected = uxReturn & MQTT_CONNECTED_BIT;
+
+    if(wifi_connected && mqtt_connected){
         tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ipinfo);
         sprintf(buffer, IPSTR, IP2STR(&ipinfo.ip));
-        snprintf(buffer_topic, 128,  CONFIG_WDT_MQTT_FORMAT, buffer, "uptime");
+        snprintf(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "uptime");
         uptime_sec = esp_timer_get_time()/1000000;
-        snprintf(buffer_payload, 128, "%d", uptime_sec);
+        snprintf(buffer_payload, 32, "%d", uptime_sec);
         ESP_LOGD(TAG, "MQTT %s -> uptime %s", buffer_topic, buffer_payload);
         msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
         ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+        if(msg_id == -1){
+            mqtt_packets_fail++;
+        } else {
+            mqtt_packets_send++;
+        }
 
-        snprintf(buffer_topic, 128,  CONFIG_WDT_MQTT_FORMAT, buffer, "free_heap");
-        snprintf(buffer_payload, 128, "%d", esp_get_free_heap_size());
+        snprintf(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "free_heap");
+        snprintf(buffer_payload, 32, "%d", esp_get_free_heap_size());
         ESP_LOGD(TAG, "MQTT %s -> free_heap %s", buffer_topic, buffer_payload);
         msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
         ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+        if(msg_id == -1){
+            mqtt_packets_fail++;
+        } else {
+            mqtt_packets_send++;
+        }
+
     }
+}
+
+void periodic_wdt_timer_callback(void* arg)
+{
+    EventBits_t uxSet, uxReturn;
+    bool wifi_connected, mqtt_connected;
+    uint8_t beacon_to_take = UNKNOWN_BEACON;
+    uint16_t lowest_last_seen_sec = CONFIG_WDT_LAST_SEEN_THRESHOLD;
+    uint16_t temp_last_seen_sec;
+
+#ifdef CONFIG_WDT_SEND_REGULAR_UPTIME_HEAP_MQTT
+    send_mqtt_uptime_heap();
+#endif
 
     for(int i=0; i < CONFIG_BLE_DEVICE_COUNT_USE; i++){
         if(is_beacon_idx_active(i)){
@@ -288,8 +308,8 @@ void periodic_wdt_timer_callback(void* arg)
         uxReturn = xEventGroupWaitBits(mqtt_evg, MQTT_CONNECTED_BIT, false, true, 0);
         mqtt_connected = uxReturn & MQTT_CONNECTED_BIT;
 
-        // uxReturn = xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, 0);
-        // wifi_connected = uxReturn & WIFI_CONNECTED_BIT;
+        uxReturn = xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, 0);
+        wifi_connected = uxReturn & WIFI_CONNECTED_BIT;
 
         ESP_LOGE(TAG, "periodic_wdt_timer_callback: last seen > threshold: %d sec, WIFI: %s, MQTT (enabled/onnected): %s/%s", lowest_last_seen_sec,
             (wifi_connected ? "y" : "n"), (CONFIG_USE_MQTT ? "y" : "n"), (mqtt_connected ? "y" : "n"));
@@ -808,6 +828,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
                 ESP_LOGE(TAG, "esp_ble_gattc_close, error status %d", ret_status);
             }
             ble_beacons[idx].offline_buffer_status = OFFLINE_BUFFER_STATUS_DOWNLOAD_AVAILABLE;
+            gattc_offline_buffer_downloading = false;
         }
         break;
     }
@@ -858,6 +879,12 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         break;
     case ESP_GATTC_DISCONNECT_EVT:
         ESP_LOGD(TAG, "ESP_GATTC_DISCONNECT_EVT");
+        if(gattc_offline_buffer_downloading) {
+            // disconnect occured but download not completed
+            reset_offline_buffer(gattc_connect_beacon_idx, OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED);
+            gattc_offline_buffer_downloading = false;
+        }
+
         gattc_connect = false;
         gattc_connect_beacon_idx = UNKNOWN_BEACON;
         get_server = false;
@@ -907,6 +934,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
             ESP_LOGE(TAG, "Scan start failed: %s", esp_err_to_name(err));
         }
         ESP_LOGD(TAG, "scan start success");
+        gattc_scanning = true;
         break;
     case ESP_GAP_BLE_PASSKEY_REQ_EVT:                           /* passkey request event */
         /* Call the following function to input the passkey which is displayed on the remote device */
@@ -1046,6 +1074,8 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     gattc_connect = true;
                     gattc_connect_beacon_idx = idx;
                     ble_beacons[idx].offline_buffer_status = OFFLINE_BUFFER_STATUS_DOWNLOAD_IN_PROGRESS;
+                    gattc_offline_buffer_downloading = true;
+
                     ESP_LOGD(TAG, "connect to the remote device.");
                     esp_ble_gap_stop_scanning();
                     esp_ble_gattc_open(gl_profile_tab[PROFILE_A_APP_ID].gattc_if, scan_result->scan_rst.bda, scan_result->scan_rst.ble_addr_type, true);
@@ -1072,6 +1102,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         else {
             ESP_LOGD(TAG, "Stop scan successfully");
         }
+        gattc_scanning = false;
         break;
     case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT:
         ESP_LOGD(TAG, "ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT");
@@ -1236,6 +1267,11 @@ static void wdt_task(void* pvParameters)
             snprintf(buffer_payload, 128, "%d", uptime_sec);
             msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
             ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+            if(msg_id == -1){
+                mqtt_packets_fail++;
+            } else {
+                mqtt_packets_send++;
+            }
             fflush(stdout);
         }
 
@@ -1283,9 +1319,12 @@ void adjust_log_level()
     esp_log_level_set("httpd_uri", ESP_LOG_INFO);
     esp_log_level_set("BTDM_INIT", ESP_LOG_INFO);
     esp_log_level_set("timer", ESP_LOG_INFO);
-    // esp_log_level_set("BLEMQTTPROXY", ESP_LOG_INFO);
     esp_log_level_set("beacon", ESP_LOG_INFO);
+    esp_log_level_set("display", ESP_LOG_INFO);
+    esp_log_level_set("event", ESP_LOG_INFO);
     esp_log_level_set("ble_mqtt", ESP_LOG_INFO);
+    esp_log_level_set("web_file_server", ESP_LOG_INFO);
+    esp_log_level_set("BLEMQTTPROXY", ESP_LOG_INFO);
 }
 
 void initialize_ble()

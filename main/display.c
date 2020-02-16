@@ -340,6 +340,7 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
     case APPVERSION_SCREEN:
     {
         const esp_app_desc_t *app_desc = esp_ota_get_app_description();
+        tcpip_adapter_ip_info_t ipinfo;
         uint8_t mac[6];
         ESP_ERROR_CHECK(esp_efuse_mac_get_default(mac));
 
@@ -354,13 +355,8 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
                  mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
         ssd1306_draw_string(canvas, 0, 33, (const uint8_t *)buffer, 10, 1);
 
-        uxReturn = xEventGroupWaitBits(mqtt_evg, MQTT_CONNECTED_BIT, false, true, 0);
-        bool mqtt_connected = uxReturn & MQTT_CONNECTED_BIT;
-
-        uxReturn = xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, 0);
-        bool wifi_connected = uxReturn & WIFI_CONNECTED_BIT;
-
-        snprintf(buffer, 128, "WIFI: %s, MQTT: %s/%s", (wifi_connected ? "y" : "n"), (CONFIG_USE_MQTT ? "y" : "n"), (mqtt_connected ? "y" : "n"));
+        tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ipinfo);
+        sprintf(buffer, IPSTR, IP2STR(&ipinfo.ip));
         ssd1306_draw_string(canvas, 0, 44, (const uint8_t *)buffer, 10, 1);
 
         itoa(s_active_beacon_mask, buffer2, 2);
@@ -388,18 +384,27 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
 
         ssd1306_clear_canvas(canvas, 0x00);
 
-        snprintf(buffer, 128, "%s", "Statistics:");
+        snprintf(buffer, 128, "%s", "Statistics/Status:");
         ssd1306_draw_string(canvas, 0, 0, (const uint8_t *)buffer, 10, 1);
 
         convert_s_ddhhmmss(uptime_sec, &up_d, &up_h, &up_m, &up_s);
-        snprintf(buffer, 128, "%-6s:     %3dd %2d:%02d:%02d", "uptime", up_d, up_h, up_m, up_s);
+        snprintf(buffer, 128, "%-6s      %3dd %2d:%02d:%02d", "uptime", up_d, up_h, up_m, up_s);
         ssd1306_draw_string(canvas, 0, 11, (const uint8_t *)buffer, 10, 1);
 
-        snprintf(buffer, 128, "%-9s: %5d/%5d", "WiFi ok/fail", wifi_connections_count_connect, wifi_connections_count_disconnect);
+        snprintf(buffer, 128, "%-9s %6d/%5d", "WiFi ok/fail", wifi_connections_count_connect, wifi_connections_count_disconnect);
         ssd1306_draw_string(canvas, 0, 22, (const uint8_t *)buffer, 10, 1);
 
-        snprintf(buffer, 128, "%-9s: %5d/%5d", "MQTT ok/fail", mqtt_packets_send, mqtt_packets_fail);
+        snprintf(buffer, 128, "%-9s %6d/%5d", "MQTT ok/fail", mqtt_packets_send, mqtt_packets_fail);
         ssd1306_draw_string(canvas, 0, 33, (const uint8_t *)buffer, 10, 1);
+
+        uxReturn = xEventGroupWaitBits(mqtt_evg, MQTT_CONNECTED_BIT, false, true, 0);
+        bool mqtt_connected = uxReturn & MQTT_CONNECTED_BIT;
+
+        uxReturn = xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, 0);
+        bool wifi_connected = uxReturn & WIFI_CONNECTED_BIT;
+
+        snprintf(buffer, 128, "WIFI: %s, MQTT: %s/%s", (wifi_connected ? "y" : "n"), (CONFIG_USE_MQTT ? "y" : "n"), (mqtt_connected ? "y" : "n"));
+        ssd1306_draw_string(canvas, 0, 44, (const uint8_t *)buffer, 10, 1);
 
         display_status.current_screen = display_status.screen_to_show;
         return ssd1306_refresh_gram(canvas);
