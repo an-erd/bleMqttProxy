@@ -85,14 +85,16 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
     httpd_resp_sendstr_chunk(req, "<meta http-equiv=\"refresh\" content=\"5\">\n");
     httpd_resp_sendstr_chunk(req, "<body style=\"font-family:Arial\">\n");
     httpd_resp_sendstr_chunk(req, "<h1 style=\"text-align: center;\">Beacon List</h1>\n");
+
+    // Beacon list table
     httpd_resp_sendstr_chunk(req, "<table style=\"margin-left: auto; margin-right: auto;\" border=\"0\" width=\"600\" bgcolor=\"#e0e0e0\">\n");
     httpd_resp_sendstr_chunk(req, "<tbody>\n");
     httpd_resp_sendstr_chunk(req, "<tr bgcolor=\"#c0c0c0\">\n");
-    httpd_resp_sendstr_chunk(req, "<td style=\"text-align: center;\">Name</td>\n");
-    httpd_resp_sendstr_chunk(req, "<td style=\"text-align: center;\">Last seen ago</td>\n");
-    httpd_resp_sendstr_chunk(req, "<td style=\"text-align: center;\">Status</td>\n");
-    httpd_resp_sendstr_chunk(req, "<td style=\"text-align: center;\">Command</td>\n");
-    httpd_resp_sendstr_chunk(req, "<td style=\"text-align: center;\">Download file</td>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Name</th>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Last seen ago</th>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Status</th>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Command</th>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Download file</th>\n");
     httpd_resp_sendstr_chunk(req, "</tr>\n");
 
     for (int i = 0; i < num_devices; i++){
@@ -164,19 +166,40 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
                     break;
             }
 
-            httpd_resp_sendstr_chunk(req, "</tr>\n");
         } else {
             httpd_resp_sendstr_chunk(req, "<td>");
             httpd_resp_sendstr_chunk(req, "inactive");
             httpd_resp_sendstr_chunk(req, "</td>\n");
         }
+        httpd_resp_sendstr_chunk(req, "</tr>\n");
     }
+    httpd_resp_sendstr_chunk(req, "<tr height = 20px></tr>\n");
     httpd_resp_sendstr_chunk(req, "</tbody></table>");
 
-    httpd_resp_sendstr_chunk(req, (gattc_connect == true ? "gattc_connect == true<br />\n":"gattc_connect == false<br />\n"));
-    httpd_resp_sendstr_chunk(req, (gattc_scanning == true ? "gattc_scanning == true<br />\n":"gattc_scanning == false<br />\n"));
-    snprintf(buffer, 128, "%s: %d<br />\n", "gattc_connect_beacon_idx", gattc_connect_beacon_idx);
+    // Status table
+
+    httpd_resp_sendstr_chunk(req, "<table style=\"margin-left: auto; margin-right: auto;\" border=\"0\" width=\"600\" bgcolor=\"#e0e0e0\">\n");
+    httpd_resp_sendstr_chunk(req, "<tbody>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr bgcolor=\"#c0c0c0\">\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Flag/Field</th>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Status</th>\n");
+    httpd_resp_sendstr_chunk(req, "</tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>gattc_connect</td><td>");
+    httpd_resp_sendstr_chunk(req, (gattc_connect == true ? "true":"false"));
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>gattc_scanning</td><td>");
+    httpd_resp_sendstr_chunk(req, (gattc_scanning == true ? "true":"false"));
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>gattc_connect_beacon_idx</td><td>");
+    snprintf(buffer, 128, "%d", gattc_connect_beacon_idx);
     httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "</tbody></table>");
 
     httpd_resp_sendstr_chunk(req, "</body></html>");
     httpd_resp_sendstr_chunk(req, NULL);
