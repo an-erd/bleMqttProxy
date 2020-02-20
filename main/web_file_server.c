@@ -7,8 +7,9 @@
 
 #include "esp_err.h"
 #include "esp_log.h"
-
+#include "esp_ota_ops.h"
 #include "esp_http_server.h"
+
 #include "web_file_server.h"
 #include "beacon.h"
 #include "ble.h"
@@ -76,7 +77,7 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
     char buffer[128];
     uint8_t num_devices = CONFIG_BLE_DEVICE_COUNT_CONFIGURED;
     offline_buffer_status_t status;
-
+    const esp_app_desc_t *app_desc = esp_ota_get_app_description();
 
     ESP_LOGD(TAG, "http_resp_list_devices, count = %d", num_devices);
 
@@ -194,8 +195,31 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
     httpd_resp_sendstr_chunk(req, (gattc_scanning == true ? "true":"false"));
     httpd_resp_sendstr_chunk(req, "</td></tr>\n");
 
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>gattc_offline_buffer_downloading</td><td>");
+    httpd_resp_sendstr_chunk(req, (gattc_offline_buffer_downloading == true ? "true":"false"));
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>gattc_give_up_now</td><td>");
+    httpd_resp_sendstr_chunk(req, (gattc_give_up_now == true ? "true":"false"));
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>gattc_connect_beacon_idx</td><td>");
     snprintf(buffer, 128, "%d", gattc_connect_beacon_idx);
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>app_desc->version</td><td>");
+    snprintf(buffer, 128, "%s", app_desc->version);
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>app_desc->project_name</td><td>");
+    snprintf(buffer, 128, "%s", app_desc->project_name);
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>app_desc->idf_ver</td><td>");
+    snprintf(buffer, 128, "%s", app_desc->idf_ver);
     httpd_resp_sendstr_chunk(req, buffer);
     httpd_resp_sendstr_chunk(req, "</td></tr>\n");
 
@@ -335,7 +359,8 @@ esp_err_t csv_get_handler(httpd_req_t *req)
                     free_offline_buffer(idx, OFFLINE_BUFFER_STATUS_NONE);
                     break;
                 case OFFLINE_BUFFER_STATUS_DOWNLOAD_IN_PROGRESS:
-                    ESP_LOGD(TAG, "already in progress, wait for now, cannot be stopped yet");
+                    ESP_LOGD(TAG, "already in progress, wait for now, give up next time possible...");
+                    gattc_give_up_now = true;
                     break;
                 case OFFLINE_BUFFER_STATUS_DOWNLOAD_AVAILABLE:
                     ESP_LOGD(TAG, "already available for download");

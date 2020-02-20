@@ -7,6 +7,7 @@ const uint8_t const REMOTE_SERVICE_UUID[] = {0x3C, 0xB7, 0xA2, 0x4B, 0x0C, 0x32,
 const char remote_device_name[20] = "";
 bool gattc_connect = false;
 bool gattc_scanning = false;
+bool gattc_give_up_now = false;
 uint8_t gattc_connect_beacon_idx;
 
 bool get_server = false;

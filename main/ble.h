@@ -24,6 +24,8 @@ extern const uint8_t const REMOTE_SERVICE_UUID[];
 
 extern bool gattc_connect;
 extern bool gattc_scanning;
+extern bool gattc_give_up_now;
+
 extern uint8_t gattc_connect_beacon_idx;
 extern bool get_server;
 extern bool device_notify_1401;

@@ -880,13 +880,20 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
     case ESP_GATTC_DISCONNECT_EVT:
         ESP_LOGD(TAG, "ESP_GATTC_DISCONNECT_EVT");
         if(gattc_offline_buffer_downloading) {
-            // disconnect occured but download not completed
-            reset_offline_buffer(gattc_connect_beacon_idx, OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED);
-            gattc_offline_buffer_downloading = false;
+            if(gattc_give_up_now == true){
+                free_offline_buffer(gattc_connect_beacon_idx, OFFLINE_BUFFER_STATUS_NONE);
+                gattc_give_up_now = false;
+                gattc_offline_buffer_downloading = false;
+            } else {
+                // disconnect occured but download not completed, maybe next time
+                reset_offline_buffer(gattc_connect_beacon_idx, OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED);
+                gattc_offline_buffer_downloading = false;
+            }
         }
 
         gattc_connect = false;
         gattc_connect_beacon_idx = UNKNOWN_BEACON;
+        gattc_give_up_now = false;
         get_server = false;
         device_notify_1401 = false;
         device_indicate_2A52 = false;
@@ -1071,14 +1078,19 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 check_update_display(maj, min);
 
                 if ((ble_beacons[idx].offline_buffer_status == OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED) && (gattc_connect == false)) {
-                    gattc_connect = true;
-                    gattc_connect_beacon_idx = idx;
-                    ble_beacons[idx].offline_buffer_status = OFFLINE_BUFFER_STATUS_DOWNLOAD_IN_PROGRESS;
-                    gattc_offline_buffer_downloading = true;
+                    if(gattc_give_up_now == false){
+                        gattc_connect = true;
+                        gattc_connect_beacon_idx = idx;
+                        ble_beacons[idx].offline_buffer_status = OFFLINE_BUFFER_STATUS_DOWNLOAD_IN_PROGRESS;
+                        gattc_offline_buffer_downloading = true;
 
-                    ESP_LOGD(TAG, "connect to the remote device.");
-                    esp_ble_gap_stop_scanning();
-                    esp_ble_gattc_open(gl_profile_tab[PROFILE_A_APP_ID].gattc_if, scan_result->scan_rst.bda, scan_result->scan_rst.ble_addr_type, true);
+                        ESP_LOGD(TAG, "connect to the remote device.");
+                        esp_ble_gap_stop_scanning();
+                        esp_ble_gattc_open(gl_profile_tab[PROFILE_A_APP_ID].gattc_if, scan_result->scan_rst.bda, scan_result->scan_rst.ble_addr_type, true);
+                    } else {
+                        free_offline_buffer(idx, OFFLINE_BUFFER_STATUS_NONE);
+                        gattc_give_up_now = false;
+                    }
                 }
             } else {
                 // ESP_LOGD(TAG, "mybeacon not found");
