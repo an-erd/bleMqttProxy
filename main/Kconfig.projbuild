@@ -384,10 +384,38 @@ menu "BLE-MQTT Proxy"
 
     endmenu
 
+    menu "OTA"
+
+        config OTA_FIRMWARE_UPG_URL
+            string "Firmware Upgrade URL"
+            default "https://192.168.2.130:8070/blemqttproxy.bin"
+            help
+                URL of server which hosts the firmware image.
+
+        config OTA_SKIP_COMMON_NAME_CHECK
+            bool "Skip server certificate CN fieldcheck"
+            default n
+            help
+                This allows you to skip the validation of OTA server certificate CN field.
+
+        config OTA_SKIP_VERSION_CHECK
+            bool "Skip firmware version check"
+            default n
+            help
+                This allows you to skip the firmware version check.
+
+        config OTA_RECV_TIMEOUT
+            int "OTA Receive Timeout"
+            default 5000
+            help
+                Maximum time for reception
+    endmenu
+
     menu "Test functions"
 
         config DISPLAY_TIME_TEST
             bool "Add extra display screen with tests (currently not in use!)"
             default n
     endmenu
+
 endmenu

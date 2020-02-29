@@ -23,6 +23,8 @@ static const char *web_file_server_commands[WEBFILESERVER_NUM_ENTRIES] = {
     "dl",
     "rst",
     "list",
+    "ota",
+    "reboot"
 };
 
 static esp_err_t redirect_handler(httpd_req_t *req)

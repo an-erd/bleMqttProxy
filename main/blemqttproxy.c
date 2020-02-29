@@ -24,6 +24,9 @@
 #include "esp_gatt_common_api.h"
 #include "esp_log.h"
 #include "esp_ota_ops.h"
+#include "esp_flash_partitions.h"
+#include "esp_partition.h"
+#include "errno.h"
 #include "esp_timer.h"
 #include "lwip/sockets.h"
 #include <tcpip_adapter.h>
@@ -34,6 +37,7 @@
 #include "iot_param.h"
 #include <inttypes.h>
 #include <esp_http_server.h>
+#include "esp_http_client.h"
 
 #include "helperfunctions.h"
 #include "display.h"
@@ -44,6 +48,7 @@
 #include "timer.h"
 #include "web_file_server.h"
 #include "offlinebuffer.h"
+#include "ota.h"
 
 static const char* TAG = "BLEMQTTPROXY";
 
@@ -1423,4 +1428,7 @@ void app_main()
 #if (CONFIG_WDT_REBOOT_LAST_SEEN_THRESHOLD==1 || CONFIG_WDT_SEND_MQTT_BEFORE_REBOOT==1)
     xTaskCreate(&wdt_task, "wdt_task", 2048 * 2, NULL, 5, NULL);
 #endif
+
+    initialize_ota();
+    xTaskCreate(&ota_task, "ota_task", 8192, NULL, 5, NULL);
 }
