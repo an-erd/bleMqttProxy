@@ -73,7 +73,9 @@ static esp_err_t http_resp_csv_download(httpd_req_t *req, uint8_t idx)
 static esp_err_t http_resp_list_devices(httpd_req_t *req)
 {
     uint8_t h, m, s;
+    uint16_t d;
     uint16_t last_seen_sec_gone, last_send_sec_gone;
+    uint32_t uptime_sec = esp_timer_get_time() / 1000000;
     char buffer[128];
     uint8_t num_devices = CONFIG_BLE_DEVICE_COUNT_CONFIGURED;
     offline_buffer_status_t status;
@@ -197,6 +199,12 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
     httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Flag/Field</th>\n");
     httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Status</th>\n");
     httpd_resp_sendstr_chunk(req, "</tr>\n");
+
+    convert_s_ddhhmmss(uptime_sec, &d, &h, &m, &s);
+    snprintf(buffer, 128, "%3dd %02d:%02d:%02d", d, h, m, s);
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>uptime</td><td>");
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
 
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>gattc_connect</td><td>");
     httpd_resp_sendstr_chunk(req, (gattc_connect == true ? "true":"false"));
