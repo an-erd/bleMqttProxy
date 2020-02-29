@@ -8,7 +8,7 @@ const char remote_device_name[20] = "";
 bool gattc_connect = false;
 bool gattc_scanning = false;
 bool gattc_give_up_now = false;
-uint8_t gattc_connect_beacon_idx;
+uint8_t gattc_connect_beacon_idx = UNKNOWN_BEACON;
 
 bool get_server = false;
 bool device_notify_1401 = false;

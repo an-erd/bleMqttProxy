@@ -73,7 +73,7 @@ static esp_err_t http_resp_csv_download(httpd_req_t *req, uint8_t idx)
 static esp_err_t http_resp_list_devices(httpd_req_t *req)
 {
     uint8_t h, m, s;
-    uint16_t last_seen_sec_gone;
+    uint16_t last_seen_sec_gone, last_send_sec_gone;
     char buffer[128];
     uint8_t num_devices = CONFIG_BLE_DEVICE_COUNT_CONFIGURED;
     offline_buffer_status_t status;
@@ -92,7 +92,8 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
     httpd_resp_sendstr_chunk(req, "<tbody>\n");
     httpd_resp_sendstr_chunk(req, "<tr bgcolor=\"#c0c0c0\">\n");
     httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Name</th>\n");
-    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Last seen ago</th>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Last seen<br>(sec ago)</th>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">MQTT send<br>(sec ago)</th>\n");
     httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Status</th>\n");
     httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Command</th>\n");
     httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Download file</th>\n");
@@ -113,6 +114,16 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
             } else {
                 last_seen_sec_gone = (esp_timer_get_time() - ble_beacons[i].adv_data.last_seen) / 1000000;
                 convert_s_hhmmss(last_seen_sec_gone, &h, &m, &s);
+                snprintf(buffer, 128, "%02d:%02d:%02d", h, m, s);
+                httpd_resp_sendstr_chunk(req, buffer);
+            }
+            httpd_resp_sendstr_chunk(req, "</td>\n<td>");
+
+            if(ble_beacons[i].adv_data.mqtt_last_send == 0){
+                httpd_resp_sendstr_chunk(req, "never");
+            } else {
+                last_send_sec_gone = (esp_timer_get_time() - ble_beacons[i].adv_data.mqtt_last_send) / 1000000;
+                convert_s_hhmmss(last_send_sec_gone, &h, &m, &s);
                 snprintf(buffer, 128, "%02d:%02d:%02d", h, m, s);
                 httpd_resp_sendstr_chunk(req, buffer);
             }
