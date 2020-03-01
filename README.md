@@ -54,36 +54,51 @@ The current configuration of active beacons will be stored in NVS.
 
 Use git checkout version to checkout a specific version.
 
-Update submodules: git submodule update --recursive
+Update submodules: `git submodule update --recursive`
 
-Call ~/esp-idf/install.sh to get tools downloaded and instelled
+Call `~/esp-idf/install.sh` to get tools downloaded and installed
 
 #### menuconfig
 
-Start with calling menuconfig to make the basic configuration
+Start with calling `menuconfig` to make the basic configuration
 
 Important: under MQTT you can set MQTT to 0 to disable or to 1 to enable MQTT messages, which will be put in the database by the script afterwards.
 
-#### Using the corret Python version
+#### Using the correct Python version
 
-According to the ESP-IDF documentation, currently only Phython 2.7 is supported. So, if on your systems python3 is the defaul Python, you need to implement
-the steps as shon in [Build System CMake - phython](https://docs.espressif.com/projects/esp-idf/en/stable/api-guides/build-system-cmake.html).
+According to the ESP-IDF documentation, currently only Phython 2.7 is supported. So, if on your systems python3 is the default Python, you need to implement
+the steps as shown in [Build System CMake - phython](https://docs.espressif.com/projects/esp-idf/en/stable/api-guides/build-system-cmake.html).
 
 ### Flashing the app
 
 #### Step 1 (optional): Erase all ESP32 flash memory if necessary
 
-make erase_flash
+`make erase_flash`
 
 
 #### Step 2: Flash the Partition, Application, ... (TBD)
 
-make flash
+`make flash`
 
 #### Step 3: Use Monitor
 
-Use make monitor to get the console messages to check that everything is fine.
+Use `make monitor` to get the console messages to check that everything is fine.
 
+### OTA Webserver setup
+
+On a Rapsberry Pi start an server using with the binary file `blemqttproxy.bin` and the certificates in the same directory.
+
+```
+openssl s_server -WWW -key ca_key.pem -cert ca_cert.pem -port 8070 .
+```
+
+To run in the background use 
+
+```
+pi@raspberrypi:~/ota_server $ nohup openssl s_server -WWW -key ca_key.pem -cert ca_cert.pem -port 8070 > s_server.log 2> s_server.err &
+```
+
+Using the openssl command on a MSYS32 system I experienced that the download was not completed. Other user report similar issues, thus the alternative on a Raspberry Pi is used.
 
 ## Logfile
 

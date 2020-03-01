@@ -13,7 +13,9 @@
 
 #include "ota.h"
 
-#define BUFFSIZE 1024
+EventGroupHandle_t ota_evg;
+
+#define BUFFSIZE 2048
 #define HASH_LEN 32 /* SHA-256 digest length */
 
 static const char *TAG = "native_ota";
@@ -60,14 +62,14 @@ static void infinite_loop(void)
     }
 }
 
-void ota_task(void *pvParameter)
+void ota_update()
 {
     esp_err_t err;
     /* update handle : set by esp_ota_begin(), must be freed via esp_ota_end() */
     esp_ota_handle_t update_handle = 0 ;
     const esp_partition_t *update_partition = NULL;
 
-    ESP_LOGI(TAG, "Starting OTA example...");
+    ESP_LOGI(TAG, "ota_update() >");
 
     const esp_partition_t *configured = esp_ota_get_boot_partition();
     const esp_partition_t *running = esp_ota_get_running_partition();
@@ -120,6 +122,8 @@ void ota_task(void *pvParameter)
         } else if (data_read > 0) {
             if (image_header_was_checked == false) {
                 esp_app_desc_t new_app_info;
+                ESP_LOGD(TAG, "OTA data read %d, need data %d", data_read,
+                    sizeof(esp_image_header_t) + sizeof(esp_image_segment_header_t) + sizeof(esp_app_desc_t));
                 if (data_read > sizeof(esp_image_header_t) + sizeof(esp_image_segment_header_t) + sizeof(esp_app_desc_t)) {
                     // check current version with downloading
                     memcpy(&new_app_info, &ota_write_data[sizeof(esp_image_header_t) + sizeof(esp_image_segment_header_t)], sizeof(esp_app_desc_t));
@@ -147,11 +151,6 @@ void ota_task(void *pvParameter)
                         }
                     }
 
-                    if (memcmp(new_app_info.version, running_app_info.version, sizeof(new_app_info.version)) == 0) {
-                        ESP_LOGW(TAG, "Current running version is the same as a new. We will not continue the update.");
-                        http_cleanup(client);
-                        infinite_loop();
-                    }
 #ifndef CONFIG_OTA_SKIP_VERSION_CHECK
                     if (memcmp(new_app_info.version, running_app_info.version, sizeof(new_app_info.version)) == 0) {
                         ESP_LOGW(TAG, "Current running version is the same as a new. We will not continue the update.");
@@ -181,7 +180,7 @@ void ota_task(void *pvParameter)
                 task_fatal_error();
             }
             binary_file_length += data_read;
-            ESP_LOGD(TAG, "Written image length %d", binary_file_length);
+            // ESP_LOGD(TAG, "Written image length %d", binary_file_length);
         } else if (data_read == 0) {
             ESP_LOGI(TAG, "Connection closed,all data received");
             break;
@@ -246,3 +245,14 @@ void initialize_ota(void)
     }
 }
 
+void ota_task(void *pvParameters)
+{
+
+    initialize_ota();
+    while (1)
+    {
+        xEventGroupWaitBits(ota_evg, OTA_START_UPDATE, true, true, portMAX_DELAY);
+        ota_update();
+    }
+    vTaskDelete(NULL);
+}

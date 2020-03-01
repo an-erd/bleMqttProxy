@@ -1322,19 +1322,22 @@ void adjust_log_level()
     esp_log_level_set("httpd_sess", ESP_LOG_WARN);
     esp_log_level_set("httpd_txrx", ESP_LOG_WARN);
     esp_log_level_set("httpd_parse", ESP_LOG_WARN);
-    esp_log_level_set("wifi", ESP_LOG_WARN);
+    esp_log_level_set("httpd_uri", ESP_LOG_INFO);
+    esp_log_level_set("HTTP_CLIENT", ESP_LOG_INFO);
     esp_log_level_set("phy_init", ESP_LOG_WARN);
-    esp_log_level_set("efuse", ESP_LOG_WARN);
     esp_log_level_set("tcpip_adapter", ESP_LOG_WARN);
+    esp_log_level_set("efuse", ESP_LOG_WARN);
     esp_log_level_set("nvs", ESP_LOG_WARN);
+    esp_log_level_set("BTDM_INIT", ESP_LOG_INFO);
+    esp_log_level_set("OUTBOX", ESP_LOG_INFO);
     esp_log_level_set("memory_layout", ESP_LOG_WARN);
     esp_log_level_set("heap_init", ESP_LOG_WARN);
     esp_log_level_set("intr_alloc", ESP_LOG_WARN);
+    esp_log_level_set("esp_ota_ops", ESP_LOG_WARN);
+    esp_log_level_set("boot_comm", ESP_LOG_WARN);
+    esp_log_level_set("wifi", ESP_LOG_WARN);
     esp_log_level_set("BT_BTM", ESP_LOG_WARN);
     esp_log_level_set("MQTT_CLIENT", ESP_LOG_INFO);
-    esp_log_level_set("OUTBOX", ESP_LOG_INFO);
-    esp_log_level_set("httpd_uri", ESP_LOG_INFO);
-    esp_log_level_set("BTDM_INIT", ESP_LOG_INFO);
     esp_log_level_set("timer", ESP_LOG_INFO);
     esp_log_level_set("beacon", ESP_LOG_INFO);
     esp_log_level_set("display", ESP_LOG_INFO);
@@ -1394,6 +1397,7 @@ void app_main()
     wifi_evg   = xEventGroupCreate();
     mqtt_evg   = xEventGroupCreate();
     s_wdt_evg    = xEventGroupCreate();
+    ota_evg = xEventGroupCreate();
 
     create_timer();
 
@@ -1429,6 +1433,5 @@ void app_main()
     xTaskCreate(&wdt_task, "wdt_task", 2048 * 2, NULL, 5, NULL);
 #endif
 
-    initialize_ota();
     xTaskCreate(&ota_task, "ota_task", 8192, NULL, 5, NULL);
 }

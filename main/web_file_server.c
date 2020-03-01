@@ -15,6 +15,7 @@
 #include "ble.h"
 #include "offlinebuffer.h"
 #include "helperfunctions.h"
+#include "ota.h"
 
 static const char *TAG = "web_file_server";
 static const char *web_file_server_commands[WEBFILESERVER_NUM_ENTRIES] = {
@@ -189,7 +190,15 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
         }
         httpd_resp_sendstr_chunk(req, "</tr>\n");
     }
-    httpd_resp_sendstr_chunk(req, "<tr height = 20px></tr>\n");
+    httpd_resp_sendstr_chunk(req, "<tr height = 10px></tr>\n");
+
+    // Reboot and OTA commands for device
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>Device</td><td></td><td></td><td></td>");
+    httpd_resp_sendstr_chunk(req, "<td><a href=\"/csv?cmd=reboot\">Reboot</a></td><td></td></tr>\n");
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>Device</td><td></td><td></td><td></td>");
+    httpd_resp_sendstr_chunk(req, "<td><a href=\"/csv?cmd=ota\">Start OTA</a></td><td></td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr height = 10px></tr>\n");
     httpd_resp_sendstr_chunk(req, "</tbody></table>");
 
     // Status table
@@ -241,6 +250,18 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
 
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>app_desc->idf_ver</td><td>");
     snprintf(buffer, 128, "%s", app_desc->idf_ver);
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    const esp_partition_t *running = esp_ota_get_running_partition();
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>OTA running partition</td><td>");
+    snprintf(buffer, 128, "type %d subtype %d (offset 0x%08x)", running->type, running->subtype, running->address);
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    const esp_partition_t *configured = esp_ota_get_boot_partition();
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>OTA configured partition</td><td>");
+    snprintf(buffer, 128, "type %d subtype %d (offset 0x%08x)", configured->type, configured->subtype, configured->address);
     httpd_resp_sendstr_chunk(req, buffer);
     httpd_resp_sendstr_chunk(req, "</td></tr>\n");
 
@@ -397,6 +418,23 @@ esp_err_t csv_get_handler(httpd_req_t *req)
         case WEBFILESERVER_CMD_LIST:
             ESP_LOGD(TAG, "csv_get_handler WEBFILESERVER_CMD_LIST");
             http_resp_list_devices(req);
+            break;
+
+        case WEBFILESERVER_CMD_OTA:
+            ESP_LOGD(TAG, "csv_get_handler WEBFILESERVER_CMD_OTA");
+            redirect_handler(req);
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            xEventGroupSetBits(ota_evg, OTA_START_UPDATE);
+            break;
+
+        case WEBFILESERVER_CMD_REBOOT:
+            ESP_LOGD(TAG, "csv_get_handler WEBFILESERVER_CMD_REBOOT");
+            redirect_handler(req);
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            ESP_LOGE(TAG, "reboot flag is set -> esp_restart() -> REBOOT");
+            fflush(stdout);
+            esp_restart();
+
             break;
 
         default:
