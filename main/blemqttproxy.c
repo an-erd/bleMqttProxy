@@ -311,12 +311,11 @@ void periodic_wdt_timer_callback(void* arg)
         }
     }
 
-    if((beacon_to_take_seen == UNKNOWN_BEACON) && (beacon_to_take_send == UNKNOWN_BEACON)){
-        return;
-    }
+    ESP_LOGD(TAG, "check 1: lowest_last_seen_sec %d, lowest_last_send_sec %d, beacon_to_take_seen %d, beacon_to_take_send %d",
+        lowest_last_seen_sec, lowest_last_send_sec, beacon_to_take_seen, beacon_to_take_send );
 
     if((lowest_last_seen_sec >= CONFIG_WDT_LAST_SEEN_THRESHOLD) || (lowest_last_send_sec >= CONFIG_WDT_LAST_SEND_THRESHOLD)){
-        ESP_LOGD(TAG, "check 1: lowest_last_seen_sec >= CONFIG_WDT_LAST_SEEN_THRESHOLD: %d, lowest_last_send_sec >= CONFIG_WDT_LAST_SEND_THRESHOLD: %d",
+        ESP_LOGD(TAG, "check 2: lowest_last_seen_sec >= CONFIG_WDT_LAST_SEEN_THRESHOLD: %d, lowest_last_send_sec >= CONFIG_WDT_LAST_SEND_THRESHOLD: %d",
             (lowest_last_seen_sec >= CONFIG_WDT_LAST_SEEN_THRESHOLD), (lowest_last_send_sec >= CONFIG_WDT_LAST_SEND_THRESHOLD) );
 
         uxReturn = xEventGroupWaitBits(mqtt_evg, MQTT_CONNECTED_BIT, false, true, 0);
