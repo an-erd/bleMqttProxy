@@ -286,9 +286,11 @@ void periodic_wdt_timer_callback(void* arg)
 {
     EventBits_t uxSet, uxReturn;
     bool wifi_connected, mqtt_connected;
-    uint8_t beacon_to_take = UNKNOWN_BEACON;
+    uint8_t beacon_to_take_seen = UNKNOWN_BEACON;
+    uint8_t beacon_to_take_send = UNKNOWN_BEACON;
     uint16_t lowest_last_seen_sec = CONFIG_WDT_LAST_SEEN_THRESHOLD;
-    uint16_t temp_last_seen_sec;
+    uint16_t lowest_last_send_sec = CONFIG_WDT_LAST_SEND_THRESHOLD;
+    uint16_t temp_last_seen_sec, temp_last_send_sec;
 
 #ifdef CONFIG_WDT_SEND_REGULAR_UPTIME_HEAP_MQTT
     send_mqtt_uptime_heap();
@@ -298,17 +300,24 @@ void periodic_wdt_timer_callback(void* arg)
         if(is_beacon_idx_active(i)){
             temp_last_seen_sec = (esp_timer_get_time() - ble_beacons[i].adv_data.last_seen)/1000000;
             if(temp_last_seen_sec < lowest_last_seen_sec){
-                beacon_to_take = i;
+                beacon_to_take_seen = i;
                 lowest_last_seen_sec = temp_last_seen_sec;
+            }
+            temp_last_send_sec = (esp_timer_get_time() - ble_beacons[i].adv_data.mqtt_last_send)/1000000;
+            if(temp_last_send_sec < lowest_last_send_sec){
+                beacon_to_take_send = i;
+                lowest_last_send_sec = temp_last_send_sec;
             }
         }
     }
 
-    if(beacon_to_take == UNKNOWN_BEACON){
+    if((beacon_to_take_seen == UNKNOWN_BEACON) && (beacon_to_take_send == UNKNOWN_BEACON)){
         return;
     }
 
-    if(lowest_last_seen_sec >= CONFIG_WDT_LAST_SEEN_THRESHOLD){
+    if((lowest_last_seen_sec >= CONFIG_WDT_LAST_SEEN_THRESHOLD) || (lowest_last_send_sec >= CONFIG_WDT_LAST_SEND_THRESHOLD)){
+        ESP_LOGD(TAG, "check 1: lowest_last_seen_sec >= CONFIG_WDT_LAST_SEEN_THRESHOLD: %d, lowest_last_send_sec >= CONFIG_WDT_LAST_SEND_THRESHOLD: %d",
+            (lowest_last_seen_sec >= CONFIG_WDT_LAST_SEEN_THRESHOLD), (lowest_last_send_sec >= CONFIG_WDT_LAST_SEND_THRESHOLD) );
 
         uxReturn = xEventGroupWaitBits(mqtt_evg, MQTT_CONNECTED_BIT, false, true, 0);
         mqtt_connected = uxReturn & MQTT_CONNECTED_BIT;
@@ -316,21 +325,25 @@ void periodic_wdt_timer_callback(void* arg)
         uxReturn = xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, 0);
         wifi_connected = uxReturn & WIFI_CONNECTED_BIT;
 
-        ESP_LOGE(TAG, "periodic_wdt_timer_callback: last seen > threshold: %d sec, WIFI: %s, MQTT (enabled/onnected): %s/%s", lowest_last_seen_sec,
+        ESP_LOGD(TAG, "periodic_wdt_timer_callback: last seen > threshold: %d sec, last send > threshold: %d sec, WIFI: %s, MQTT (enabled/connected): %s/%s",
+            lowest_last_seen_sec, lowest_last_send_sec,
             (wifi_connected ? "y" : "n"), (CONFIG_USE_MQTT ? "y" : "n"), (mqtt_connected ? "y" : "n"));
 
         uxSet = 0;
-        if(CONFIG_WDT_REBOOT_LAST_SEEN_THRESHOLD){
+        if( ((CONFIG_WDT_REBOOT_LAST_SEEN_THRESHOLD == 1) && (lowest_last_seen_sec >= CONFIG_WDT_LAST_SEEN_THRESHOLD))
+            || ((CONFIG_WDT_REBOOT_LAST_SEND_THRESHOLD == 1) && (lowest_last_send_sec >= CONFIG_WDT_LAST_SEND_THRESHOLD)) ){
             uxSet |= UPDATE_ESP_RESTART;
+            ESP_LOGD(TAG, "periodic_wdt_timer_callback: reboot/mqtt flag set: %d, check 1", uxSet);
         }
 
         if(CONFIG_WDT_SEND_MQTT_BEFORE_REBOOT){
             uxSet |= UPDATE_ESP_MQTT_RESTART;
+            ESP_LOGD(TAG, "periodic_wdt_timer_callback: reboot/mqtt flag set: %d, check 2", uxSet);
         }
 
         if(uxSet){
-            ESP_LOGE(TAG, "periodic_wdt_timer_callback: reboot/mqtt flag set: %d", uxSet);
-            esp_restart_mqtt_beacon_to_take = beacon_to_take;
+            ESP_LOGD(TAG, "periodic_wdt_timer_callback: reboot/mqtt flag set: %d, check 3", uxSet);
+            esp_restart_mqtt_beacon_to_take = MIN(beacon_to_take_seen, beacon_to_take_send);
             xEventGroupSetBits(s_wdt_evg, uxSet);
         }
     }
@@ -1260,14 +1273,14 @@ esp_err_t save_blemqttproxy_param()
     return ret;
 }
 
-#if (CONFIG_WDT_REBOOT_LAST_SEEN_THRESHOLD==1 || CONFIG_WDT_SEND_MQTT_BEFORE_REBOOT==1)
+#if ((CONFIG_WDT_REBOOT_LAST_SEEN_THRESHOLD==1) || (CONFIG_WDT_REBOOT_LAST_SEND_THRESHOLD==1) || (CONFIG_WDT_SEND_MQTT_BEFORE_REBOOT==1) )
 static void wdt_task(void* pvParameters)
 {
     EventBits_t uxBits;
-    char buffer_topic[128];
-    char buffer_payload[128];
+    char buffer[32], buffer_topic[32], buffer_payload[32];
     uint32_t uptime_sec;
     int msg_id = 0;
+    tcpip_adapter_ip_info_t ipinfo;
 
     periodic_wdt_timer_start();
 
@@ -1275,13 +1288,15 @@ static void wdt_task(void* pvParameters)
         uxBits = xEventGroupWaitBits(s_wdt_evg, UPDATE_ESP_RESTART | UPDATE_ESP_MQTT_RESTART, pdTRUE, pdFALSE, portMAX_DELAY);
 
         if(uxBits & UPDATE_ESP_MQTT_RESTART){
-            ESP_LOGE(TAG, "ssd1306_update: reboot send mqtt flag is set -> send MQTT message");
+            ESP_LOGI(TAG, "wdt_task: reboot send mqtt flag is set -> send MQTT message");
             uptime_sec = esp_timer_get_time()/1000000;
 
-            snprintf(buffer_topic, 128,  CONFIG_MQTT_FORMAT, "beac",
-                ble_beacons[esp_restart_mqtt_beacon_to_take].beacon_data.major,
-                ble_beacons[esp_restart_mqtt_beacon_to_take].beacon_data.minor, "reboot");
+            tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ipinfo);
+            sprintf(buffer, IPSTR, IP2STR(&ipinfo.ip));
+            snprintf(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "reboot");
             snprintf(buffer_payload, 128, "%d", uptime_sec);
+            ESP_LOGD(TAG, "wdt_task: MQTT message to be send reg. REBOOT: %s %s", buffer_topic, buffer_payload);
+
             msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
             ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
             if(msg_id == -1){
@@ -1293,7 +1308,7 @@ static void wdt_task(void* pvParameters)
         }
 
         if(uxBits & UPDATE_ESP_RESTART){
-            ESP_LOGE(TAG, "ssd1306_update: reboot flag is set -> esp_restart() -> REBOOT");
+            ESP_LOGI(TAG, "wdt_task: reboot flag is set -> esp_restart() -> REBOOT");
             fflush(stdout);
             esp_restart();
         }
@@ -1324,7 +1339,9 @@ void adjust_log_level()
     esp_log_level_set("httpd_parse", ESP_LOG_WARN);
     esp_log_level_set("httpd_uri", ESP_LOG_INFO);
     esp_log_level_set("HTTP_CLIENT", ESP_LOG_INFO);
+    esp_log_level_set("phy", ESP_LOG_WARN);
     esp_log_level_set("phy_init", ESP_LOG_WARN);
+    esp_log_level_set("esp_image", ESP_LOG_WARN);
     esp_log_level_set("tcpip_adapter", ESP_LOG_WARN);
     esp_log_level_set("efuse", ESP_LOG_WARN);
     esp_log_level_set("nvs", ESP_LOG_WARN);

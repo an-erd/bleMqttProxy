@@ -25,14 +25,22 @@ menu "BLE-MQTT Proxy"
 
         config WDT_LAST_SEEN_THRESHOLD
             int "Threshold value in seconds for last seen to determine 'not alive'"
-            default 60
+            default 1800
 
         config WDT_REBOOT_LAST_SEEN_THRESHOLD
             int "Reboot if the last seen threshold applies."
             default 1
 
+        config WDT_LAST_SEND_THRESHOLD
+            int "Threshold value in seconds for last MQTT send to determine 'not alive'"
+            default 1800
+
+        config WDT_REBOOT_LAST_SEND_THRESHOLD
+            int "Reboot if the last MQTT send threshold applies."
+            default 1
+
         config WDT_SEND_MQTT_BEFORE_REBOOT
-            int "Send a last MQTT message if last seen threshold applies (just before reboot, if configured)"
+            int "Send (or at least try to send) a last MQTT message if last seen and/or last MQTT send threshold applies (just before reboot, if configured)"
             default 1
 
         config WDT_SEND_REGULAR_UPTIME_HEAP_MQTT
