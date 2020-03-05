@@ -1,6 +1,7 @@
 #ifndef __BEACON_H__
 #define __BEACON_H__
 
+#include "esp_bt_defs.h"
 #include "offlinebuffer.h"
 
 typedef struct  {
@@ -8,6 +9,8 @@ typedef struct  {
     uint16_t    major;
     uint16_t    minor;
     char        name[8];
+    esp_bd_addr_t bd_addr;
+    bool        bd_addr_set;
 } beacon_data_t;
 
 typedef struct  {

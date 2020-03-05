@@ -10,6 +10,7 @@
 #include "esp_ota_ops.h"
 #include "esp_http_server.h"
 #include "esp_gap_ble_api.h"
+#include "esp_bt_defs.h"
 
 #include "web_file_server.h"
 #include "beacon.h"
@@ -140,6 +141,16 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
         // Name
         httpd_resp_sendstr_chunk(req, "<tr>\n<td>\n");
         httpd_resp_sendstr_chunk(req, ble_beacons[i].beacon_data.name);
+        httpd_resp_sendstr_chunk(req, "</td>\n");
+
+        // bd_addr
+        httpd_resp_sendstr_chunk(req, "<td>\n");
+        if(ble_beacons[i].beacon_data.bd_addr_set){
+            for (int v = 0; v < sizeof(esp_bd_addr_t); v++){
+                snprintf(buffer, 128, "%02X ", ble_beacons[i].beacon_data.bd_addr[v]);
+                httpd_resp_sendstr_chunk(req, buffer);
+            }
+        }
         httpd_resp_sendstr_chunk(req, "</td>\n");
 
         // Last seen

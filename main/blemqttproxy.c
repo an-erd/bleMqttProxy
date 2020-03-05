@@ -459,6 +459,25 @@ void mqtt_init(void)
     esp_mqtt_client_start(mqtt_client);
 }
 
+bool is_beacon_bd_addr_set(uint16_t maj, uint16_t min)
+{
+    uint8_t idx = beacon_maj_min_to_idx(maj, min);
+
+    return ble_beacons[idx].beacon_data.bd_addr_set;
+}
+
+void set_beaconaddress(uint16_t maj, uint16_t min, esp_bd_addr_t *p_bd_addr)
+{
+    uint8_t idx = beacon_maj_min_to_idx(maj, min);
+
+    if ((ble_beacons[idx].beacon_data.bd_addr_set) || (idx == UNKNOWN_BEACON)){
+        return;
+    }
+
+    memcpy(ble_beacons[idx].beacon_data.bd_addr, *p_bd_addr, sizeof(esp_bd_addr_t));
+    ble_beacons[idx].beacon_data.bd_addr_set = true;
+}
+
 void update_adv_data(uint16_t maj, uint16_t min, int8_t measured_power,
     float temp, float humidity, uint16_t battery, bool mqtt_send)
 {
@@ -1093,6 +1112,10 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
 
                 ESP_LOGI(TAG, "(0x%04x%04x) rssi %3d | temp %5.1f | hum %5.1f | x %+6d | y %+6d | z %+6d | batt %4d | mqtt send %c",
                     maj, min, scan_result->scan_rst.rssi, temp, humidity, x, y, z, battery, (mqtt_send_adv ? 'y':'n') );
+
+                if(!is_beacon_bd_addr_set(maj, min)){
+                    set_beaconaddress(maj, min, &scan_result->scan_rst.bda);
+                }
 
                 update_adv_data(maj, min, scan_result->scan_rst.rssi, temp, humidity, battery, mqtt_send_adv);
                 check_update_display(maj, min);
