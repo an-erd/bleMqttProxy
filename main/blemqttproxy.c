@@ -68,6 +68,7 @@ esp_err_t save_blemqttproxy_param();
 static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
 static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param);
 static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param);
+static void show_bonded_devices(void);
 
 static esp_ble_scan_params_t ble_scan_params = {
     .scan_type              = BLE_SCAN_TYPE_ACTIVE,
@@ -573,11 +574,13 @@ static void __attribute__((unused)) show_bonded_devices(void)
 
     esp_ble_bond_dev_t *dev_list = (esp_ble_bond_dev_t *)malloc(sizeof(esp_ble_bond_dev_t) * dev_num);
     esp_ble_get_bond_device_list(&dev_num, dev_list);
-    ESP_LOGI(TAG, "Bonded devices number : %d\n", dev_num);
-
-    ESP_LOGI(TAG, "Bonded devices list : %d\n", dev_num);
+    ESP_LOGI(TAG, "Bonded devices number : %d", dev_num);
     for (int i = 0; i < dev_num; i++) {
+        ESP_LOGI(TAG, "Bond device num %d,", i);
+        ESP_LOGI(TAG, "bd_addr");
         ESP_LOG_BUFFER_HEX_LEVEL(TAG, (void *)dev_list[i].bd_addr, sizeof(esp_bd_addr_t), ESP_LOG_INFO);
+        ESP_LOGI(TAG, "bond_key.pid_key.irk");
+        ESP_LOG_BUFFER_HEX_LEVEL(TAG, (void *)dev_list[i].bond_key.pid_key.irk, sizeof(esp_bt_octet16_t), ESP_LOG_INFO);
     }
 
     free(dev_list);

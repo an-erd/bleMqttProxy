@@ -9,6 +9,7 @@
 #include "esp_log.h"
 #include "esp_ota_ops.h"
 #include "esp_http_server.h"
+#include "esp_gap_ble_api.h"
 
 #include "web_file_server.h"
 #include "beacon.h"
@@ -34,6 +35,35 @@ static esp_err_t redirect_handler(httpd_req_t *req)
     httpd_resp_set_status(req, "303 See Other");
     httpd_resp_set_hdr(req, "Location", "/csv?cmd=list");
     httpd_resp_send(req, NULL, 0);
+
+    return ESP_OK;
+}
+
+static esp_err_t print_bond_devices(httpd_req_t *req)
+{
+    char buffer[128];
+    int dev_num = esp_ble_get_bond_device_num();
+
+    esp_ble_bond_dev_t *dev_list = (esp_ble_bond_dev_t *)malloc(sizeof(esp_ble_bond_dev_t) * dev_num);
+    esp_ble_get_bond_device_list(&dev_num, dev_list);
+
+    for (int i = 0; i < dev_num; i++) {
+        snprintf(buffer, 128, "<tr>\n<td valign=top>Bond device %d</td><td style=\"white-space:nowrap;\">ADDR: ", i);
+        httpd_resp_sendstr_chunk(req, buffer);
+        for (int v = 0; v < sizeof(esp_bd_addr_t); v++){
+            snprintf(buffer, 128, "%02X ", dev_list[i].bd_addr[v]);
+            httpd_resp_sendstr_chunk(req, buffer);
+        }
+        httpd_resp_sendstr_chunk(req, "<br>IRK: ");
+        for (int v = 0; v < sizeof(esp_bt_octet16_t); v++){
+            snprintf(buffer, 128, "%02X ", dev_list[i].bond_key.pid_key.irk[v]);
+            httpd_resp_sendstr_chunk(req, buffer);
+        }
+
+        httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+    }
+
+    free(dev_list);
 
     return ESP_OK;
 }
@@ -75,6 +105,7 @@ static esp_err_t http_resp_csv_download(httpd_req_t *req, uint8_t idx)
 
 static esp_err_t http_resp_list_devices(httpd_req_t *req)
 {
+    esp_err_t ret;
     uint8_t h, m, s;
     uint16_t d;
     uint16_t last_seen_sec_gone, last_send_sec_gone;
@@ -83,8 +114,6 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
     uint8_t num_devices = CONFIG_BLE_DEVICE_COUNT_CONFIGURED;
     offline_buffer_status_t status;
     const esp_app_desc_t *app_desc = esp_ota_get_app_description();
-
-    ESP_LOGD(TAG, "http_resp_list_devices, count = %d", num_devices);
 
     httpd_resp_sendstr_chunk(req, "<!DOCTYPE html><html><head>\n");
     httpd_resp_sendstr_chunk(req, "<title>Beacon List</title>\n");
@@ -190,19 +219,17 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
         }
         httpd_resp_sendstr_chunk(req, "</tr>\n");
     }
-    httpd_resp_sendstr_chunk(req, "<tr height = 10px></tr>\n");
 
     // Reboot and OTA commands for device
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>Device</td><td></td><td></td><td></td>");
     httpd_resp_sendstr_chunk(req, "<td><a href=\"/csv?cmd=reboot\">Reboot</a></td><td></td></tr>\n");
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>Device</td><td></td><td></td><td></td>");
     httpd_resp_sendstr_chunk(req, "<td><a href=\"/csv?cmd=ota\">Start OTA</a></td><td></td></tr>\n");
-
-    httpd_resp_sendstr_chunk(req, "<tr height = 10px></tr>\n");
     httpd_resp_sendstr_chunk(req, "</tbody></table>");
 
-    // Status table
+    httpd_resp_sendstr_chunk(req, "</br></br>\n");
 
+    // Status table
     httpd_resp_sendstr_chunk(req, "<table style=\"margin-left: auto; margin-right: auto;\" border=\"0\" width=\"600\" bgcolor=\"#e0e0e0\">\n");
     httpd_resp_sendstr_chunk(req, "<tbody>\n");
 
@@ -264,6 +291,10 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
     snprintf(buffer, 128, "type %d subtype %d (offset 0x%08x)", configured->type, configured->subtype, configured->address);
     httpd_resp_sendstr_chunk(req, buffer);
     httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    // print bond devices
+    ret = print_bond_devices(req);
+    ESP_ERROR_CHECK(ret);
 
     httpd_resp_sendstr_chunk(req, "</tbody></table>");
 
