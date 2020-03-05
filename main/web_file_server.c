@@ -46,6 +46,8 @@ static esp_err_t print_bond_devices(httpd_req_t *req)
 
     esp_ble_bond_dev_t *dev_list = (esp_ble_bond_dev_t *)malloc(sizeof(esp_ble_bond_dev_t) * dev_num);
     esp_ble_get_bond_device_list(&dev_num, dev_list);
+    snprintf(buffer, 128, "<tr>\n<td valign=top>Bond device num</td><td> %d </td></tr>\n", dev_num);
+    httpd_resp_sendstr_chunk(req, buffer);
 
     for (int i = 0; i < dev_num; i++) {
         snprintf(buffer, 128, "<tr>\n<td valign=top>Bond device %d</td><td style=\"white-space:nowrap;\">ADDR: ", i);
@@ -60,7 +62,7 @@ static esp_err_t print_bond_devices(httpd_req_t *req)
             httpd_resp_sendstr_chunk(req, buffer);
         }
 
-        httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+        httpd_resp_sendstr_chunk(req, "");
     }
 
     free(dev_list);
