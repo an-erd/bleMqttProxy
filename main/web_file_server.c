@@ -129,6 +129,7 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
     httpd_resp_sendstr_chunk(req, "<tbody>\n");
     httpd_resp_sendstr_chunk(req, "<tr bgcolor=\"#c0c0c0\">\n");
     httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Name</th>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Address</th>\n");
     httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Last seen<br>(sec ago)</th>\n");
     httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">MQTT send<br>(sec ago)</th>\n");
     httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Status</th>\n");
