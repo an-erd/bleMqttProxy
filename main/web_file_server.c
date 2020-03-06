@@ -145,7 +145,7 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
         httpd_resp_sendstr_chunk(req, "</td>\n");
 
         // bd_addr
-        httpd_resp_sendstr_chunk(req, "<td>\n");
+        httpd_resp_sendstr_chunk(req, "<td style=\"white-space:nowrap;\">\n");
         if(ble_beacons[i].beacon_data.bd_addr_set){
             for (int v = 0; v < sizeof(esp_bd_addr_t); v++){
                 snprintf(buffer, 128, "%02X ", ble_beacons[i].beacon_data.bd_addr[v]);
@@ -175,7 +175,7 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
                 snprintf(buffer, 128, "%02d:%02d:%02d", h, m, s);
                 httpd_resp_sendstr_chunk(req, buffer);
             }
-            httpd_resp_sendstr_chunk(req, "</td>\n<td>");
+            httpd_resp_sendstr_chunk(req, "</td>\n<td style=\"white-space:nowrap;\">");
 
             // Download Status
             status = ble_beacons[i].offline_buffer_status;
@@ -238,7 +238,7 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>Device</td><td></td><td></td><td></td>");
     httpd_resp_sendstr_chunk(req, "<td><a href=\"/csv?cmd=reboot\">Reboot</a></td><td></td></tr>\n");
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>Device</td><td></td><td></td><td></td>");
-    httpd_resp_sendstr_chunk(req, "<td><a href=\"/csv?cmd=ota\">Start OTA</a></td><td></td></tr>\n");
+    httpd_resp_sendstr_chunk(req, "<td style=\"white-space:nowrap;\"><a href=\"/csv?cmd=ota\">Start OTA</a></td><td></td></tr>\n");
     httpd_resp_sendstr_chunk(req, "</tbody></table>");
 
     httpd_resp_sendstr_chunk(req, "</br></br>\n");
@@ -260,6 +260,10 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
 
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>gattc_connect</td><td>");
     httpd_resp_sendstr_chunk(req, (gattc_connect == true ? "true":"false"));
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>gattc_is_connected</td><td>");
+    httpd_resp_sendstr_chunk(req, (gattc_is_connected == true ? "true":"false"));
     httpd_resp_sendstr_chunk(req, "</td></tr>\n");
 
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>gattc_scanning</td><td>");

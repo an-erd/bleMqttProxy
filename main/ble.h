@@ -23,6 +23,7 @@ extern const uint8_t const REMOTE_SERVICE_UUID[];
 #define INVALID_HANDLE   0
 
 extern bool gattc_connect;
+extern bool gattc_is_connected;
 extern bool gattc_scanning;
 extern bool gattc_give_up_now;
 
