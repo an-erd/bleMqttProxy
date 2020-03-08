@@ -19,7 +19,10 @@
 #include "helperfunctions.h"
 #include "ota.h"
 
+
 static const char *TAG = "web_file_server";
+extern void remove_bonded_devices_num(uint8_t num_bond_device);
+
 static const char *web_file_server_commands[WEBFILESERVER_NUM_ENTRIES] = {
     "stat",
     "req",
@@ -27,7 +30,8 @@ static const char *web_file_server_commands[WEBFILESERVER_NUM_ENTRIES] = {
     "rst",
     "list",
     "ota",
-    "reboot"
+    "reboot",
+    "delbond"
 };
 
 static esp_err_t redirect_handler(httpd_req_t *req)
@@ -51,7 +55,9 @@ static esp_err_t print_bond_devices(httpd_req_t *req)
     httpd_resp_sendstr_chunk(req, buffer);
 
     for (int i = 0; i < dev_num; i++) {
-        snprintf(buffer, 128, "<tr>\n<td valign=top>Bond device %d</td><td style=\"white-space:nowrap;\">ADDR: ", i);
+        snprintf(buffer, 128, "<tr>\n<td valign=top>Bond device %d <a href=\"/csv?cmd=delbond&amp;num=%d\">delete</a>", i, i);
+        httpd_resp_sendstr_chunk(req, buffer);
+        snprintf(buffer, 128, "</td><td style=\"white-space:nowrap;\">ADDR: ");
         httpd_resp_sendstr_chunk(req, buffer);
         for (int v = 0; v < sizeof(esp_bd_addr_t); v++){
             snprintf(buffer, 128, "%02X ", dev_list[i].bd_addr[v]);
@@ -63,13 +69,14 @@ static esp_err_t print_bond_devices(httpd_req_t *req)
             httpd_resp_sendstr_chunk(req, buffer);
         }
 
-        httpd_resp_sendstr_chunk(req, "");
+        httpd_resp_sendstr_chunk(req, "</td></tr>\n");
     }
 
     free(dev_list);
 
     return ESP_OK;
 }
+
 
 static esp_err_t http_resp_csv_download(httpd_req_t *req, uint8_t idx)
 {
@@ -335,6 +342,7 @@ esp_err_t csv_get_handler(httpd_req_t *req)
     uint8_t idx = UNKNOWN_BEACON;
     offline_buffer_status_t status;
     web_file_server_cmd_t cmd = WEBFILESERVER_NO_CMD;
+    int num;
 
     ESP_LOGD(TAG, "csv_get_handler >");
 
@@ -357,6 +365,18 @@ esp_err_t csv_get_handler(httpd_req_t *req)
                     break;
                 default:
                     ESP_LOGD(TAG, "    beac=not set");
+                    break;
+            }
+
+            // get num (just a parameter for commands) out of query
+            ret = httpd_query_key_value(buf, "num", param, sizeof(param));
+            switch (ret){
+                case ESP_OK:
+                    ESP_LOGD(TAG, "    num=%s", param);
+                    sscanf(param, "%d", &num);
+                    break;
+                default:
+                    ESP_LOGD(TAG, "    num=not set");
                     break;
             }
 
@@ -484,6 +504,13 @@ esp_err_t csv_get_handler(httpd_req_t *req)
             fflush(stdout);
             esp_restart();
 
+            break;
+
+        case WEBFILESERVER_CMD_DELBOND:
+            ESP_LOGD(TAG, "csv_get_handler WEBFILESERVER_CMD_DELBOND");
+            ESP_LOGI(TAG, "WEBFILESERVER_CMD_DELBOND, delete %d", num);
+            remove_bonded_devices_num(num);
+            redirect_handler(req);
             break;
 
         default:

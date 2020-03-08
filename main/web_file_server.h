@@ -12,9 +12,10 @@ typedef enum
     WEBFILESERVER_CMD_LIST,
     WEBFILESERVER_CMD_OTA,
     WEBFILESERVER_CMD_REBOOT,
+    WEBFILESERVER_CMD_DELBOND,
     WEBFILESERVER_NO_CMD = 99,
 } web_file_server_cmd_t;
-#define WEBFILESERVER_NUM_ENTRIES   7
+#define WEBFILESERVER_NUM_ENTRIES   8
 
 httpd_handle_t start_webserver(void);
 void stop_webserver(httpd_handle_t server);

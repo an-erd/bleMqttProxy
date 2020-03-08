@@ -618,6 +618,17 @@ static void __attribute__((unused)) remove_all_bonded_devices(void)
     free(dev_list);
 }
 
+void remove_bonded_devices_num(uint8_t num_bond_device)
+{
+    int dev_num = esp_ble_get_bond_device_num();
+
+    esp_ble_bond_dev_t *dev_list = (esp_ble_bond_dev_t *)malloc(sizeof(esp_ble_bond_dev_t) * dev_num);
+    esp_ble_get_bond_device_list(&dev_num, dev_list);
+        esp_ble_remove_bond_device(dev_list[num_bond_device].bd_addr);
+
+    free(dev_list);
+}
+
 static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param)
 {
     esp_ble_gattc_cb_param_t *p_data = (esp_ble_gattc_cb_param_t *)param;
