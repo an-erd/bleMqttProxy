@@ -132,16 +132,16 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
     httpd_resp_sendstr_chunk(req, "<h1 style=\"text-align: center;\">Beacon List</h1>\n");
 
     // Beacon list table
-    httpd_resp_sendstr_chunk(req, "<table style=\"margin-left: auto; margin-right: auto;\" border=\"0\" width=\"600\" bgcolor=\"#e0e0e0\">\n");
+    httpd_resp_sendstr_chunk(req, "<table style=\"margin-left: auto; margin-right: auto;\" border=\"0\" bgcolor=\"#e0e0e0\">\n");
     httpd_resp_sendstr_chunk(req, "<tbody>\n");
     httpd_resp_sendstr_chunk(req, "<tr bgcolor=\"#c0c0c0\">\n");
-    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Name</th>\n");
-    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Address</th>\n");
-    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Last seen<br>(sec ago)</th>\n");
-    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">MQTT send<br>(sec ago)</th>\n");
-    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Status</th>\n");
-    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Command</th>\n");
-    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Download file</th>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\" width=\"75\">Name</th>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\" width=\"150\">Address</th>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\" width=\"75\">Last seen<br>(sec ago)</th>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\" width=\"75\">MQTT send<br>(sec ago)</th>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\" width=\"185\">Status</th>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\" width=\"95\">Command</th>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\" width=\"90\">Download file</th>\n");
     httpd_resp_sendstr_chunk(req, "</tr>\n");
 
     for (int i = 0; i < num_devices; i++){
@@ -251,12 +251,12 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
     httpd_resp_sendstr_chunk(req, "</br></br>\n");
 
     // Status table
-    httpd_resp_sendstr_chunk(req, "<table style=\"margin-left: auto; margin-right: auto;\" border=\"0\" width=\"600\" bgcolor=\"#e0e0e0\">\n");
+    httpd_resp_sendstr_chunk(req, "<table style=\"margin-left: auto; margin-right: auto;\" border=\"0\" bgcolor=\"#e0e0e0\">\n");
     httpd_resp_sendstr_chunk(req, "<tbody>\n");
 
     httpd_resp_sendstr_chunk(req, "<tr bgcolor=\"#c0c0c0\">\n");
-    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Flag/Field</th>\n");
-    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\">Status</th>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\" width=\"300\">Flag/Field</th>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\" width=\"465\">Status</th>\n");
     httpd_resp_sendstr_chunk(req, "</tr>\n");
 
     convert_s_ddhhmmss(uptime_sec, &d, &h, &m, &s);
