@@ -113,6 +113,97 @@ openssl s_server -WWW -key ca_key.pem -cert ca_cert.pem -port 8070
 
 ## Functionalities
 
+The main purpose of this device:
+
+- Retrieve data 
+  - from a BLE beacon (e.g. temperature, humidity, acceleration data)
+  - from a locally attached temperature sensor
+- Display data
+  - on the OLED display
+  - on the web interface
+- Forward data
+  - to a MQTT broker, to be displayed with e.g. Grafana or to be used for home automation or alerting
+- Provide a service
+  - to retrieve and download the Beacons offline buffer data
+- Retrieve Commands 
+  - from the web interface
+
+### Retrieve Data from a BLE beacon
+
+Retrieving data from a BLE beacon is done more or less automatically. The major step is to configure the beacon using `menuconfig` and to activate the relevant beacons. After that, the beacon data of activated beacons will be updated and, if configured, forwarded to the MQTT broker.
+
+#### Configuration
+
+Step 1) Use `menuconfig` 
+
+Step 2) Checkmark the relevant device and configure major and minor id, as well as the name, according to the ble_beacon software and number of devices you're using.
+
+Step 3) Set the number of devices configured
+
+Step 4) Set the number of devices to use (can be lower than the number of devices configured)
+
+Step 5) Set the BLE device active mask. This is the devices which are activated when you first flash the board, but can be changed using the push button (to activate/deactivate) a device later on.
+
+Step 6) Configure whether the device active mask is to store in persistent memory.
+
+Step 7) Configure the proximity threshold to activate/identify a device by "touching" the board. (not yet implemented)
+
+Step 8) Configure the size of the offline buffer. This value must be the same as in the ble_beacon software, too. It defaults to 1250 entries.
+
+### Retrieve Data from a locally attached temperature sensor
+
+to be done
+
+### Display Data on the OLED Display
+
+If you push the application button, you can switch through the different pages using a short push, and activate/deactivate beacons (in Beacon data screens) and reset statistics (in Statistics screen) using a long push. 
+
+The different screens and the button functionalities are given in the section [Device Usage using Push Button]([#device-usage-using-push-button). 
+
+**Warning**: the application button and the reset button are close together, take care not to accidentially reset the board.
+
+### Display Data on the Web Interface
+
+Beacon status information, device actions and the offline buffer download functionality can be controlled using the web interface. 
+
+To start the web interface, visit the URL `http://192.168.2.156/csv?cmd=list`. From this starting page, you can set commands, delete bonds, etc. 
+
+More information is given in the section [Device Usage using Web Interface](#device-usage-using-web-interface).
+
+### Forward Data to a MQTT Broker
+
+Forwarding retrieved sensor data is done automatically, but needs to be configured first.
+
+#### Configuration 
+
+Step 1) Use `menuconfig` 
+
+Step 2) Configure `MQTT` to true (1)
+
+Step 3) Configure the MQTT brokers URL, port, user name and passsword
+
+Step 4) To not flood the MQTT broker, you can set a minimum wait interval, i.e. the device waits the given number of seconds before sending the next MQTT message to the broker.
+
+### Using the Service to Retrieve Beacons Offline Data
+
+The device can be used to retrieve the offline buffer data from a BLE beacon and to provide a download using the web interface. If you click on `Request`, essentially the following process is started:
+
+Step 1) The next time we retrieve an (connectable) advertisement from the respective beacon we stop scanning for advertisements.
+
+Step 2) initiate a connection to the GATT server. 
+
+Step 3) as soon as we successfully connected to the server, the relevant notifications and indications are activated.
+
+Step 4) We write the command `Report Records, All` to the Bluetooth service
+
+Step 5) in turn we receive all data sets and store them in an array
+
+Step 6) The connection is closed by the server
+
+Step 7) the data is prepared and now available for download.
+
+
+
 
 
 ## Usage
@@ -137,17 +228,27 @@ This section gives an overview on the different screens and the respective butto
 
 ##### Screen "Splash"
 
+![screen_webinterface](Documents\Graphics\screen0.jpg)
+
 ##### Screen "Beacon details"
+
+![screen_webinterface](Documents\Graphics\screen1.jpg)
 
 ##### Screen "Last seen"
 
+![screen_webinterface](Documents\Graphics\screen2.jpg)
+
 ##### Screen "Local temperature"
+
+(not yet available)
 
 ##### Screen "App version"
 
+![screen_webinterface](Documents\Graphics\screen3.jpg)
+
 ##### Screen "Statistics"
 
-
+![screen_webinterface](Documents\Graphics\screen4.jpg)
 
 ### Device Usage using Web Interface
 
@@ -159,7 +260,7 @@ http://192.168.2.156/csv?cmd=list
 
 The following figure shows a screenshot of the Web Interface:
 
-**TDB Figure**
+![screen_webinterface](Documents\Graphics\screen_webinterface.PNG)
 
 The Web Interface is intended for getting the status of the beacons configured for the device, to initiate commands, and status and commands of the proxy device. 
 
@@ -225,8 +326,15 @@ Most of the flags are just for debug reasons and will be removed in the future i
 | app_desc->idf_ver                | The ESP-IDF version used, e.g. v3.3.1-205-gf3c3605fc         |
 | OTA running partition            | The currently running OTA partition, e.g. <br />type 0 subtype 16 (offset 0x00010000) |
 | OTA configured partition         | The newly configured OTA partition, e.g.<br />type 0 subtype 16 (offset 0x00010000) |
-| Bond device num                  | Number of bond devices                                       |
+| Bond device num                  | Number of bond devices, e.g. 2                               |
 | Bond device NUM                  | For each bond device NUM, the address and the IRK is given, e.g.<br />ADDR: D7 59 9D 1D 7B 6B <br />IRK: 7A 1F 1A 20 CE 24 2A A2 63 F3 1A 62 BB 69 EA CA |
+
+#### Downloading Offline Buffer
+
+If you click on the link "Download", the offline buffer data retrieved from the Beacon will be provided and downloaded as a CSV file. Imported in Excel you get the following result:
+
+![screen_webinterface](Documents\Graphics\csv_download.PNG)
+
 
 
 ## BLE beacon announcement functionality
@@ -279,3 +387,13 @@ D (35724) BLEMQTTPROXY: 0x3ffba5a4   00 d2 00 ba 40 0b ca                       
     Z           ba 40
     Battery     0b ca
 
+# TODO
+
+- watchdog usage and configuration
+- offline buffer download process
+- headless mode
+- mqtt configuration
+- range of values
+- ble devices
+- ota configuration
+- 
