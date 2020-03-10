@@ -24,10 +24,10 @@ void convert_s_ddhhmmss(uint32_t sec, uint16_t *d, uint8_t *h, uint8_t *m, uint8
 {
     uint32_t tmp_sec = sec;
 
-    *d = sec / 86400;
+    *d = tmp_sec / 86400;
     tmp_sec -= *d*86400;
 
-    *h = sec / 3600;
+    *h = tmp_sec / 3600;
     tmp_sec -= *h*3600;
 
     *m = tmp_sec / 60;
@@ -40,7 +40,7 @@ void convert_s_hhmmss(uint32_t sec, uint8_t *h, uint8_t *m, uint8_t *s)
 {
     uint32_t tmp_sec = sec;
 
-    *h = sec / 3600;
+    *h = tmp_sec / 3600;
     tmp_sec -= *h*3600;
 
     *m = tmp_sec / 60;
