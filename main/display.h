@@ -12,7 +12,7 @@ extern  esp_timer_handle_t display_message_timer;
 void oneshot_display_message_timer_callback(void* arg);
 void oneshot_display_message_timer_start();
 void oneshot_display_message_timer_stop();
-void oneshot_display_message_timer_stop_touch();
+void oneshot_display_message_timer_touch();
 void display_message_show();
 void display_message_stop_show();
 
@@ -56,9 +56,12 @@ extern volatile bool turn_display_off;           // switch display on/off as idl
 
 // pop-up message screen values
 typedef struct {
-    uint8_t             beac;
+    char                title[32];
     char                message[32];
+    char                comment[32];
     char                action[32];
+    uint8_t             beac;
+    bool                need_refresh;
 } display_message_content_t;
 
 extern display_message_content_t display_message_content;

@@ -193,6 +193,15 @@ void button_release_cb(void* arg)
         return;
     }
 
+    if(display_status.display_message_is_shown){
+        oneshot_display_message_timer_touch();
+        toggle_beacon_idx_active(display_message_content.beac);
+        snprintf(display_message_content.comment, 128, "Activated: %c", (is_beacon_idx_active(display_message_content.beac)? 'y':'n'));
+        display_message_content.need_refresh = true;
+        xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
+        return;
+    }
+
     set_run_idle_timer_touch(true);
 
     ESP_LOGD(TAG, "button_release_cb: display_status.current_screen %d screen_to_show %d >",
@@ -239,7 +248,7 @@ __attribute__((unused)) void periodic_wdt_timer_start(){
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_wdt_timer, WDT_TIMER_DURATION));
 }
 
-static __attribute__((unused)) void send_mqtt_uptime_heap(){
+static __attribute__((unused)) void send_mqtt_uptime_heap_last_seen(uint16_t lowest_last_seen_sec, uint16_t lowest_last_send_sec){
     EventBits_t uxReturn;
     int msg_id = 0;
     char buffer[32], buffer_topic[32], buffer_payload[32];
@@ -280,6 +289,27 @@ static __attribute__((unused)) void send_mqtt_uptime_heap(){
             mqtt_packets_send++;
         }
 
+        snprintf(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "last_seen");
+        snprintf(buffer_payload, 32, "%d", lowest_last_seen_sec);
+        ESP_LOGD(TAG, "MQTT %s -> lowest_last_seen_sec %s", buffer_topic, buffer_payload);
+        msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
+        ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+        if(msg_id == -1){
+            mqtt_packets_fail++;
+        } else {
+            mqtt_packets_send++;
+        }
+
+        snprintf(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "last_send");
+        snprintf(buffer_payload, 32, "%d", lowest_last_send_sec);
+        ESP_LOGD(TAG, "MQTT %s -> lowest_last_send_sec %s", buffer_topic, buffer_payload);
+        msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
+        ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+        if(msg_id == -1){
+            mqtt_packets_fail++;
+        } else {
+            mqtt_packets_send++;
+        }
     }
 }
 
@@ -293,9 +323,6 @@ void periodic_wdt_timer_callback(void* arg)
     uint16_t lowest_last_send_sec = CONFIG_WDT_LAST_SEND_THRESHOLD;
     uint16_t temp_last_seen_sec, temp_last_send_sec;
 
-#ifdef CONFIG_WDT_SEND_REGULAR_UPTIME_HEAP_MQTT
-    send_mqtt_uptime_heap();
-#endif
 
     for(int i=0; i < CONFIG_BLE_DEVICE_COUNT_USE; i++){
         if(is_beacon_idx_active(i)){
@@ -311,6 +338,9 @@ void periodic_wdt_timer_callback(void* arg)
             }
         }
     }
+#ifdef CONFIG_WDT_SEND_REGULAR_UPTIME_HEAP_MQTT
+    send_mqtt_uptime_heap_last_seen(lowest_last_seen_sec, lowest_last_send_sec);
+#endif
 
     ESP_LOGD(TAG, "check 1: lowest_last_seen_sec %d, lowest_last_send_sec %d, beacon_to_take_seen %d, beacon_to_take_send %d",
         lowest_last_seen_sec, lowest_last_send_sec, beacon_to_take_seen, beacon_to_take_send );
@@ -1119,7 +1149,11 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 }
 
                 if(is_beacon_close && (!display_status.display_message_is_shown)){
-                    snprintf(display_message_content.message, 128, "Identified: %s", ble_beacons[idx].beacon_data.name);
+                    display_message_content.beac = idx;
+                    snprintf(display_message_content.title, 32, "Beacon Identified");
+                    snprintf(display_message_content.message, 32, "Name: %s", ble_beacons[idx].beacon_data.name);
+                    snprintf(display_message_content.comment, 32, "Activated: %c", (is_beacon_idx_active(idx)? 'y':'n'));
+                    snprintf(display_message_content.action, 32, "%s", "Toggle active w/Button");
                     display_message_show();
                 }
 

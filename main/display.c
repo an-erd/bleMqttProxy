@@ -39,9 +39,11 @@ display_status_t display_status = {
 
 display_message_content_t display_message_content =
 {
-    .beac = UNKNOWN_BEACON,
+    .title = "",
     .message = "",
+    .comment = "",
     .action = "",
+    .beac = UNKNOWN_BEACON,
 };
 
 volatile bool turn_display_off = false;
@@ -72,7 +74,7 @@ void oneshot_display_message_timer_stop()
     ESP_ERROR_CHECK(ret);
 }
 
-void oneshot_display_message_timer_stop_touch()
+void oneshot_display_message_timer_touch()
 {
     oneshot_display_message_timer_stop();
     oneshot_display_message_timer_start();
@@ -116,14 +118,13 @@ void update_display_message(ssd1306_canvas_t *canvas)
 
     ESP_LOGD(TAG, "update_display_message");
 
-    ssd1306_draw_string(canvas, 0, 0, (const uint8_t *)display_message_content.message, 10, 1);
-
-    // snprintf(buffer, 128, "%s: %s", ble_beacons[i].beacon_data.name, "seen >99h");
-    // snprintf(buffer, 128, "%s: %02d:%02d:%02d %02d:%02d:%02d", ble_beacons[i].beacon_data.name, h, m, s, hq, mq, sq);
-    // ssd1306_draw_string(canvas, 0, line * 10, (const uint8_t *)buffer, 10, 1);
+    ssd1306_draw_string(canvas, 0, 0, (const uint8_t *)display_message_content.title, 10, 1);
+    ssd1306_draw_string(canvas, 0, 12, (const uint8_t *)display_message_content.message, 10, 1);
+    ssd1306_draw_string(canvas, 0, 24, (const uint8_t *)display_message_content.comment, 10, 1);
+    ssd1306_draw_string(canvas, 0, 48, (const uint8_t *)display_message_content.action, 10, 1);
 }
 
-void set_next_display_show()
+ void set_next_display_show()
 {
     ESP_LOGD(TAG, "set_next_display_show: display_status.current_screen %d", display_status.current_screen);
 
@@ -276,12 +277,13 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, ssd1306_canvas_t *canvas_mess
 
     // ESP_LOGD(TAG, "ssd1306_update display_message %d, display_message_is_shown %d", display_status.display_message, display_status.display_message_is_shown);
     if(display_status.display_message){
-        if(display_status.display_message_is_shown){
+        if(display_status.display_message_is_shown && !display_message_content.need_refresh){
             // SOLL: anzeigen, IST: wird gezeigt
             return ESP_OK;
         } else {
             // SOLL: anzeigen, IST: wird nicht gezeigt
             display_status.display_message_is_shown = true;
+            display_message_content.need_refresh = false;
             update_display_message(canvas_message);
             return ssd1306_refresh_gram(canvas_message);
         }
