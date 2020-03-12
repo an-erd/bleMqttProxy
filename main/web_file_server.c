@@ -18,7 +18,8 @@
 #include "offlinebuffer.h"
 #include "helperfunctions.h"
 #include "ota.h"
-
+#include "timer.h"
+#include "display.h"
 
 static const char *TAG = "web_file_server";
 extern void remove_bonded_devices_num(uint8_t num_bond_device);
@@ -302,6 +303,41 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
 
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>app_desc->idf_ver</td><td>");
     snprintf(buffer, 128, "%s", app_desc->idf_ver);
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>run_idle_timer</td><td>");
+    snprintf(buffer, 128, "%s", (get_run_idle_timer()== true ? "true":"false"));
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>idle_timer_running</td><td>");
+    snprintf(buffer, 128, "%s", (idle_timer_is_running()== true ? "true":"false"));
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>run_periodic_timer</td><td>");
+    snprintf(buffer, 128, "%s", (get_run_periodic_timer()== true ? "true":"false"));
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>periodic_timer_running</td><td>");
+    snprintf(buffer, 128, "%s", (periodic_timer_is_running()== true ? "true":"false"));
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>turn_display_off</td><td>");
+    snprintf(buffer, 128, "%s", (turn_display_off== true ? "true":"false"));
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>display_status.display_message</td><td>");
+    snprintf(buffer, 128, "%s", (display_status.display_message== true ? "true":"false"));
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>display_status.display_message_is_shown</td><td>");
+    snprintf(buffer, 128, "%s", (display_status.display_message_is_shown== true ? "true":"false"));
     httpd_resp_sendstr_chunk(req, buffer);
     httpd_resp_sendstr_chunk(req, "</td></tr>\n");
 

@@ -983,7 +983,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
     case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: {
         ESP_LOGD(TAG, "ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT");
         uint32_t duration = 0;  // scan permanently
-        esp_ble_gap_start_scanning(duration);   // TODO
+        esp_ble_gap_start_scanning(duration);
         break;
     }
     case ESP_GAP_BLE_SCAN_START_COMPLETE_EVT:
@@ -1073,6 +1073,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         float temp = 0, humidity = 0;
 
         bool is_beacon_active = true;
+        bool is_beacon_close = false;
         bool mqtt_send_adv = false;
 
         switch (scan_result->scan_rst.search_evt) {
@@ -1099,7 +1100,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
 
                 case BEACON_V3: {
                     decode_mybeacon_packet_v3((esp_ble_mybeacon_v3_t*)(scan_result->scan_rst.ble_adv), &idx, &maj, &min, &temp, &humidity, &battery,
-                        &x, &y, &z, scan_result->scan_rst.rssi, &is_beacon_active);
+                        &x, &y, &z, scan_result->scan_rst.rssi, &is_beacon_active, &is_beacon_close);
                     break;
                 }
 
@@ -1109,12 +1110,17 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     esp_ble_mybeacon_payload_t *mybeacon_payload = (esp_ble_mybeacon_payload_t *)(&scan_result->scan_rst.ble_adv[11]);
 
                     decode_mybeacon_packet_v4(mybeacon_payload, scan_result->scan_rst.ble_adv, &idx, &maj, &min, &temp, &humidity, &battery,
-                        &x, &y, &z, scan_result->scan_rst.rssi, &is_beacon_active);
+                        &x, &y, &z, scan_result->scan_rst.rssi, &is_beacon_active, &is_beacon_close);
                     break;
                 }
                 default:
                     ESP_LOGE(TAG, "ESP_GAP_SEARCH_INQ_RES_EVT: should not happen");
                     break;
+                }
+
+                if(is_beacon_close && (!display_status.display_message_is_shown)){
+                    snprintf(display_message_content.message, 128, "Identified: %s", ble_beacons[idx].beacon_data.name);
+                    display_message_show();
                 }
 
                 if(!is_beacon_active){

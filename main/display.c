@@ -1,5 +1,6 @@
 #include "esp_log.h"
 #include "esp_ota_ops.h"
+#include "esp_timer.h"
 
 #include "display.h"
 #include "beacon.h"
@@ -21,19 +22,105 @@ extern uint16_t wifi_connections_count_connect;
 extern uint16_t wifi_connections_count_disconnect;
 #define WIFI_CONNECTED_BIT          (BIT0)
 
+esp_timer_handle_t oneshot_display_message_timer;
+#define DISPLAY_MESSAGE_TIME_DURATION       (CONFIG_DISPLAY_MESSAGE_TIME * 1000000)
+void oneshot_display_message_timer_callback(void* arg);
+static bool idle_timer_running_before_message = false;
+static bool turn_display_off_before_message = false;
+
 display_status_t display_status = {
     .current_screen = UNKNOWN_SCREEN,
     .screen_to_show = SPLASH_SCREEN,
     .button_enabled = false,
-    .display_on = true};
+    .display_on = true,
+    .display_message = false,
+    .display_message_is_shown = false
+};
+
+display_message_content_t display_message_content =
+{
+    .beac = UNKNOWN_BEACON,
+    .message = "",
+    .action = "",
+};
 
 volatile bool turn_display_off = false;
+
+ssd1306_canvas_t *display_canvas;
+ssd1306_canvas_t *display_canvas_message;
+
+void oneshot_display_message_timer_callback(void* arg)
+{
+    ESP_LOGD(TAG, "oneshot_display_message_timer_callback");
+    display_message_stop_show();
+}
+
+void oneshot_display_message_timer_start()
+{
+    ESP_ERROR_CHECK(esp_timer_start_once(oneshot_display_message_timer, DISPLAY_MESSAGE_TIME_DURATION));
+}
+
+void oneshot_display_message_timer_stop()
+{
+    esp_err_t ret;
+
+    ret = esp_timer_stop(oneshot_display_message_timer);
+    if(ret == ESP_ERR_INVALID_STATE){
+        return;
+    }
+
+    ESP_ERROR_CHECK(ret);
+}
+
+void oneshot_display_message_timer_stop_touch()
+{
+    oneshot_display_message_timer_stop();
+    oneshot_display_message_timer_start();
+}
+
+void display_message_show()
+{
+    turn_display_off_before_message = turn_display_off;
+    idle_timer_running_before_message = get_run_idle_timer();
+
+    ESP_LOGD(TAG, "display_message_show, turn_display_off_before_message %d, idle_timer_running_before_message %d",
+        turn_display_off_before_message, idle_timer_running_before_message);
+    set_run_idle_timer(false);
+    turn_display_off = false;
+    display_status.display_message = true;
+    oneshot_display_message_timer_start();
+    xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
+}
+
+void display_message_stop_show()
+{
+    ESP_LOGD(TAG, "display_message_stop_show, turn_display_off_before_message %d, idle_timer_running_before_message %d",
+        turn_display_off_before_message, idle_timer_running_before_message);
+    oneshot_display_message_timer_stop();
+    turn_display_off = turn_display_off_before_message;
+    set_run_idle_timer(idle_timer_running_before_message);
+    display_status.display_message = false;
+    xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
+}
 
 void draw_pagenumber(ssd1306_canvas_t *canvas, uint8_t nr_act, uint8_t nr_total)
 {
     char buffer2[5];
     snprintf(buffer2, 5, "%d/%d", nr_act, nr_total);
     ssd1306_draw_string_8x8(canvas, 128 - 3 * 8, 7, (const uint8_t *)buffer2);
+}
+
+void update_display_message(ssd1306_canvas_t *canvas)
+{
+    char buffer[128], buffer2[32];
+
+    ESP_LOGD(TAG, "update_display_message");
+
+    ssd1306_draw_string(canvas, 0, 0, (const uint8_t *)display_message_content.message, 10, 1);
+
+    // snprintf(buffer, 128, "%s: %s", ble_beacons[i].beacon_data.name, "seen >99h");
+    // snprintf(buffer, 128, "%s: %02d:%02d:%02d %02d:%02d:%02d", ble_beacons[i].beacon_data.name, h, m, s, hq, mq, sq);
+    // ssd1306_draw_string(canvas, 0, line * 10, (const uint8_t *)buffer, 10, 1);
 }
 
 void set_next_display_show()
@@ -115,7 +202,7 @@ void set_next_display_show()
     }
 }
 
-esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
+esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, ssd1306_canvas_t *canvas_message)
 {
     esp_err_t ret;
     UNUSED(ret);
@@ -184,7 +271,27 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
         {
             display_status.display_on = true;
             ssd1306_display_on();
+        }
+    }
+
+    // ESP_LOGD(TAG, "ssd1306_update display_message %d, display_message_is_shown %d", display_status.display_message, display_status.display_message_is_shown);
+    if(display_status.display_message){
+        if(display_status.display_message_is_shown){
+            // SOLL: anzeigen, IST: wird gezeigt
             return ESP_OK;
+        } else {
+            // SOLL: anzeigen, IST: wird nicht gezeigt
+            display_status.display_message_is_shown = true;
+            update_display_message(canvas_message);
+            return ssd1306_refresh_gram(canvas_message);
+        }
+    } else {
+        if(display_status.display_message_is_shown){
+            // SOLL: nicht anzeigen, IST: wird gezeigt
+            display_status.current_screen = UNKNOWN_SCREEN;
+            display_status.display_message_is_shown = false;
+        } else {
+            // SOLL: nicht anzeigen, IST: nicht gezeigt
         }
     }
 
@@ -422,18 +529,26 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
 
 void ssd1306_task(void *pvParameters)
 {
-    ssd1306_canvas_t *canvas = create_ssd1306_canvas(OLED_COLUMNS, OLED_PAGES, 0, 0, 0);
+    const esp_timer_create_args_t oneshot_display_message_timer_args = {
+        .callback = &oneshot_display_message_timer_callback,
+        .name     = "oneshot_display_message"
+    };
+
+    // canvas for a full screen display and a pop-up message
+    display_canvas = create_ssd1306_canvas(OLED_COLUMNS, OLED_PAGES, 0, 0, 0);
+    display_canvas_message = create_ssd1306_canvas(OLED_COLUMNS, OLED_PAGES, 0, 0, 0);
 
     EventBits_t uxBits;
     UNUSED(uxBits);
 
+    ESP_ERROR_CHECK(esp_timer_create(&oneshot_display_message_timer_args, &oneshot_display_message_timer));
     i2c_master_init();
     ssd1306_init();
 
     while (1)
     {
         uxBits = xEventGroupWaitBits(s_values_evg, UPDATE_DISPLAY, pdTRUE, pdFALSE, portMAX_DELAY);
-        ssd1306_update(canvas);
+        ssd1306_update(display_canvas, display_canvas_message);
     }
     vTaskDelete(NULL);
 }

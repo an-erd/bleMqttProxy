@@ -42,7 +42,7 @@
 			"problemMatcher": []
 		},
 		{
-			"label": "flash app",
+			"label": "app flash",
 			"command": "make",
 			"type": "shell",
 			"args": [
@@ -56,7 +56,7 @@
 			"problemMatcher": []
 		},
 		{
-			"label": "flash app monitor",
+			"label": "app flash monitor",
 			"command": "make",
 			"type": "shell",
 			"args": [
@@ -78,6 +78,21 @@
 				"args": [
 					"make",
 					"monitor"
+				]
+			},
+			"presentation": {
+				"reveal": "always"
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "flash",
+			"type": "process",
+			"windows": {
+				"command": "c:/msys32/mingw32.exe",
+				"args": [
+					"make",
+					"flash"
 				]
 			},
 			"presentation": {

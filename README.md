@@ -16,7 +16,7 @@ The BLE beacons provide an offline buffer. Using web server commands a download 
 
 ### Sensors to be attached
 
-Currently the following sensor can be attached to the board using the OWB (one-wire bus). 
+Currently the following sensor can be attached to the board using the OWB (one-wire bus).
 
 | Sensor  | Description                                        | Data Sheet                                  |
 | ------- | -------------------------------------------------- | ------------------------------------------- |
@@ -57,7 +57,7 @@ git submodule update --recursive
 If necessary, use the following command to get tools downloaded and installed
 
 ```
-~/esp-idf/install.sh 
+~/esp-idf/install.sh
 ```
 
 #### Configure using menuconfig
@@ -95,7 +95,7 @@ Use `make monitor` to get the console messages to check that everything is fine,
 
 You can use OTA (over-the-air updates) to update the app. Use `menuconfig` to configure an secure web server and path/file name, and put the application image created during application build on this server.
 
-An introduction is given by Espressif [here](https://github.com/espressif/esp-idf/tree/master/examples/system/ota), in particular creating the certificate and running the https server. But, I experienced problems using Windows 10 with `openssl s_server` with not completed downloads of the firmware to flash, thus moved to a Raspberry Pi server. 
+An introduction is given by Espressif [here](https://github.com/espressif/esp-idf/tree/master/examples/system/ota), in particular creating the certificate and running the https server. But, I experienced problems using Windows 10 with `openssl s_server` with not completed downloads of the firmware to flash, thus moved to a Raspberry Pi server.
 
 This command line creates the certificate:
 
@@ -115,7 +115,7 @@ openssl s_server -WWW -key ca_key.pem -cert ca_cert.pem -port 8070
 
 The main purpose of this device:
 
-- Retrieve data 
+- Retrieve data
   - from a BLE beacon (e.g. temperature, humidity, acceleration data)
   - from a locally attached temperature sensor
 - Display data
@@ -125,7 +125,7 @@ The main purpose of this device:
   - to a MQTT broker, to be displayed with e.g. Grafana or to be used for home automation or alerting
 - Provide a service
   - to retrieve and download the Beacons offline buffer data
-- Retrieve Commands 
+- Retrieve Commands
   - from the web interface
 
 ### Retrieve Data from a BLE beacon
@@ -134,7 +134,7 @@ Retrieving data from a BLE beacon is done more or less automatically. The major 
 
 #### Configuration
 
-Step 1) Use `menuconfig` 
+Step 1) Use `menuconfig`
 
 Step 2) Checkmark the relevant device and configure major and minor id, as well as the name, according to the ble_beacon software and number of devices you're using.
 
@@ -156,17 +156,17 @@ to be done
 
 ### Display Data on the OLED Display
 
-If you push the application button, you can switch through the different pages using a short push, and activate/deactivate beacons (in Beacon data screens) and reset statistics (in Statistics screen) using a long push. 
+If you push the application button, you can switch through the different pages using a short push, and activate/deactivate beacons (in Beacon data screens) and reset statistics (in Statistics screen) using a long push.
 
-The different screens and the button functionalities are given in the section [Device Usage using Push Button]([#device-usage-using-push-button). 
+The different screens and the button functionalities are given in the section [Device Usage using Push Button]([#device-usage-using-push-button).
 
 **Warning**: the application button and the reset button are close together, take care not to accidentially reset the board.
 
 ### Display Data on the Web Interface
 
-Beacon status information, device actions and the offline buffer download functionality can be controlled using the web interface. 
+Beacon status information, device actions and the offline buffer download functionality can be controlled using the web interface.
 
-To start the web interface, visit the URL `http://192.168.2.156/csv?cmd=list`. From this starting page, you can set commands, delete bonds, etc. 
+To start the web interface, visit the URL `http://192.168.2.156/csv?cmd=list`. From this starting page, you can set commands, delete bonds, etc.
 
 More information is given in the section [Device Usage using Web Interface](#device-usage-using-web-interface).
 
@@ -174,9 +174,9 @@ More information is given in the section [Device Usage using Web Interface](#dev
 
 Forwarding retrieved sensor data is done automatically, but needs to be configured first.
 
-#### Configuration 
+#### Configuration
 
-Step 1) Use `menuconfig` 
+Step 1) Use `menuconfig`
 
 Step 2) Configure `MQTT` to true (1)
 
@@ -190,7 +190,7 @@ The device can be used to retrieve the offline buffer data from a BLE beacon and
 
 Step 1) The next time we retrieve an (connectable) advertisement from the respective beacon we stop scanning for advertisements.
 
-Step 2) initiate a connection to the GATT server. 
+Step 2) initiate a connection to the GATT server.
 
 Step 3) as soon as we successfully connected to the server, the relevant notifications and indications are activated.
 
@@ -228,15 +228,15 @@ This section gives an overview on the different screens and the respective butto
 
 ##### Screen "Splash"
 
-![screen_webinterface](Documents\Graphics\screen0.jpg)
+![screen_webinterface](Documents/Graphics/screen0.jpg?raw=true "Splash Screen")
 
 ##### Screen "Beacon details"
 
-![screen_webinterface](Documents\Graphics\screen1.jpg)
+![screen_webinterface](Documents/Graphics/screen1.jpg?raw=true "Beacon details")
 
 ##### Screen "Last seen"
 
-![screen_webinterface](Documents\Graphics\screen2.jpg)
+![screen_webinterface](Documents/Graphics/screen2.jpg?raw=true "Last seen")
 
 ##### Screen "Local temperature"
 
@@ -244,11 +244,11 @@ This section gives an overview on the different screens and the respective butto
 
 ##### Screen "App version"
 
-![screen_webinterface](Documents\Graphics\screen3.jpg)
+![screen_webinterface](Documents/Graphics/screen3.jpg?raw=true "App version")
 
 ##### Screen "Statistics"
 
-![screen_webinterface](Documents\Graphics\screen4.jpg)
+![screen_webinterface](Documents/Graphics/screen4.jpg?raw=true "Statistics")
 
 ### Device Usage using Web Interface
 
@@ -260,11 +260,11 @@ http://192.168.2.156/csv?cmd=list
 
 The following figure shows a screenshot of the Web Interface:
 
-![screen_webinterface](Documents\Graphics\screen_webinterface.PNG)
+![screen_webinterface](Documents/Graphics/screen_webinterface.PNG)
 
-The Web Interface is intended for getting the status of the beacons configured for the device, to initiate commands, and status and commands of the proxy device. 
+The Web Interface is intended for getting the status of the beacons configured for the device, to initiate commands, and status and commands of the proxy device.
 
-#### Beacon List of BLE Beacon devices 
+#### Beacon List of BLE Beacon devices
 
 The beacon list shows a table of the configured beacons, with information about name, address, some status information and commands.
 
@@ -318,7 +318,7 @@ Most of the flags are just for debug reasons and will be removed in the future i
 | gattc_connect                    | Flag, initiate connection to device "gattc_connect_beacon_idx", is true until canceled or DISCONNECT_EVT |
 | gattc_is_connected               | Flag, currently connected to peer                            |
 | gattc_scanning                   | Flag, true if in scanning process                            |
-| gattc_offline_buffer_downloading | Flag, true if connection is initiated                        |
+| gattc_offline_buffer_downloading | Flag, true if connection is initiated and cleared if download completed. Necessary to distinguish between completed download or abort. |
 | gattc_give_up_now                | Flag, true if e.g. cancel is pressed during download process. Will wait for a timeout on the current activity and stop before next try, or, if no connection initiated, executed directly. |
 | gattc_connect_beacon_idx         | Number of beacon to connect to or in connection with.        |
 | app_desc->version                | The git version of the app software, e.g. 0.34-21-gd86d164   |
@@ -333,7 +333,7 @@ Most of the flags are just for debug reasons and will be removed in the future i
 
 If you click on the link "Download", the offline buffer data retrieved from the Beacon will be provided and downloaded as a CSV file. Imported in Excel you get the following result:
 
-![screen_webinterface](Documents\Graphics\csv_download.PNG)
+![screen_webinterface](Documents/Graphics/csv_download.PNG)
 
 
 
@@ -344,7 +344,7 @@ After a confirmation with a **push** in between 2 secs the device will be added.
 The current configuration of active beacons will be stored in NVS.
 
 
-## 
+##
 
 ### Beacons
 
@@ -396,4 +396,4 @@ D (35724) BLEMQTTPROXY: 0x3ffba5a4   00 d2 00 ba 40 0b ca                       
 - range of values
 - ble devices
 - ota configuration
-- 
+- touch beacon/device to activate

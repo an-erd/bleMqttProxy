@@ -7,6 +7,7 @@
 
 #include "beacon.h"
 #include "helperfunctions.h"
+#include "display.h"
 
 static const char *TAG = "beacon";
 extern esp_err_t save_blemqttproxy_param();
@@ -33,16 +34,16 @@ esp_ble_mybeacon_vendor_t mybeacon_common_vendor_v3 = {
 
 ble_beacon_t ble_beacons[CONFIG_BLE_DEVICE_COUNT_CONFIGURED] =
 {
-    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_1_MAJ,  CONFIG_BLE_DEVICE_1_MIN,  CONFIG_BLE_DEVICE_1_NAME}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
-    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_2_MAJ,  CONFIG_BLE_DEVICE_2_MIN,  CONFIG_BLE_DEVICE_2_NAME}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
-    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_3_MAJ,  CONFIG_BLE_DEVICE_3_MIN,  CONFIG_BLE_DEVICE_3_NAME}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
-    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_4_MAJ,  CONFIG_BLE_DEVICE_4_MIN,  CONFIG_BLE_DEVICE_4_NAME}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
-    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_5_MAJ,  CONFIG_BLE_DEVICE_5_MIN,  CONFIG_BLE_DEVICE_5_NAME}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
-    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_6_MAJ,  CONFIG_BLE_DEVICE_6_MIN,  CONFIG_BLE_DEVICE_6_NAME}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
-    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_7_MAJ,  CONFIG_BLE_DEVICE_7_MIN,  CONFIG_BLE_DEVICE_7_NAME}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
-    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_8_MAJ,  CONFIG_BLE_DEVICE_8_MIN,  CONFIG_BLE_DEVICE_8_NAME}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
-    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_9_MAJ,  CONFIG_BLE_DEVICE_9_MIN,  CONFIG_BLE_DEVICE_9_NAME}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
-    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_10_MAJ, CONFIG_BLE_DEVICE_10_MIN, CONFIG_BLE_DEVICE_10_NAME}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
+    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_1_MAJ,  CONFIG_BLE_DEVICE_1_MIN,  CONFIG_BLE_DEVICE_1_NAME, {0,0,0,0,0,0,}, false}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
+    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_2_MAJ,  CONFIG_BLE_DEVICE_2_MIN,  CONFIG_BLE_DEVICE_2_NAME, {0,0,0,0,0,0,}, false}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
+    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_3_MAJ,  CONFIG_BLE_DEVICE_3_MIN,  CONFIG_BLE_DEVICE_3_NAME, {0,0,0,0,0,0,}, false}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
+    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_4_MAJ,  CONFIG_BLE_DEVICE_4_MIN,  CONFIG_BLE_DEVICE_4_NAME, {0,0,0,0,0,0,}, false}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
+    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_5_MAJ,  CONFIG_BLE_DEVICE_5_MIN,  CONFIG_BLE_DEVICE_5_NAME, {0,0,0,0,0,0,}, false}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
+    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_6_MAJ,  CONFIG_BLE_DEVICE_6_MIN,  CONFIG_BLE_DEVICE_6_NAME, {0,0,0,0,0,0,}, false}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
+    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_7_MAJ,  CONFIG_BLE_DEVICE_7_MIN,  CONFIG_BLE_DEVICE_7_NAME, {0,0,0,0,0,0,}, false}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
+    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_8_MAJ,  CONFIG_BLE_DEVICE_8_MIN,  CONFIG_BLE_DEVICE_8_NAME, {0,0,0,0,0,0,}, false}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
+    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_9_MAJ,  CONFIG_BLE_DEVICE_9_MIN,  CONFIG_BLE_DEVICE_9_NAME, {0,0,0,0,0,0,}, false}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
+    {{{CONFIG_BLE_UUID_1, CONFIG_BLE_UUID_2, CONFIG_BLE_UUID_3, CONFIG_BLE_UUID_4}, CONFIG_BLE_DEVICE_10_MAJ, CONFIG_BLE_DEVICE_10_MIN, CONFIG_BLE_DEVICE_10_NAME, {0,0,0,0,0,0,}, false}, {0}, OFFLINE_BUFFER_STATUS_NONE, 0, 0},
 };
 
 uint16_t s_active_beacon_mask = 0;
@@ -186,22 +187,25 @@ beacon_type_t esp_ble_is_mybeacon_packet (uint8_t *adv_data, uint8_t adv_data_le
 
 void decode_mybeacon_packet_v3(esp_ble_mybeacon_v3_t *mybeacon_data,
     uint8_t *idx, uint16_t *maj, uint16_t *min, float *temp, float *humidity, uint16_t *battery,
-    int16_t *x, int16_t *y, int16_t *z, int8_t rssi, bool *is_beacon_active)
+    int16_t *x, int16_t *y, int16_t *z, int8_t rssi, bool *is_beacon_active, bool *is_beacon_close)
 {
     *maj      = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.major);
     *min      = ENDIAN_CHANGE_U16(mybeacon_data->mybeacon_vendor.minor);
     *idx      = beacon_maj_min_to_idx(*maj, *min);
 
-    if( (*idx != UNKNOWN_BEACON) && (!is_beacon_idx_active(*idx)) ){
-        if(rssi > CONFIG_PROXIMITY_RSSI_THRESHOLD) {
-            ESP_LOGI(TAG, "Announcing new mybeacon (0x%04x%04x), idx %d, RSSI %d", *maj, *min, *idx, rssi);
-            set_beacon_idx_active(*idx);
-        } else {
-            ESP_LOGD(TAG, "mybeacon not active, not close enough (0x%04x%04x), idx %d, RSSI %d",
-                *maj, *min, *idx, rssi);
-            *is_beacon_active = false;
-            return;
-        }
+    if(*idx == UNKNOWN_BEACON){
+        return;
+    }
+
+    *is_beacon_active = is_beacon_idx_active(*idx);
+
+    if(rssi > CONFIG_PROXIMITY_RSSI_THRESHOLD) {
+        ESP_LOGD(TAG, "Close to beacon (0x%04x%04x), idx %d, RSSI %d", *maj, *min, *idx, rssi);
+        *is_beacon_close = true;
+    }
+
+    if(!*is_beacon_active){
+        return;
     }
 
     *temp       = SHT3_GET_TEMPERATURE_VALUE(
@@ -218,22 +222,25 @@ void decode_mybeacon_packet_v3(esp_ble_mybeacon_v3_t *mybeacon_data,
 
 void decode_mybeacon_packet_v4(esp_ble_mybeacon_payload_t *mybeacon_payload, uint8_t *ble_adv,
     uint8_t *idx, uint16_t *maj, uint16_t *min, float *temp, float *humidity, uint16_t *battery,
-    int16_t *x, int16_t *y, int16_t *z, int8_t rssi, bool *is_beacon_active)
+    int16_t *x, int16_t *y, int16_t *z, int8_t rssi, bool *is_beacon_active, bool *is_beacon_close)
 {
     *maj        = (uint16_t) ( ((ble_adv[7])<<8) + (ble_adv[8]));
     *min        = (uint16_t) ( ((ble_adv[9])<<8) + (ble_adv[10]));
     *idx        = beacon_maj_min_to_idx(*maj, *min);
 
-    if( (*idx != UNKNOWN_BEACON) && (!is_beacon_idx_active(*idx)) ){
-        if(rssi > CONFIG_PROXIMITY_RSSI_THRESHOLD) {
-            ESP_LOGI(TAG, "Announcing new mybeacon (0x%04x%04x), idx %d, RSSI %d", *maj, *min, *idx, rssi);
-            set_beacon_idx_active(*idx);
-        } else {
-            ESP_LOGD(TAG, "mybeacon not active, not close enough (0x%04x%04x), idx %d, RSSI %d",
-                *maj, *min, *idx, rssi);
-            *is_beacon_active = false;
-            return;
-        }
+    if(*idx == UNKNOWN_BEACON){
+        return;
+    }
+
+    *is_beacon_active = is_beacon_idx_active(*idx);
+
+    if(rssi > CONFIG_PROXIMITY_RSSI_THRESHOLD) {
+        ESP_LOGD(TAG, "Close to beacon (0x%04x%04x), idx %d, RSSI %d", *maj, *min, *idx, rssi);
+        *is_beacon_close = true;
+    }
+
+    if(!*is_beacon_active){
+        return;
     }
 
     *temp       = SHT3_GET_TEMPERATURE_VALUE(LSB_16(mybeacon_payload->temp), MSB_16(mybeacon_payload->temp) );

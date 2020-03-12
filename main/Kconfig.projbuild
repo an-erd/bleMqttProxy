@@ -79,6 +79,13 @@ menu "BLE-MQTT Proxy"
             range 0 600
             help
                 Number of seconds without button to show empty screen, 0 disables idle timer"
+
+        config DISPLAY_MESSAGE_TIME
+            int "Time in sec to show a message"
+            default 5
+            range 1 15
+            help
+                Number of seconds to show a message, shwitch to last shown screen afterwards.
     endmenu
 
     menu "MQTT Configuration"
