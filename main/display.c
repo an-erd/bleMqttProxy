@@ -1,5 +1,6 @@
 #include "esp_log.h"
 #include "esp_ota_ops.h"
+#include "esp_timer.h"
 
 #include "display.h"
 #include "beacon.h"
@@ -21,13 +22,88 @@ extern uint16_t wifi_connections_count_connect;
 extern uint16_t wifi_connections_count_disconnect;
 #define WIFI_CONNECTED_BIT          (BIT0)
 
+esp_timer_handle_t oneshot_display_message_timer;
+#define DISPLAY_MESSAGE_TIME_DURATION       (CONFIG_DISPLAY_MESSAGE_TIME * 1000000)
+void oneshot_display_message_timer_callback(void* arg);
+static bool idle_timer_running_before_message = false;
+static bool turn_display_off_before_message = false;
+
 display_status_t display_status = {
     .current_screen = UNKNOWN_SCREEN,
     .screen_to_show = SPLASH_SCREEN,
     .button_enabled = false,
-    .display_on = true};
+    .display_on = true,
+    .display_message = false,
+    .display_message_is_shown = false
+};
+
+display_message_content_t display_message_content =
+{
+    .title = "",
+    .message = "",
+    .comment = "",
+    .action = "",
+    .beac = UNKNOWN_BEACON,
+};
 
 volatile bool turn_display_off = false;
+
+ssd1306_canvas_t *display_canvas;
+ssd1306_canvas_t *display_canvas_message;
+
+void oneshot_display_message_timer_callback(void* arg)
+{
+    ESP_LOGD(TAG, "oneshot_display_message_timer_callback");
+    display_message_stop_show();
+}
+
+void oneshot_display_message_timer_start()
+{
+    ESP_ERROR_CHECK(esp_timer_start_once(oneshot_display_message_timer, DISPLAY_MESSAGE_TIME_DURATION));
+}
+
+void oneshot_display_message_timer_stop()
+{
+    esp_err_t ret;
+
+    ret = esp_timer_stop(oneshot_display_message_timer);
+    if(ret == ESP_ERR_INVALID_STATE){
+        return;
+    }
+
+    ESP_ERROR_CHECK(ret);
+}
+
+void oneshot_display_message_timer_touch()
+{
+    oneshot_display_message_timer_stop();
+    oneshot_display_message_timer_start();
+}
+
+void display_message_show()
+{
+    turn_display_off_before_message = turn_display_off;
+    idle_timer_running_before_message = get_run_idle_timer();
+
+    ESP_LOGD(TAG, "display_message_show, turn_display_off_before_message %d, idle_timer_running_before_message %d",
+        turn_display_off_before_message, idle_timer_running_before_message);
+    set_run_idle_timer(false);
+    turn_display_off = false;
+    display_status.display_message = true;
+    oneshot_display_message_timer_start();
+    xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
+}
+
+void display_message_stop_show()
+{
+    ESP_LOGD(TAG, "display_message_stop_show, turn_display_off_before_message %d, idle_timer_running_before_message %d",
+        turn_display_off_before_message, idle_timer_running_before_message);
+    oneshot_display_message_timer_stop();
+    turn_display_off = turn_display_off_before_message;
+    set_run_idle_timer(idle_timer_running_before_message);
+    display_status.display_message = false;
+    xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
+}
 
 void draw_pagenumber(ssd1306_canvas_t *canvas, uint8_t nr_act, uint8_t nr_total)
 {
@@ -36,7 +112,19 @@ void draw_pagenumber(ssd1306_canvas_t *canvas, uint8_t nr_act, uint8_t nr_total)
     ssd1306_draw_string_8x8(canvas, 128 - 3 * 8, 7, (const uint8_t *)buffer2);
 }
 
-void set_next_display_show()
+void update_display_message(ssd1306_canvas_t *canvas)
+{
+    char buffer[128], buffer2[32];
+
+    ESP_LOGD(TAG, "update_display_message");
+
+    ssd1306_draw_string(canvas, 0, 0, (const uint8_t *)display_message_content.title, 10, 1);
+    ssd1306_draw_string(canvas, 0, 12, (const uint8_t *)display_message_content.message, 10, 1);
+    ssd1306_draw_string(canvas, 0, 24, (const uint8_t *)display_message_content.comment, 10, 1);
+    ssd1306_draw_string(canvas, 0, 48, (const uint8_t *)display_message_content.action, 10, 1);
+}
+
+ void set_next_display_show()
 {
     ESP_LOGD(TAG, "set_next_display_show: display_status.current_screen %d", display_status.current_screen);
 
@@ -115,7 +203,7 @@ void set_next_display_show()
     }
 }
 
-esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
+esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, ssd1306_canvas_t *canvas_message)
 {
     esp_err_t ret;
     UNUSED(ret);
@@ -184,7 +272,28 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
         {
             display_status.display_on = true;
             ssd1306_display_on();
+        }
+    }
+
+    // ESP_LOGD(TAG, "ssd1306_update display_message %d, display_message_is_shown %d", display_status.display_message, display_status.display_message_is_shown);
+    if(display_status.display_message){
+        if(display_status.display_message_is_shown && !display_message_content.need_refresh){
+            // SOLL: anzeigen, IST: wird gezeigt
             return ESP_OK;
+        } else {
+            // SOLL: anzeigen, IST: wird nicht gezeigt
+            display_status.display_message_is_shown = true;
+            display_message_content.need_refresh = false;
+            update_display_message(canvas_message);
+            return ssd1306_refresh_gram(canvas_message);
+        }
+    } else {
+        if(display_status.display_message_is_shown){
+            // SOLL: nicht anzeigen, IST: wird gezeigt
+            display_status.current_screen = UNKNOWN_SCREEN;
+            display_status.display_message_is_shown = false;
+        } else {
+            // SOLL: nicht anzeigen, IST: nicht gezeigt
         }
     }
 
@@ -340,6 +449,7 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
     case APPVERSION_SCREEN:
     {
         const esp_app_desc_t *app_desc = esp_ota_get_app_description();
+        tcpip_adapter_ip_info_t ipinfo;
         uint8_t mac[6];
         ESP_ERROR_CHECK(esp_efuse_mac_get_default(mac));
 
@@ -354,13 +464,8 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
                  mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
         ssd1306_draw_string(canvas, 0, 33, (const uint8_t *)buffer, 10, 1);
 
-        uxReturn = xEventGroupWaitBits(mqtt_evg, MQTT_CONNECTED_BIT, false, true, 0);
-        bool mqtt_connected = uxReturn & MQTT_CONNECTED_BIT;
-
-        uxReturn = xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, 0);
-        bool wifi_connected = uxReturn & WIFI_CONNECTED_BIT;
-
-        snprintf(buffer, 128, "WIFI: %s, MQTT: %s/%s", (wifi_connected ? "y" : "n"), (CONFIG_USE_MQTT ? "y" : "n"), (mqtt_connected ? "y" : "n"));
+        tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ipinfo);
+        sprintf(buffer, IPSTR, IP2STR(&ipinfo.ip));
         ssd1306_draw_string(canvas, 0, 44, (const uint8_t *)buffer, 10, 1);
 
         itoa(s_active_beacon_mask, buffer2, 2);
@@ -382,23 +487,33 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
 
     case STATS_SCREEN:
     {
-        uint16_t uptime_sec = esp_timer_get_time() / 1000000;
+        uint32_t uptime_sec = esp_timer_get_time() / 1000000;
+        uint16_t up_d;
         uint8_t up_h, up_m, up_s;
 
         ssd1306_clear_canvas(canvas, 0x00);
 
-        snprintf(buffer, 128, "%s", "Statistics:");
+        snprintf(buffer, 128, "%s", "Statistics/Status:");
         ssd1306_draw_string(canvas, 0, 0, (const uint8_t *)buffer, 10, 1);
 
-        convert_s_hhmmss(uptime_sec, &up_h, &up_m, &up_s);
-        snprintf(buffer, 128, "%-6s:         %3d:%02d:%02d", "uptime", up_h, up_m, up_s);
+        convert_s_ddhhmmss(uptime_sec, &up_d, &up_h, &up_m, &up_s);
+        snprintf(buffer, 128, "%-6s      %3dd %2d:%02d:%02d", "uptime", up_d, up_h, up_m, up_s);
         ssd1306_draw_string(canvas, 0, 11, (const uint8_t *)buffer, 10, 1);
 
-        snprintf(buffer, 128, "%-9s: %5d/%5d", "WiFi ok/fail", wifi_connections_count_connect, wifi_connections_count_disconnect);
+        snprintf(buffer, 128, "%-9s %6d/%5d", "WiFi ok/fail", wifi_connections_count_connect, wifi_connections_count_disconnect);
         ssd1306_draw_string(canvas, 0, 22, (const uint8_t *)buffer, 10, 1);
 
-        snprintf(buffer, 128, "%-9s: %5d/%5d", "MQTT ok/fail", mqtt_packets_send, mqtt_packets_fail);
+        snprintf(buffer, 128, "%-9s %6d/%5d", "MQTT ok/fail", mqtt_packets_send, mqtt_packets_fail);
         ssd1306_draw_string(canvas, 0, 33, (const uint8_t *)buffer, 10, 1);
+
+        uxReturn = xEventGroupWaitBits(mqtt_evg, MQTT_CONNECTED_BIT, false, true, 0);
+        bool mqtt_connected = uxReturn & MQTT_CONNECTED_BIT;
+
+        uxReturn = xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, 0);
+        bool wifi_connected = uxReturn & WIFI_CONNECTED_BIT;
+
+        snprintf(buffer, 128, "WIFI: %s, MQTT: %s/%s", (wifi_connected ? "y" : "n"), (CONFIG_USE_MQTT ? "y" : "n"), (mqtt_connected ? "y" : "n"));
+        ssd1306_draw_string(canvas, 0, 44, (const uint8_t *)buffer, 10, 1);
 
         display_status.current_screen = display_status.screen_to_show;
         return ssd1306_refresh_gram(canvas);
@@ -416,18 +531,26 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas)
 
 void ssd1306_task(void *pvParameters)
 {
-    ssd1306_canvas_t *canvas = create_ssd1306_canvas(OLED_COLUMNS, OLED_PAGES, 0, 0, 0);
+    const esp_timer_create_args_t oneshot_display_message_timer_args = {
+        .callback = &oneshot_display_message_timer_callback,
+        .name     = "oneshot_display_message"
+    };
+
+    // canvas for a full screen display and a pop-up message
+    display_canvas = create_ssd1306_canvas(OLED_COLUMNS, OLED_PAGES, 0, 0, 0);
+    display_canvas_message = create_ssd1306_canvas(OLED_COLUMNS, OLED_PAGES, 0, 0, 0);
 
     EventBits_t uxBits;
     UNUSED(uxBits);
 
+    ESP_ERROR_CHECK(esp_timer_create(&oneshot_display_message_timer_args, &oneshot_display_message_timer));
     i2c_master_init();
     ssd1306_init();
 
     while (1)
     {
         uxBits = xEventGroupWaitBits(s_values_evg, UPDATE_DISPLAY, pdTRUE, pdFALSE, portMAX_DELAY);
-        ssd1306_update(canvas);
+        ssd1306_update(display_canvas, display_canvas_message);
     }
     vTaskDelete(NULL);
 }

@@ -7,20 +7,32 @@
 
 #include "esp_err.h"
 #include "esp_log.h"
-
+#include "esp_ota_ops.h"
 #include "esp_http_server.h"
+#include "esp_gap_ble_api.h"
+#include "esp_bt_defs.h"
+
 #include "web_file_server.h"
 #include "beacon.h"
+#include "ble.h"
 #include "offlinebuffer.h"
 #include "helperfunctions.h"
+#include "ota.h"
+#include "timer.h"
+#include "display.h"
 
 static const char *TAG = "web_file_server";
+extern void remove_bonded_devices_num(uint8_t num_bond_device);
+
 static const char *web_file_server_commands[WEBFILESERVER_NUM_ENTRIES] = {
     "stat",
     "req",
     "dl",
     "rst",
     "list",
+    "ota",
+    "reboot",
+    "delbond"
 };
 
 static esp_err_t redirect_handler(httpd_req_t *req)
@@ -32,6 +44,40 @@ static esp_err_t redirect_handler(httpd_req_t *req)
 
     return ESP_OK;
 }
+
+static esp_err_t print_bond_devices(httpd_req_t *req)
+{
+    char buffer[128];
+    int dev_num = esp_ble_get_bond_device_num();
+
+    esp_ble_bond_dev_t *dev_list = (esp_ble_bond_dev_t *)malloc(sizeof(esp_ble_bond_dev_t) * dev_num);
+    esp_ble_get_bond_device_list(&dev_num, dev_list);
+    snprintf(buffer, 128, "<tr>\n<td valign=top>Bond device num</td><td> %d </td></tr>\n", dev_num);
+    httpd_resp_sendstr_chunk(req, buffer);
+
+    for (int i = 0; i < dev_num; i++) {
+        snprintf(buffer, 128, "<tr>\n<td valign=top>Bond device %d <a href=\"/csv?cmd=delbond&amp;num=%d\">delete</a>", i, i);
+        httpd_resp_sendstr_chunk(req, buffer);
+        snprintf(buffer, 128, "</td><td style=\"white-space:nowrap;\">ADDR: ");
+        httpd_resp_sendstr_chunk(req, buffer);
+        for (int v = 0; v < sizeof(esp_bd_addr_t); v++){
+            snprintf(buffer, 128, "%02X ", dev_list[i].bd_addr[v]);
+            httpd_resp_sendstr_chunk(req, buffer);
+        }
+        httpd_resp_sendstr_chunk(req, "<br>IRK: ");
+        for (int v = 0; v < sizeof(esp_bt_octet16_t); v++){
+            snprintf(buffer, 128, "%02X ", dev_list[i].bond_key.pid_key.irk[v]);
+            httpd_resp_sendstr_chunk(req, buffer);
+        }
+
+        httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+    }
+
+    free(dev_list);
+
+    return ESP_OK;
+}
+
 
 static esp_err_t http_resp_csv_download(httpd_req_t *req, uint8_t idx)
 {
@@ -70,28 +116,33 @@ static esp_err_t http_resp_csv_download(httpd_req_t *req, uint8_t idx)
 
 static esp_err_t http_resp_list_devices(httpd_req_t *req)
 {
+    esp_err_t ret;
     uint8_t h, m, s;
-    uint16_t last_seen_sec_gone;
+    uint16_t d;
+    uint16_t last_seen_sec_gone, last_send_sec_gone;
+    uint32_t uptime_sec = esp_timer_get_time() / 1000000;
     char buffer[128];
     uint8_t num_devices = CONFIG_BLE_DEVICE_COUNT_CONFIGURED;
     offline_buffer_status_t status;
-
-
-    ESP_LOGD(TAG, "http_resp_list_devices, count = %d", num_devices);
+    const esp_app_desc_t *app_desc = esp_ota_get_app_description();
 
     httpd_resp_sendstr_chunk(req, "<!DOCTYPE html><html><head>\n");
     httpd_resp_sendstr_chunk(req, "<title>Beacon List</title>\n");
     httpd_resp_sendstr_chunk(req, "<meta http-equiv=\"refresh\" content=\"5\">\n");
     httpd_resp_sendstr_chunk(req, "<body style=\"font-family:Arial\">\n");
     httpd_resp_sendstr_chunk(req, "<h1 style=\"text-align: center;\">Beacon List</h1>\n");
-    httpd_resp_sendstr_chunk(req, "<table style=\"margin-left: auto; margin-right: auto;\" border=\"0\" width=\"600\" bgcolor=\"#e0e0e0\">\n");
+
+    // Beacon list table
+    httpd_resp_sendstr_chunk(req, "<table style=\"margin-left: auto; margin-right: auto;\" border=\"0\" bgcolor=\"#e0e0e0\">\n");
     httpd_resp_sendstr_chunk(req, "<tbody>\n");
     httpd_resp_sendstr_chunk(req, "<tr bgcolor=\"#c0c0c0\">\n");
-    httpd_resp_sendstr_chunk(req, "<td style=\"text-align: center;\">Name</td>\n");
-    httpd_resp_sendstr_chunk(req, "<td style=\"text-align: center;\">Last seen ago</td>\n");
-    httpd_resp_sendstr_chunk(req, "<td style=\"text-align: center;\">Status</td>\n");
-    httpd_resp_sendstr_chunk(req, "<td style=\"text-align: center;\">Command</td>\n");
-    httpd_resp_sendstr_chunk(req, "<td style=\"text-align: center;\">Download file</td>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\" width=\"75\">Name</th>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\" width=\"150\">Address</th>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\" width=\"75\">Last seen<br>(sec ago)</th>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\" width=\"75\">MQTT send<br>(sec ago)</th>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\" width=\"185\">Status</th>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\" width=\"95\">Command</th>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\" width=\"90\">Download file</th>\n");
     httpd_resp_sendstr_chunk(req, "</tr>\n");
 
     for (int i = 0; i < num_devices; i++){
@@ -99,6 +150,16 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
         // Name
         httpd_resp_sendstr_chunk(req, "<tr>\n<td>\n");
         httpd_resp_sendstr_chunk(req, ble_beacons[i].beacon_data.name);
+        httpd_resp_sendstr_chunk(req, "</td>\n");
+
+        // bd_addr
+        httpd_resp_sendstr_chunk(req, "<td style=\"white-space:nowrap;\">\n");
+        if(ble_beacons[i].beacon_data.bd_addr_set){
+            for (int v = 0; v < sizeof(esp_bd_addr_t); v++){
+                snprintf(buffer, 128, "%02X ", ble_beacons[i].beacon_data.bd_addr[v]);
+                httpd_resp_sendstr_chunk(req, buffer);
+            }
+        }
         httpd_resp_sendstr_chunk(req, "</td>\n");
 
         // Last seen
@@ -113,6 +174,16 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
                 httpd_resp_sendstr_chunk(req, buffer);
             }
             httpd_resp_sendstr_chunk(req, "</td>\n<td>");
+
+            if(ble_beacons[i].adv_data.mqtt_last_send == 0){
+                httpd_resp_sendstr_chunk(req, "never");
+            } else {
+                last_send_sec_gone = (esp_timer_get_time() - ble_beacons[i].adv_data.mqtt_last_send) / 1000000;
+                convert_s_hhmmss(last_send_sec_gone, &h, &m, &s);
+                snprintf(buffer, 128, "%02d:%02d:%02d", h, m, s);
+                httpd_resp_sendstr_chunk(req, buffer);
+            }
+            httpd_resp_sendstr_chunk(req, "</td>\n<td style=\"white-space:nowrap;\">");
 
             // Download Status
             status = ble_beacons[i].offline_buffer_status;
@@ -163,14 +234,131 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
                     break;
             }
 
-            httpd_resp_sendstr_chunk(req, "</tr>\n");
         } else {
             httpd_resp_sendstr_chunk(req, "<td>");
             httpd_resp_sendstr_chunk(req, "inactive");
             httpd_resp_sendstr_chunk(req, "</td>\n");
         }
+        httpd_resp_sendstr_chunk(req, "</tr>\n");
     }
+
+    // Reboot and OTA commands for device
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>Device</td><td></td><td></td><td></td>");
+    httpd_resp_sendstr_chunk(req, "<td><a href=\"/csv?cmd=reboot\">Reboot</a></td><td></td></tr>\n");
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>Device</td><td></td><td></td><td></td>");
+    httpd_resp_sendstr_chunk(req, "<td style=\"white-space:nowrap;\"><a href=\"/csv?cmd=ota\">Start OTA</a></td><td></td></tr>\n");
     httpd_resp_sendstr_chunk(req, "</tbody></table>");
+
+    httpd_resp_sendstr_chunk(req, "</br></br>\n");
+
+    // Status table
+    httpd_resp_sendstr_chunk(req, "<table style=\"margin-left: auto; margin-right: auto;\" border=\"0\" bgcolor=\"#e0e0e0\">\n");
+    httpd_resp_sendstr_chunk(req, "<tbody>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr bgcolor=\"#c0c0c0\">\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\" width=\"300\">Flag/Field</th>\n");
+    httpd_resp_sendstr_chunk(req, "<th style=\"text-align: center;\" width=\"465\">Status</th>\n");
+    httpd_resp_sendstr_chunk(req, "</tr>\n");
+
+    convert_s_ddhhmmss(uptime_sec, &d, &h, &m, &s);
+    snprintf(buffer, 128, "%3dd %02d:%02d:%02d", d, h, m, s);
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>uptime</td><td>");
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>gattc_connect</td><td>");
+    httpd_resp_sendstr_chunk(req, (gattc_connect == true ? "true":"false"));
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>gattc_is_connected</td><td>");
+    httpd_resp_sendstr_chunk(req, (gattc_is_connected == true ? "true":"false"));
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>gattc_scanning</td><td>");
+    httpd_resp_sendstr_chunk(req, (gattc_scanning == true ? "true":"false"));
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>gattc_offline_buffer_downloading</td><td>");
+    httpd_resp_sendstr_chunk(req, (gattc_offline_buffer_downloading == true ? "true":"false"));
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>gattc_give_up_now</td><td>");
+    httpd_resp_sendstr_chunk(req, (gattc_give_up_now == true ? "true":"false"));
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>gattc_connect_beacon_idx</td><td>");
+    snprintf(buffer, 128, "%d", gattc_connect_beacon_idx);
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>app_desc->version</td><td>");
+    snprintf(buffer, 128, "%s", app_desc->version);
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>app_desc->project_name</td><td>");
+    snprintf(buffer, 128, "%s", app_desc->project_name);
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>app_desc->idf_ver</td><td>");
+    snprintf(buffer, 128, "%s", app_desc->idf_ver);
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>run_idle_timer</td><td>");
+    snprintf(buffer, 128, "%s", (get_run_idle_timer()== true ? "true":"false"));
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>idle_timer_running</td><td>");
+    snprintf(buffer, 128, "%s", (idle_timer_is_running()== true ? "true":"false"));
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>run_periodic_timer</td><td>");
+    snprintf(buffer, 128, "%s", (get_run_periodic_timer()== true ? "true":"false"));
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>periodic_timer_running</td><td>");
+    snprintf(buffer, 128, "%s", (periodic_timer_is_running()== true ? "true":"false"));
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>turn_display_off</td><td>");
+    snprintf(buffer, 128, "%s", (turn_display_off== true ? "true":"false"));
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>display_status.display_message</td><td>");
+    snprintf(buffer, 128, "%s", (display_status.display_message== true ? "true":"false"));
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>display_status.display_message_is_shown</td><td>");
+    snprintf(buffer, 128, "%s", (display_status.display_message_is_shown== true ? "true":"false"));
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    const esp_partition_t *running = esp_ota_get_running_partition();
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>OTA running partition</td><td>");
+    snprintf(buffer, 128, "type %d subtype %d (offset 0x%08x)", running->type, running->subtype, running->address);
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    const esp_partition_t *configured = esp_ota_get_boot_partition();
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>OTA configured partition</td><td>");
+    snprintf(buffer, 128, "type %d subtype %d (offset 0x%08x)", configured->type, configured->subtype, configured->address);
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    // print bond devices
+    ret = print_bond_devices(req);
+    ESP_ERROR_CHECK(ret);
+
+    httpd_resp_sendstr_chunk(req, "</tbody></table>");
+
     httpd_resp_sendstr_chunk(req, "</body></html>");
     httpd_resp_sendstr_chunk(req, NULL);
 
@@ -190,6 +378,7 @@ esp_err_t csv_get_handler(httpd_req_t *req)
     uint8_t idx = UNKNOWN_BEACON;
     offline_buffer_status_t status;
     web_file_server_cmd_t cmd = WEBFILESERVER_NO_CMD;
+    int num;
 
     ESP_LOGD(TAG, "csv_get_handler >");
 
@@ -212,6 +401,18 @@ esp_err_t csv_get_handler(httpd_req_t *req)
                     break;
                 default:
                     ESP_LOGD(TAG, "    beac=not set");
+                    break;
+            }
+
+            // get num (just a parameter for commands) out of query
+            ret = httpd_query_key_value(buf, "num", param, sizeof(param));
+            switch (ret){
+                case ESP_OK:
+                    ESP_LOGD(TAG, "    num=%s", param);
+                    sscanf(param, "%d", &num);
+                    break;
+                default:
+                    ESP_LOGD(TAG, "    num=not set");
                     break;
             }
 
@@ -265,9 +466,7 @@ esp_err_t csv_get_handler(httpd_req_t *req)
             } else {
                 switch(ble_beacons[idx].offline_buffer_status){
                     case OFFLINE_BUFFER_STATUS_NONE:
-                        ble_beacons[idx].p_buffer_download = (ble_os_meas_t *) malloc(sizeof(ble_os_meas_t) * CONFIG_OFFLINE_BUFFER_SIZE);
-                        ble_beacons[idx].offline_buffer_count = 0;
-                        ble_beacons[idx].offline_buffer_status = OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED;
+                        alloc_offline_buffer(idx, OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED);
                         break;
                     case OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED:
                         ESP_LOGD(TAG, "already requested");
@@ -304,18 +503,15 @@ esp_err_t csv_get_handler(httpd_req_t *req)
                     break;
                 case OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED:
                     ESP_LOGD(TAG, "set to status none");
-                    ble_beacons[idx].offline_buffer_status = OFFLINE_BUFFER_STATUS_NONE;
-                    ble_beacons[idx].offline_buffer_count = 0;
-                    free(ble_beacons[idx].p_buffer_download);
+                    free_offline_buffer(idx, OFFLINE_BUFFER_STATUS_NONE);
                     break;
                 case OFFLINE_BUFFER_STATUS_DOWNLOAD_IN_PROGRESS:
-                    ESP_LOGD(TAG, "already in progress, wait for now, cannot be stopped yet");
+                    ESP_LOGD(TAG, "already in progress, wait for now, give up next time possible...");
+                    gattc_give_up_now = true;
                     break;
                 case OFFLINE_BUFFER_STATUS_DOWNLOAD_AVAILABLE:
                     ESP_LOGD(TAG, "already available for download");
-                    ble_beacons[idx].offline_buffer_status = OFFLINE_BUFFER_STATUS_NONE;
-                    ble_beacons[idx].offline_buffer_count = 0;
-                    free(ble_beacons[idx].p_buffer_download);
+                    free_offline_buffer(idx, OFFLINE_BUFFER_STATUS_NONE);
                     break;
                 default:
                     ESP_LOGD(TAG, "unhandled switch case");
@@ -327,6 +523,30 @@ esp_err_t csv_get_handler(httpd_req_t *req)
         case WEBFILESERVER_CMD_LIST:
             ESP_LOGD(TAG, "csv_get_handler WEBFILESERVER_CMD_LIST");
             http_resp_list_devices(req);
+            break;
+
+        case WEBFILESERVER_CMD_OTA:
+            ESP_LOGD(TAG, "csv_get_handler WEBFILESERVER_CMD_OTA");
+            redirect_handler(req);
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            xEventGroupSetBits(ota_evg, OTA_START_UPDATE);
+            break;
+
+        case WEBFILESERVER_CMD_REBOOT:
+            ESP_LOGD(TAG, "csv_get_handler WEBFILESERVER_CMD_REBOOT");
+            redirect_handler(req);
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            ESP_LOGE(TAG, "reboot flag is set -> esp_restart() -> REBOOT");
+            fflush(stdout);
+            esp_restart();
+
+            break;
+
+        case WEBFILESERVER_CMD_DELBOND:
+            ESP_LOGD(TAG, "csv_get_handler WEBFILESERVER_CMD_DELBOND");
+            ESP_LOGI(TAG, "WEBFILESERVER_CMD_DELBOND, delete %d", num);
+            remove_bonded_devices_num(num);
+            redirect_handler(req);
             break;
 
         default:

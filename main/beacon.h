@@ -1,6 +1,7 @@
 #ifndef __BEACON_H__
 #define __BEACON_H__
 
+#include "esp_bt_defs.h"
 #include "offlinebuffer.h"
 
 typedef struct  {
@@ -8,6 +9,8 @@ typedef struct  {
     uint16_t    major;
     uint16_t    minor;
     char        name[8];
+    esp_bd_addr_t bd_addr;
+    bool        bd_addr_set;
 } beacon_data_t;
 
 typedef struct  {
@@ -75,10 +78,10 @@ extern esp_ble_mybeacon_vendor_t mybeacon_common_vendor_v3;
 beacon_type_t esp_ble_is_mybeacon_packet (uint8_t *adv_data, uint8_t adv_data_len, uint8_t scan_rsp_len);
 void decode_mybeacon_packet_v3(esp_ble_mybeacon_v3_t *mybeacon_data,
     uint8_t *idx, uint16_t *maj, uint16_t *min, float *temp, float *humidity, uint16_t *battery,
-    int16_t *x, int16_t *y, int16_t *z, int8_t rssi, bool *is_beacon_active);
+    int16_t *x, int16_t *y, int16_t *z, int8_t rssi, bool *is_beacon_active, bool *is_beacon_close);
 void decode_mybeacon_packet_v4(esp_ble_mybeacon_payload_t *mybeacon_payload, uint8_t *ble_adv,
     uint8_t *idx, uint16_t *maj, uint16_t *min, float *temp, float *humidity, uint16_t *battery,
-    int16_t *x, int16_t *y, int16_t *z, int8_t rssi, bool *is_beacon_active);
+    int16_t *x, int16_t *y, int16_t *z, int8_t rssi, bool *is_beacon_active, bool *is_beacon_close);
 
 uint8_t beacon_maj_min_to_idx(uint16_t maj, uint16_t min);
 uint8_t beacon_name_to_idx(char *adv_name);

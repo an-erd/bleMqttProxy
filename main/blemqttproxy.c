@@ -24,6 +24,9 @@
 #include "esp_gatt_common_api.h"
 #include "esp_log.h"
 #include "esp_ota_ops.h"
+#include "esp_flash_partitions.h"
+#include "esp_partition.h"
+#include "errno.h"
 #include "esp_timer.h"
 #include "lwip/sockets.h"
 #include <tcpip_adapter.h>
@@ -34,6 +37,7 @@
 #include "iot_param.h"
 #include <inttypes.h>
 #include <esp_http_server.h>
+#include "esp_http_client.h"
 
 #include "helperfunctions.h"
 #include "display.h"
@@ -44,6 +48,7 @@
 #include "timer.h"
 #include "web_file_server.h"
 #include "offlinebuffer.h"
+#include "ota.h"
 
 static const char* TAG = "BLEMQTTPROXY";
 
@@ -63,6 +68,7 @@ esp_err_t save_blemqttproxy_param();
 static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
 static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param);
 static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param);
+static void show_bonded_devices(void);
 
 static esp_ble_scan_params_t ble_scan_params = {
     .scan_type              = BLE_SCAN_TYPE_ACTIVE,
@@ -166,7 +172,7 @@ void button_release_cb(void* arg)
     char* pstr = (char*) arg;
     UNUSED(pstr);
 
-    ESP_LOGI(TAG, "heap: %d\n", esp_get_free_heap_size());
+    ESP_LOGD(TAG, "heap: %d", esp_get_free_heap_size());
 
     if(!display_status.button_enabled){
         ESP_LOGD(TAG, "button_release_cb: button not enabled");
@@ -183,6 +189,15 @@ void button_release_cb(void* arg)
             set_run_periodic_timer(true);
         }
         turn_display_off = false;
+        xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
+        return;
+    }
+
+    if(display_status.display_message_is_shown){
+        oneshot_display_message_timer_touch();
+        toggle_beacon_idx_active(display_message_content.beac);
+        snprintf(display_message_content.comment, 128, "Activated: %c", (is_beacon_idx_active(display_message_content.beac)? 'y':'n'));
+        display_message_content.need_refresh = true;
         xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
         return;
     }
@@ -233,73 +248,132 @@ __attribute__((unused)) void periodic_wdt_timer_start(){
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_wdt_timer, WDT_TIMER_DURATION));
 }
 
+static __attribute__((unused)) void send_mqtt_uptime_heap_last_seen(uint16_t lowest_last_seen_sec, uint16_t lowest_last_send_sec){
+    EventBits_t uxReturn;
+    int msg_id = 0;
+    char buffer[32], buffer_topic[32], buffer_payload[32];
+    bool wifi_connected, mqtt_connected;
+    uint32_t uptime_sec;
+    tcpip_adapter_ip_info_t ipinfo;
+
+    // send uptime and free heap to MQTT
+    uxReturn = xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, 0);
+    wifi_connected = uxReturn & WIFI_CONNECTED_BIT;
+
+    uxReturn = xEventGroupWaitBits(mqtt_evg, MQTT_CONNECTED_BIT, false, true, 0);
+    mqtt_connected = uxReturn & MQTT_CONNECTED_BIT;
+
+    if(wifi_connected && mqtt_connected){
+        tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ipinfo);
+        sprintf(buffer, IPSTR, IP2STR(&ipinfo.ip));
+        snprintf(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "uptime");
+        uptime_sec = esp_timer_get_time()/1000000;
+        snprintf(buffer_payload, 32, "%d", uptime_sec);
+        ESP_LOGD(TAG, "MQTT %s -> uptime %s", buffer_topic, buffer_payload);
+        msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
+        ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+        if(msg_id == -1){
+            mqtt_packets_fail++;
+        } else {
+            mqtt_packets_send++;
+        }
+
+        snprintf(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "free_heap");
+        snprintf(buffer_payload, 32, "%d", esp_get_free_heap_size());
+        ESP_LOGD(TAG, "MQTT %s -> free_heap %s", buffer_topic, buffer_payload);
+        msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
+        ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+        if(msg_id == -1){
+            mqtt_packets_fail++;
+        } else {
+            mqtt_packets_send++;
+        }
+
+        snprintf(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "last_seen");
+        snprintf(buffer_payload, 32, "%d", lowest_last_seen_sec);
+        ESP_LOGD(TAG, "MQTT %s -> lowest_last_seen_sec %s", buffer_topic, buffer_payload);
+        msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
+        ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+        if(msg_id == -1){
+            mqtt_packets_fail++;
+        } else {
+            mqtt_packets_send++;
+        }
+
+        snprintf(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "last_send");
+        snprintf(buffer_payload, 32, "%d", lowest_last_send_sec);
+        ESP_LOGD(TAG, "MQTT %s -> lowest_last_send_sec %s", buffer_topic, buffer_payload);
+        msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
+        ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+        if(msg_id == -1){
+            mqtt_packets_fail++;
+        } else {
+            mqtt_packets_send++;
+        }
+    }
+}
+
 void periodic_wdt_timer_callback(void* arg)
 {
     EventBits_t uxSet, uxReturn;
-
-    uint8_t beacon_to_take = UNKNOWN_BEACON;
+    bool wifi_connected, mqtt_connected;
+    uint8_t beacon_to_take_seen = UNKNOWN_BEACON;
+    uint8_t beacon_to_take_send = UNKNOWN_BEACON;
     uint16_t lowest_last_seen_sec = CONFIG_WDT_LAST_SEEN_THRESHOLD;
-    uint16_t temp_last_seen_sec;
-    uint32_t uptime_sec;
-    tcpip_adapter_ip_info_t ipinfo;
-    int msg_id = 0;
-    char buffer[128];
-    char buffer_topic[128];
-    char buffer_payload[128];
-    bool wifi_connected;
-    bool mqtt_connected;
+    uint16_t lowest_last_send_sec = CONFIG_WDT_LAST_SEND_THRESHOLD;
+    uint16_t temp_last_seen_sec, temp_last_send_sec;
 
-    // send uptime to MQTT
-    uxReturn = xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, 0);
-    wifi_connected = uxReturn & WIFI_CONNECTED_BIT;
-    if(wifi_connected){
-        tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ipinfo);
-        sprintf(buffer, IPSTR, IP2STR(&ipinfo.ip));
-        snprintf(buffer_topic, 128,  CONFIG_WDT_MQTT_FORMAT, buffer, "uptime");
-        uptime_sec = esp_timer_get_time()/1000000;
-        snprintf(buffer_payload, 128, "%d", uptime_sec);
-        ESP_LOGI(TAG, "MQTT %s -> uptime %s", buffer_topic, buffer_payload);
-        msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
-        ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
-    }
 
     for(int i=0; i < CONFIG_BLE_DEVICE_COUNT_USE; i++){
         if(is_beacon_idx_active(i)){
             temp_last_seen_sec = (esp_timer_get_time() - ble_beacons[i].adv_data.last_seen)/1000000;
             if(temp_last_seen_sec < lowest_last_seen_sec){
-                beacon_to_take = i;
+                beacon_to_take_seen = i;
                 lowest_last_seen_sec = temp_last_seen_sec;
+            }
+            temp_last_send_sec = (esp_timer_get_time() - ble_beacons[i].adv_data.mqtt_last_send)/1000000;
+            if(temp_last_send_sec < lowest_last_send_sec){
+                beacon_to_take_send = i;
+                lowest_last_send_sec = temp_last_send_sec;
             }
         }
     }
+#ifdef CONFIG_WDT_SEND_REGULAR_UPTIME_HEAP_MQTT
+    send_mqtt_uptime_heap_last_seen(lowest_last_seen_sec, lowest_last_send_sec);
+#endif
 
-    if(beacon_to_take == UNKNOWN_BEACON){
-        return;
-    }
+    ESP_LOGD(TAG, "check 1: lowest_last_seen_sec %d, lowest_last_send_sec %d, beacon_to_take_seen %d, beacon_to_take_send %d",
+        lowest_last_seen_sec, lowest_last_send_sec, beacon_to_take_seen, beacon_to_take_send );
 
-    if(lowest_last_seen_sec >= CONFIG_WDT_LAST_SEEN_THRESHOLD){
+    if((lowest_last_seen_sec >= CONFIG_WDT_LAST_SEEN_THRESHOLD) || (lowest_last_send_sec >= CONFIG_WDT_LAST_SEND_THRESHOLD)){
+        ESP_LOGD(TAG, "check 2: lowest_last_seen_sec >= CONFIG_WDT_LAST_SEEN_THRESHOLD: %d, lowest_last_send_sec >= CONFIG_WDT_LAST_SEND_THRESHOLD: %d",
+            (lowest_last_seen_sec >= CONFIG_WDT_LAST_SEEN_THRESHOLD), (lowest_last_send_sec >= CONFIG_WDT_LAST_SEND_THRESHOLD) );
 
         uxReturn = xEventGroupWaitBits(mqtt_evg, MQTT_CONNECTED_BIT, false, true, 0);
         mqtt_connected = uxReturn & MQTT_CONNECTED_BIT;
 
-        // uxReturn = xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, 0);
-        // wifi_connected = uxReturn & WIFI_CONNECTED_BIT;
+        uxReturn = xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, 0);
+        wifi_connected = uxReturn & WIFI_CONNECTED_BIT;
 
-        ESP_LOGE(TAG, "periodic_wdt_timer_callback: last seen > threshold: %d sec, WIFI: %s, MQTT (enabled/onnected): %s/%s", lowest_last_seen_sec,
+        ESP_LOGD(TAG, "periodic_wdt_timer_callback: last seen > threshold: %d sec, last send > threshold: %d sec, WIFI: %s, MQTT (enabled/connected): %s/%s",
+            lowest_last_seen_sec, lowest_last_send_sec,
             (wifi_connected ? "y" : "n"), (CONFIG_USE_MQTT ? "y" : "n"), (mqtt_connected ? "y" : "n"));
 
         uxSet = 0;
-        if(CONFIG_WDT_REBOOT_LAST_SEEN_THRESHOLD){
+        if( ((CONFIG_WDT_REBOOT_LAST_SEEN_THRESHOLD == 1) && (lowest_last_seen_sec >= CONFIG_WDT_LAST_SEEN_THRESHOLD))
+            || ((CONFIG_WDT_REBOOT_LAST_SEND_THRESHOLD == 1) && (lowest_last_send_sec >= CONFIG_WDT_LAST_SEND_THRESHOLD)) ){
             uxSet |= UPDATE_ESP_RESTART;
+            ESP_LOGD(TAG, "periodic_wdt_timer_callback: reboot/mqtt flag set: %d, check 1", uxSet);
         }
 
         if(CONFIG_WDT_SEND_MQTT_BEFORE_REBOOT){
             uxSet |= UPDATE_ESP_MQTT_RESTART;
+            ESP_LOGD(TAG, "periodic_wdt_timer_callback: reboot/mqtt flag set: %d, check 2", uxSet);
         }
 
         if(uxSet){
-            ESP_LOGE(TAG, "periodic_wdt_timer_callback: reboot/mqtt flag set: %d", uxSet);
-            esp_restart_mqtt_beacon_to_take = beacon_to_take;
+            ESP_LOGD(TAG, "periodic_wdt_timer_callback: reboot/mqtt flag set: %d, check 3", uxSet);
+            esp_restart_mqtt_beacon_to_take = MIN(beacon_to_take_seen, beacon_to_take_send);
             xEventGroupSetBits(s_wdt_evg, uxSet);
         }
     }
@@ -413,6 +487,25 @@ void mqtt_init(void)
 
     mqtt_client = esp_mqtt_client_init(&mqtt_cfg);
     esp_mqtt_client_start(mqtt_client);
+}
+
+bool is_beacon_bd_addr_set(uint16_t maj, uint16_t min)
+{
+    uint8_t idx = beacon_maj_min_to_idx(maj, min);
+
+    return ble_beacons[idx].beacon_data.bd_addr_set;
+}
+
+void set_beaconaddress(uint16_t maj, uint16_t min, esp_bd_addr_t *p_bd_addr)
+{
+    uint8_t idx = beacon_maj_min_to_idx(maj, min);
+
+    if ((ble_beacons[idx].beacon_data.bd_addr_set) || (idx == UNKNOWN_BEACON)){
+        return;
+    }
+
+    memcpy(ble_beacons[idx].beacon_data.bd_addr, *p_bd_addr, sizeof(esp_bd_addr_t));
+    ble_beacons[idx].beacon_data.bd_addr_set = true;
 }
 
 void update_adv_data(uint16_t maj, uint16_t min, int8_t measured_power,
@@ -530,11 +623,13 @@ static void __attribute__((unused)) show_bonded_devices(void)
 
     esp_ble_bond_dev_t *dev_list = (esp_ble_bond_dev_t *)malloc(sizeof(esp_ble_bond_dev_t) * dev_num);
     esp_ble_get_bond_device_list(&dev_num, dev_list);
-    ESP_LOGI(TAG, "Bonded devices number : %d\n", dev_num);
-
-    ESP_LOGI(TAG, "Bonded devices list : %d\n", dev_num);
+    ESP_LOGI(TAG, "Bonded devices number : %d", dev_num);
     for (int i = 0; i < dev_num; i++) {
+        ESP_LOGI(TAG, "Bond device num %d,", i);
+        ESP_LOGI(TAG, "bd_addr");
         ESP_LOG_BUFFER_HEX_LEVEL(TAG, (void *)dev_list[i].bd_addr, sizeof(esp_bd_addr_t), ESP_LOG_INFO);
+        ESP_LOGI(TAG, "bond_key.pid_key.irk");
+        ESP_LOG_BUFFER_HEX_LEVEL(TAG, (void *)dev_list[i].bond_key.pid_key.irk, sizeof(esp_bt_octet16_t), ESP_LOG_INFO);
     }
 
     free(dev_list);
@@ -549,6 +644,17 @@ static void __attribute__((unused)) remove_all_bonded_devices(void)
     for (int i = 0; i < dev_num; i++) {
         esp_ble_remove_bond_device(dev_list[i].bd_addr);
     }
+
+    free(dev_list);
+}
+
+void remove_bonded_devices_num(uint8_t num_bond_device)
+{
+    int dev_num = esp_ble_get_bond_device_num();
+
+    esp_ble_bond_dev_t *dev_list = (esp_ble_bond_dev_t *)malloc(sizeof(esp_ble_bond_dev_t) * dev_num);
+    esp_ble_get_bond_device_list(&dev_num, dev_list);
+        esp_ble_remove_bond_device(dev_list[num_bond_device].bd_addr);
 
     free(dev_list);
 }
@@ -568,6 +674,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         memcpy(gl_profile_tab[PROFILE_A_APP_ID].remote_bda, p_data->connect.remote_bda, sizeof(esp_bd_addr_t));
         ESP_LOGD(TAG, "REMOTE BDA:");
         ESP_LOG_BUFFER_HEX_LEVEL(TAG, gl_profile_tab[PROFILE_A_APP_ID].remote_bda, sizeof(esp_bd_addr_t), ESP_LOG_DEBUG);
+        gattc_is_connected = true;
         esp_err_t mtu_ret = esp_ble_gattc_send_mtu_req (gattc_if, p_data->connect.conn_id);
         if (mtu_ret){
             ESP_LOGE(TAG, "config MTU error, error code = %x", mtu_ret);
@@ -802,6 +909,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
                 ESP_LOGE(TAG, "esp_ble_gattc_close, error status %d", ret_status);
             }
             ble_beacons[idx].offline_buffer_status = OFFLINE_BUFFER_STATUS_DOWNLOAD_AVAILABLE;
+            gattc_offline_buffer_downloading = false;
         }
         break;
     }
@@ -852,8 +960,22 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         break;
     case ESP_GATTC_DISCONNECT_EVT:
         ESP_LOGD(TAG, "ESP_GATTC_DISCONNECT_EVT");
+        if(gattc_offline_buffer_downloading) {
+            if(gattc_give_up_now == true){
+                free_offline_buffer(gattc_connect_beacon_idx, OFFLINE_BUFFER_STATUS_NONE);
+                gattc_give_up_now = false;
+                gattc_offline_buffer_downloading = false;
+            } else {
+                // disconnect occured but download not completed, maybe next time
+                reset_offline_buffer(gattc_connect_beacon_idx, OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED);
+                gattc_offline_buffer_downloading = false;
+            }
+        }
+
         gattc_connect = false;
+        gattc_is_connected = false;
         gattc_connect_beacon_idx = UNKNOWN_BEACON;
+        gattc_give_up_now = false;
         get_server = false;
         device_notify_1401 = false;
         device_indicate_2A52 = false;
@@ -891,7 +1013,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
     case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: {
         ESP_LOGD(TAG, "ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT");
         uint32_t duration = 0;  // scan permanently
-        esp_ble_gap_start_scanning(duration);   // TODO
+        esp_ble_gap_start_scanning(duration);
         break;
     }
     case ESP_GAP_BLE_SCAN_START_COMPLETE_EVT:
@@ -901,6 +1023,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
             ESP_LOGE(TAG, "Scan start failed: %s", esp_err_to_name(err));
         }
         ESP_LOGD(TAG, "scan start success");
+        gattc_scanning = true;
         break;
     case ESP_GAP_BLE_PASSKEY_REQ_EVT:                           /* passkey request event */
         /* Call the following function to input the passkey which is displayed on the remote device */
@@ -980,6 +1103,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         float temp = 0, humidity = 0;
 
         bool is_beacon_active = true;
+        bool is_beacon_close = false;
         bool mqtt_send_adv = false;
 
         switch (scan_result->scan_rst.search_evt) {
@@ -1006,7 +1130,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
 
                 case BEACON_V3: {
                     decode_mybeacon_packet_v3((esp_ble_mybeacon_v3_t*)(scan_result->scan_rst.ble_adv), &idx, &maj, &min, &temp, &humidity, &battery,
-                        &x, &y, &z, scan_result->scan_rst.rssi, &is_beacon_active);
+                        &x, &y, &z, scan_result->scan_rst.rssi, &is_beacon_active, &is_beacon_close);
                     break;
                 }
 
@@ -1016,12 +1140,21 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     esp_ble_mybeacon_payload_t *mybeacon_payload = (esp_ble_mybeacon_payload_t *)(&scan_result->scan_rst.ble_adv[11]);
 
                     decode_mybeacon_packet_v4(mybeacon_payload, scan_result->scan_rst.ble_adv, &idx, &maj, &min, &temp, &humidity, &battery,
-                        &x, &y, &z, scan_result->scan_rst.rssi, &is_beacon_active);
+                        &x, &y, &z, scan_result->scan_rst.rssi, &is_beacon_active, &is_beacon_close);
                     break;
                 }
                 default:
                     ESP_LOGE(TAG, "ESP_GAP_SEARCH_INQ_RES_EVT: should not happen");
                     break;
+                }
+
+                if(is_beacon_close && (!display_status.display_message_is_shown)){
+                    display_message_content.beac = idx;
+                    snprintf(display_message_content.title, 32, "Beacon Identified");
+                    snprintf(display_message_content.message, 32, "Name: %s", ble_beacons[idx].beacon_data.name);
+                    snprintf(display_message_content.comment, 32, "Activated: %c", (is_beacon_idx_active(idx)? 'y':'n'));
+                    snprintf(display_message_content.action, 32, "%s", "Toggle active w/Button");
+                    display_message_show();
                 }
 
                 if(!is_beacon_active){
@@ -1033,16 +1166,27 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 ESP_LOGI(TAG, "(0x%04x%04x) rssi %3d | temp %5.1f | hum %5.1f | x %+6d | y %+6d | z %+6d | batt %4d | mqtt send %c",
                     maj, min, scan_result->scan_rst.rssi, temp, humidity, x, y, z, battery, (mqtt_send_adv ? 'y':'n') );
 
+                if(!is_beacon_bd_addr_set(maj, min)){
+                    set_beaconaddress(maj, min, &scan_result->scan_rst.bda);
+                }
+
                 update_adv_data(maj, min, scan_result->scan_rst.rssi, temp, humidity, battery, mqtt_send_adv);
                 check_update_display(maj, min);
 
                 if ((ble_beacons[idx].offline_buffer_status == OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED) && (gattc_connect == false)) {
-                    gattc_connect = true;
-                    gattc_connect_beacon_idx = idx;
-                    ble_beacons[idx].offline_buffer_status = OFFLINE_BUFFER_STATUS_DOWNLOAD_IN_PROGRESS;
-                    ESP_LOGD(TAG, "connect to the remote device.");
-                    esp_ble_gap_stop_scanning();
-                    esp_ble_gattc_open(gl_profile_tab[PROFILE_A_APP_ID].gattc_if, scan_result->scan_rst.bda, scan_result->scan_rst.ble_addr_type, true);
+                    if(gattc_give_up_now == false){
+                        gattc_connect = true;
+                        gattc_connect_beacon_idx = idx;
+                        ble_beacons[idx].offline_buffer_status = OFFLINE_BUFFER_STATUS_DOWNLOAD_IN_PROGRESS;
+                        gattc_offline_buffer_downloading = true;
+
+                        ESP_LOGD(TAG, "connect to the remote device.");
+                        esp_ble_gap_stop_scanning();
+                        esp_ble_gattc_open(gl_profile_tab[PROFILE_A_APP_ID].gattc_if, scan_result->scan_rst.bda, scan_result->scan_rst.ble_addr_type, true);
+                    } else {
+                        free_offline_buffer(idx, OFFLINE_BUFFER_STATUS_NONE);
+                        gattc_give_up_now = false;
+                    }
                 }
             } else {
                 // ESP_LOGD(TAG, "mybeacon not found");
@@ -1066,6 +1210,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         else {
             ESP_LOGD(TAG, "Stop scan successfully");
         }
+        gattc_scanning = false;
         break;
     case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT:
         ESP_LOGD(TAG, "ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT");
@@ -1206,14 +1351,14 @@ esp_err_t save_blemqttproxy_param()
     return ret;
 }
 
-#if (CONFIG_WDT_REBOOT_LAST_SEEN_THRESHOLD==1 || CONFIG_WDT_SEND_MQTT_BEFORE_REBOOT==1)
+#if ((CONFIG_WDT_REBOOT_LAST_SEEN_THRESHOLD==1) || (CONFIG_WDT_REBOOT_LAST_SEND_THRESHOLD==1) || (CONFIG_WDT_SEND_MQTT_BEFORE_REBOOT==1) )
 static void wdt_task(void* pvParameters)
 {
     EventBits_t uxBits;
-    char buffer_topic[128];
-    char buffer_payload[128];
+    char buffer[32], buffer_topic[32], buffer_payload[32];
     uint32_t uptime_sec;
     int msg_id = 0;
+    tcpip_adapter_ip_info_t ipinfo;
 
     periodic_wdt_timer_start();
 
@@ -1221,20 +1366,27 @@ static void wdt_task(void* pvParameters)
         uxBits = xEventGroupWaitBits(s_wdt_evg, UPDATE_ESP_RESTART | UPDATE_ESP_MQTT_RESTART, pdTRUE, pdFALSE, portMAX_DELAY);
 
         if(uxBits & UPDATE_ESP_MQTT_RESTART){
-            ESP_LOGE(TAG, "ssd1306_update: reboot send mqtt flag is set -> send MQTT message");
+            ESP_LOGI(TAG, "wdt_task: reboot send mqtt flag is set -> send MQTT message");
             uptime_sec = esp_timer_get_time()/1000000;
 
-            snprintf(buffer_topic, 128,  CONFIG_MQTT_FORMAT, "beac",
-                ble_beacons[esp_restart_mqtt_beacon_to_take].beacon_data.major,
-                ble_beacons[esp_restart_mqtt_beacon_to_take].beacon_data.minor, "reboot");
+            tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ipinfo);
+            sprintf(buffer, IPSTR, IP2STR(&ipinfo.ip));
+            snprintf(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "reboot");
             snprintf(buffer_payload, 128, "%d", uptime_sec);
+            ESP_LOGD(TAG, "wdt_task: MQTT message to be send reg. REBOOT: %s %s", buffer_topic, buffer_payload);
+
             msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
             ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+            if(msg_id == -1){
+                mqtt_packets_fail++;
+            } else {
+                mqtt_packets_send++;
+            }
             fflush(stdout);
         }
 
         if(uxBits & UPDATE_ESP_RESTART){
-            ESP_LOGE(TAG, "ssd1306_update: reboot flag is set -> esp_restart() -> REBOOT");
+            ESP_LOGI(TAG, "wdt_task: reboot flag is set -> esp_restart() -> REBOOT");
             fflush(stdout);
             esp_restart();
         }
@@ -1263,23 +1415,31 @@ void adjust_log_level()
     esp_log_level_set("httpd_sess", ESP_LOG_WARN);
     esp_log_level_set("httpd_txrx", ESP_LOG_WARN);
     esp_log_level_set("httpd_parse", ESP_LOG_WARN);
-    esp_log_level_set("wifi", ESP_LOG_WARN);
+    esp_log_level_set("httpd_uri", ESP_LOG_INFO);
+    esp_log_level_set("HTTP_CLIENT", ESP_LOG_INFO);
+    esp_log_level_set("phy", ESP_LOG_WARN);
     esp_log_level_set("phy_init", ESP_LOG_WARN);
-    esp_log_level_set("efuse", ESP_LOG_WARN);
+    esp_log_level_set("esp_image", ESP_LOG_WARN);
     esp_log_level_set("tcpip_adapter", ESP_LOG_WARN);
+    esp_log_level_set("efuse", ESP_LOG_WARN);
     esp_log_level_set("nvs", ESP_LOG_WARN);
+    esp_log_level_set("BTDM_INIT", ESP_LOG_INFO);
+    esp_log_level_set("OUTBOX", ESP_LOG_INFO);
     esp_log_level_set("memory_layout", ESP_LOG_WARN);
     esp_log_level_set("heap_init", ESP_LOG_WARN);
     esp_log_level_set("intr_alloc", ESP_LOG_WARN);
+    esp_log_level_set("esp_ota_ops", ESP_LOG_WARN);
+    esp_log_level_set("boot_comm", ESP_LOG_WARN);
+    esp_log_level_set("wifi", ESP_LOG_WARN);
     esp_log_level_set("BT_BTM", ESP_LOG_WARN);
     esp_log_level_set("MQTT_CLIENT", ESP_LOG_INFO);
-    esp_log_level_set("OUTBOX", ESP_LOG_INFO);
-    esp_log_level_set("httpd_uri", ESP_LOG_INFO);
-    esp_log_level_set("BTDM_INIT", ESP_LOG_INFO);
     esp_log_level_set("timer", ESP_LOG_INFO);
-    // esp_log_level_set("BLEMQTTPROXY", ESP_LOG_INFO);
     esp_log_level_set("beacon", ESP_LOG_INFO);
+    esp_log_level_set("display", ESP_LOG_INFO);
+    esp_log_level_set("event", ESP_LOG_INFO);
     esp_log_level_set("ble_mqtt", ESP_LOG_INFO);
+    esp_log_level_set("web_file_server", ESP_LOG_INFO);
+    esp_log_level_set("BLEMQTTPROXY", ESP_LOG_INFO);
 }
 
 void initialize_ble()
@@ -1332,6 +1492,7 @@ void app_main()
     wifi_evg   = xEventGroupCreate();
     mqtt_evg   = xEventGroupCreate();
     s_wdt_evg    = xEventGroupCreate();
+    ota_evg = xEventGroupCreate();
 
     create_timer();
 
@@ -1366,4 +1527,6 @@ void app_main()
 #if (CONFIG_WDT_REBOOT_LAST_SEEN_THRESHOLD==1 || CONFIG_WDT_SEND_MQTT_BEFORE_REBOOT==1)
     xTaskCreate(&wdt_task, "wdt_task", 2048 * 2, NULL, 5, NULL);
 #endif
+
+    xTaskCreate(&ota_task, "ota_task", 8192, NULL, 5, NULL);
 }

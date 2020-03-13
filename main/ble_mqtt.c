@@ -13,8 +13,8 @@
 
 static const char *TAG = "ble_mqtt";
 
-uint16_t mqtt_packets_send = 0;
-uint16_t mqtt_packets_fail = 0;
+uint32_t mqtt_packets_send = 0;
+uint32_t mqtt_packets_fail = 0;
 
 esp_mqtt_client_handle_t mqtt_client;
 EventGroupHandle_t mqtt_evg;
@@ -44,6 +44,7 @@ bool send_to_mqtt(uint8_t idx, uint16_t maj, uint16_t min, float temp, float hum
             int msg_id = 0;
             char buffer_topic[128];
             char buffer_payload[128];
+            bool dont_send_other_values_too = false;
 
             mqtt_send_adv = true;
 
@@ -51,6 +52,7 @@ bool send_to_mqtt(uint8_t idx, uint16_t maj, uint16_t min, float temp, float hum
             // snprintf(buffer_topic, 128,  "/%s/0x%04x/x%04x/%s", "beac", maj, min, "temp");
             if( (temp < CONFIG_TEMP_LOW) || (temp > CONFIG_TEMP_HIGH) ){
                 ESP_LOGE(TAG, "temperature out of range, not send");
+                dont_send_other_values_too = true;
             } else {
                 snprintf(buffer_topic, 128,  CONFIG_MQTT_FORMAT, "beac", maj, min, "temp");
                 snprintf(buffer_payload, 128, "%.2f", temp);
@@ -63,8 +65,8 @@ bool send_to_mqtt(uint8_t idx, uint16_t maj, uint16_t min, float temp, float hum
                     mqtt_packets_send++;
                 }
             }
-            if( (humidity < CONFIG_HUMIDITY_LOW) || (humidity > CONFIG_HUMIDITY_HIGH) ){
-                ESP_LOGE(TAG, "humidity out of range, not send");
+            if( dont_send_other_values_too || (humidity < CONFIG_HUMIDITY_LOW) || (humidity > CONFIG_HUMIDITY_HIGH) ){
+                ESP_LOGE(TAG, "humidity (or temperature) out of range, not send");
             } else {
                 snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "humidity");
                 snprintf(buffer_payload, 128, "%.2f", humidity);

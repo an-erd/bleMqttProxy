@@ -25,15 +25,27 @@ menu "BLE-MQTT Proxy"
 
         config WDT_LAST_SEEN_THRESHOLD
             int "Threshold value in seconds for last seen to determine 'not alive'"
-            default 60
+            default 1800
 
         config WDT_REBOOT_LAST_SEEN_THRESHOLD
             int "Reboot if the last seen threshold applies."
             default 1
 
-        config WDT_SEND_MQTT_BEFORE_REBOOT
-            int "Send a last MQTT message if last seen threshold applies (just before reboot, if configured)"
+        config WDT_LAST_SEND_THRESHOLD
+            int "Threshold value in seconds for last MQTT send to determine 'not alive'"
+            default 1800
+
+        config WDT_REBOOT_LAST_SEND_THRESHOLD
+            int "Reboot if the last MQTT send threshold applies."
             default 1
+
+        config WDT_SEND_MQTT_BEFORE_REBOOT
+            int "Send (or at least try to send) a last MQTT message if last seen and/or last MQTT send threshold applies (just before reboot, if configured)"
+            default 1
+
+        config WDT_SEND_REGULAR_UPTIME_HEAP_MQTT
+            int "Send a regular MQTT message with uptime and free heap information"
+            default 0
 
         config WDT_MQTT_FORMAT
             string
@@ -67,6 +79,13 @@ menu "BLE-MQTT Proxy"
             range 0 600
             help
                 Number of seconds without button to show empty screen, 0 disables idle timer"
+
+        config DISPLAY_MESSAGE_TIME
+            int "Time in sec to show a message"
+            default 5
+            range 1 15
+            help
+                Number of seconds to show a message, shwitch to last shown screen afterwards.
     endmenu
 
     menu "MQTT Configuration"
@@ -380,10 +399,38 @@ menu "BLE-MQTT Proxy"
 
     endmenu
 
+    menu "OTA"
+
+        config OTA_FIRMWARE_UPG_URL
+            string "Firmware Upgrade URL"
+            default "https://192.168.2.130:8070/blemqttproxy.bin"
+            help
+                URL of server which hosts the firmware image.
+
+        config OTA_SKIP_COMMON_NAME_CHECK
+            bool "Skip server certificate CN fieldcheck"
+            default n
+            help
+                This allows you to skip the validation of OTA server certificate CN field.
+
+        config OTA_SKIP_VERSION_CHECK
+            bool "Skip firmware version check"
+            default n
+            help
+                This allows you to skip the firmware version check.
+
+        config OTA_RECV_TIMEOUT
+            int "OTA Receive Timeout"
+            default 5000
+            help
+                Maximum time for reception
+    endmenu
+
     menu "Test functions"
 
         config DISPLAY_TIME_TEST
             bool "Add extra display screen with tests (currently not in use!)"
             default n
     endmenu
+
 endmenu

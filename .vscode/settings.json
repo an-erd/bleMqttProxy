@@ -128,7 +128,11 @@
         "algorithm": "c",
         "typeinfo": "c",
         "ratio": "c",
-        "sstream": "c"
+        "sstream": "c",
+        "esp_gap_bt_api.h": "c",
+        "offlinebuffer.h": "c",
+        "errno.h": "c",
+        "ota.h": "c"
     },
 	"files.exclude": {
 		"**/.git": true,

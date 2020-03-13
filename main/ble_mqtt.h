@@ -14,8 +14,8 @@ extern EventGroupHandle_t mqtt_evg;
 #define  MQTT_CONNECTED_BIT      (BIT0)
 
 
-extern uint16_t mqtt_packets_send;
-extern uint16_t mqtt_packets_fail;
+extern uint32_t mqtt_packets_send;
+extern uint32_t mqtt_packets_fail;
 
 bool send_to_mqtt(uint8_t idx, uint16_t maj, uint16_t min, float temp, float humidity, uint16_t battery, int8_t rssi);
 
