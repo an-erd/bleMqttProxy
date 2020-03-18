@@ -114,8 +114,6 @@ void draw_pagenumber(ssd1306_canvas_t *canvas, uint8_t nr_act, uint8_t nr_total)
 
 void update_display_message(ssd1306_canvas_t *canvas)
 {
-    char buffer[128], buffer2[32];
-
     ESP_LOGD(TAG, "update_display_message");
 
     ssd1306_draw_string(canvas, 0, 0, (const uint8_t *)display_message_content.title, 10, 1);

@@ -47,3 +47,4 @@ anyfile
 server_certs/ca_cert.pem
 server_certs/ca_key.pem
 server_certs/blemqttproxy.bin
+sdkconfig_WEMOS_LOLIN

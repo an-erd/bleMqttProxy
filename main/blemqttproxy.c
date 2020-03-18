@@ -50,7 +50,14 @@
 #include "offlinebuffer.h"
 #include "ota.h"
 
+#include "esp_freertos_hooks.h"
+#include "lvgl.h"
+#include "lvgl_driver.h"
+#include "lv_testdisplay.h"
+
 static const char* TAG = "BLEMQTTPROXY";
+
+#define CONFIG_M5STACK  1
 
 // IOT param
 #define PARAM_NAMESPACE "blemqttproxy"
@@ -116,7 +123,10 @@ static EventGroupHandle_t s_wdt_evg;
 #define WDT_TIMER_DURATION          (CONFIG_WDT_OWN_INTERVAL * 1000000)
 
 // Button
-#define BUTTON_IO_NUM           0
+#define BUTTON_IO_NUM           0       // for WEMOS LOLIN board
+#define BUTTON_IO_NUM_A         39      // for M5Stack Fire board
+#define BUTTON_IO_NUM_B         38
+#define BUTTON_IO_NUM_C         37
 #define BUTTON_ACTIVE_LEVEL     0
 static int64_t time_button_long_press = 0;  // long button press -> empty display
 
@@ -248,9 +258,9 @@ __attribute__((unused)) void periodic_wdt_timer_start(){
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_wdt_timer, WDT_TIMER_DURATION));
 }
 
-static __attribute__((unused)) void send_mqtt_uptime_heap_last_seen(uint16_t lowest_last_seen_sec, uint16_t lowest_last_send_sec){
+static __attribute__((unused)) void send_mqtt_uptime_heap_last_seen(uint8_t num_act_beacon, uint16_t lowest_last_seen_sec, uint16_t lowest_last_send_sec){
     EventBits_t uxReturn;
-    int msg_id = 0;
+    int msg_id = 0; UNUSED(msg_id);
     char buffer[32], buffer_topic[32], buffer_payload[32];
     bool wifi_connected, mqtt_connected;
     uint32_t uptime_sec;
@@ -270,45 +280,23 @@ static __attribute__((unused)) void send_mqtt_uptime_heap_last_seen(uint16_t low
         uptime_sec = esp_timer_get_time()/1000000;
         snprintf(buffer_payload, 32, "%d", uptime_sec);
         ESP_LOGD(TAG, "MQTT %s -> uptime %s", buffer_topic, buffer_payload);
-        msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
-        ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
-        if(msg_id == -1){
-            mqtt_packets_fail++;
-        } else {
-            mqtt_packets_send++;
-        }
+        msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
 
         snprintf(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "free_heap");
         snprintf(buffer_payload, 32, "%d", esp_get_free_heap_size());
         ESP_LOGD(TAG, "MQTT %s -> free_heap %s", buffer_topic, buffer_payload);
-        msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
-        ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
-        if(msg_id == -1){
-            mqtt_packets_fail++;
-        } else {
-            mqtt_packets_send++;
-        }
+        msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
 
-        snprintf(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "last_seen");
-        snprintf(buffer_payload, 32, "%d", lowest_last_seen_sec);
-        ESP_LOGD(TAG, "MQTT %s -> lowest_last_seen_sec %s", buffer_topic, buffer_payload);
-        msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
-        ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
-        if(msg_id == -1){
-            mqtt_packets_fail++;
-        } else {
-            mqtt_packets_send++;
-        }
+        if(num_act_beacon > 0){
+            snprintf(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "last_seen");
+            snprintf(buffer_payload, 32, "%d", lowest_last_seen_sec);
+            ESP_LOGD(TAG, "MQTT %s -> lowest_last_seen_sec %s", buffer_topic, buffer_payload);
+            msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
 
-        snprintf(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "last_send");
-        snprintf(buffer_payload, 32, "%d", lowest_last_send_sec);
-        ESP_LOGD(TAG, "MQTT %s -> lowest_last_send_sec %s", buffer_topic, buffer_payload);
-        msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
-        ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
-        if(msg_id == -1){
-            mqtt_packets_fail++;
-        } else {
-            mqtt_packets_send++;
+            snprintf(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "last_send");
+            snprintf(buffer_payload, 32, "%d", lowest_last_send_sec);
+            ESP_LOGD(TAG, "MQTT %s -> lowest_last_send_sec %s", buffer_topic, buffer_payload);
+            msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
         }
     }
 }
@@ -322,6 +310,7 @@ void periodic_wdt_timer_callback(void* arg)
     uint16_t lowest_last_seen_sec = CONFIG_WDT_LAST_SEEN_THRESHOLD;
     uint16_t lowest_last_send_sec = CONFIG_WDT_LAST_SEND_THRESHOLD;
     uint16_t temp_last_seen_sec, temp_last_send_sec;
+    uint8_t num_active = num_active_beacon();
 
 
     for(int i=0; i < CONFIG_BLE_DEVICE_COUNT_USE; i++){
@@ -338,9 +327,15 @@ void periodic_wdt_timer_callback(void* arg)
             }
         }
     }
+
 #ifdef CONFIG_WDT_SEND_REGULAR_UPTIME_HEAP_MQTT
-    send_mqtt_uptime_heap_last_seen(lowest_last_seen_sec, lowest_last_send_sec);
+    send_mqtt_uptime_heap_last_seen(num_active, lowest_last_seen_sec, lowest_last_send_sec);
 #endif
+
+    if(num_active == 0){
+        ESP_LOGD(TAG, "periodic_wdt_timer_callback: no beacon active <");
+        return;
+    }
 
     ESP_LOGD(TAG, "check 1: lowest_last_seen_sec %d, lowest_last_send_sec %d, beacon_to_take_seen %d, beacon_to_take_send %d",
         lowest_last_seen_sec, lowest_last_send_sec, beacon_to_take_seen, beacon_to_take_send );
@@ -1161,7 +1156,9 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     break;
                 }
 
+#if CONFIG_USE_MQTT==1
                 mqtt_send_adv = send_to_mqtt(idx, maj, min, temp, humidity, battery, scan_result->scan_rst.rssi);
+#endif
 
                 ESP_LOGI(TAG, "(0x%04x%04x) rssi %3d | temp %5.1f | hum %5.1f | x %+6d | y %+6d | z %+6d | batt %4d | mqtt send %c",
                     maj, min, scan_result->scan_rst.rssi, temp, humidity, x, y, z, battery, (mqtt_send_adv ? 'y':'n') );
@@ -1357,7 +1354,7 @@ static void wdt_task(void* pvParameters)
     EventBits_t uxBits;
     char buffer[32], buffer_topic[32], buffer_payload[32];
     uint32_t uptime_sec;
-    int msg_id = 0;
+    int msg_id = 0; UNUSED(msg_id);
     tcpip_adapter_ip_info_t ipinfo;
 
     periodic_wdt_timer_start();
@@ -1374,14 +1371,7 @@ static void wdt_task(void* pvParameters)
             snprintf(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "reboot");
             snprintf(buffer_payload, 128, "%d", uptime_sec);
             ESP_LOGD(TAG, "wdt_task: MQTT message to be send reg. REBOOT: %s %s", buffer_topic, buffer_payload);
-
-            msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
-            ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
-            if(msg_id == -1){
-                mqtt_packets_fail++;
-            } else {
-                mqtt_packets_send++;
-            }
+            msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
             fflush(stdout);
         }
 
@@ -1430,7 +1420,7 @@ void adjust_log_level()
     esp_log_level_set("intr_alloc", ESP_LOG_WARN);
     esp_log_level_set("esp_ota_ops", ESP_LOG_WARN);
     esp_log_level_set("boot_comm", ESP_LOG_WARN);
-    esp_log_level_set("wifi", ESP_LOG_WARN);
+    esp_log_level_set("wifi", ESP_LOG_INFO);
     esp_log_level_set("BT_BTM", ESP_LOG_WARN);
     esp_log_level_set("MQTT_CLIENT", ESP_LOG_INFO);
     esp_log_level_set("timer", ESP_LOG_INFO);
@@ -1439,7 +1429,7 @@ void adjust_log_level()
     esp_log_level_set("event", ESP_LOG_INFO);
     esp_log_level_set("ble_mqtt", ESP_LOG_INFO);
     esp_log_level_set("web_file_server", ESP_LOG_INFO);
-    esp_log_level_set("BLEMQTTPROXY", ESP_LOG_INFO);
+    esp_log_level_set("BLEMQTTPROXY", ESP_LOG_DEBUG);
 }
 
 void initialize_ble()
@@ -1479,6 +1469,38 @@ void initialize_ble_security()
     esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &rsp_key, sizeof(uint8_t));
 }
 
+static void IRAM_ATTR lv_tick_task(void) {
+	lv_tick_inc(portTICK_RATE_MS);
+}
+
+void initialize_lv()
+{
+    lv_init();
+
+    lvgl_driver_init();
+
+    static lv_color_t buf1[DISP_BUF_SIZE];
+    static lv_color_t buf2[DISP_BUF_SIZE];
+    static lv_disp_buf_t disp_buf;
+    lv_disp_buf_init(&disp_buf, buf1, buf2, DISP_BUF_SIZE);
+
+    lv_disp_drv_t disp_drv;
+    lv_disp_drv_init(&disp_drv);
+    disp_drv.flush_cb = disp_driver_flush;
+    disp_drv.buffer = &disp_buf;
+    lv_disp_drv_register(&disp_drv);
+
+    esp_register_freertos_tick_hook(lv_tick_task);
+
+    lv_testdisplay_create();
+
+    while (1) {
+        vTaskDelay(1);
+        lv_task_handler();
+    }
+}
+
+
 void app_main()
 {
     adjust_log_level();
@@ -1497,9 +1519,18 @@ void app_main()
     create_timer();
 
 #if CONFIG_DISABLE_BUTTON_HEADLESS==0
+#if CONFIG_M5STACK==1
+    button_handle_t btn_handle_a = iot_button_create(BUTTON_IO_NUM_A, BUTTON_ACTIVE_LEVEL);
+    button_handle_t btn_handle_b = iot_button_create(BUTTON_IO_NUM_B, BUTTON_ACTIVE_LEVEL);
+    button_handle_t btn_handle_c = iot_button_create(BUTTON_IO_NUM_C, BUTTON_ACTIVE_LEVEL);
+    iot_button_set_evt_cb(btn_handle_a, BUTTON_CB_PUSH, button_push_cb, "PUSH");
+    iot_button_set_evt_cb(btn_handle_b, BUTTON_CB_PUSH, button_push_cb, "PUSH");
+    iot_button_set_evt_cb(btn_handle_c, BUTTON_CB_PUSH, button_push_cb, "PUSH");
+#else
     button_handle_t btn_handle = iot_button_create(BUTTON_IO_NUM, BUTTON_ACTIVE_LEVEL);
     iot_button_set_evt_cb(btn_handle, BUTTON_CB_PUSH, button_push_cb, "PUSH");
     iot_button_set_evt_cb(btn_handle, BUTTON_CB_RELEASE, button_release_cb, "RELEASE");
+#endif
 #endif // CONFIG_DISABLE_BUTTON_HEADLESS
 
 #ifdef CONFIG_DISPLAY_SSD1306
@@ -1512,6 +1543,8 @@ void app_main()
     ESP_LOGI(TAG, "app_main, start oneshot timer, %d", SPLASH_SCREEN_TIMER_DURATION);
     ESP_ERROR_CHECK(esp_timer_start_once(oneshot_timer, SPLASH_SCREEN_TIMER_DURATION));
 #endif // CONFIG_DISPLAY_SSD1306
+
+    initialize_lv();
 
     xTaskCreate(&wifi_mqtt_task, "wifi_mqtt_task", 2048 * 2, NULL, 5, NULL);
 

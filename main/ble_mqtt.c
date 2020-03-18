@@ -23,6 +23,32 @@ extern EventGroupHandle_t wifi_evg;
 
 #if CONFIG_USE_MQTT==1
 
+
+int mqtt_client_publish(esp_mqtt_client_handle_t client, const char *topic, const char *data, int len, int qos, int retain)
+{
+    EventBits_t uxReturn;
+    bool mqtt_connected, wifi_connected;
+    int msg_id = -1;
+
+    uxReturn = xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, 0);
+    wifi_connected = uxReturn & WIFI_CONNECTED_BIT;
+
+    uxReturn = xEventGroupWaitBits(mqtt_evg, MQTT_CONNECTED_BIT, false, true, 0);
+    mqtt_connected = uxReturn & MQTT_CONNECTED_BIT;
+
+    if(wifi_connected && mqtt_connected){
+        msg_id = esp_mqtt_client_publish(mqtt_client, topic, data, len, qos, retain);
+        ESP_LOGD(TAG, "mqtt_client_publish, msg_id=%d", msg_id);
+        if(msg_id == -1){
+            mqtt_packets_fail++;
+        } else {
+            mqtt_packets_send++;
+        }
+    }
+
+    return msg_id;
+}
+
 bool send_to_mqtt(uint8_t idx, uint16_t maj, uint16_t min, float temp, float humidity, uint16_t battery, int8_t rssi)
 {
     bool mqtt_send_adv = false;
@@ -56,13 +82,9 @@ bool send_to_mqtt(uint8_t idx, uint16_t maj, uint16_t min, float temp, float hum
             } else {
                 snprintf(buffer_topic, 128,  CONFIG_MQTT_FORMAT, "beac", maj, min, "temp");
                 snprintf(buffer_payload, 128, "%.2f", temp);
-                msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
-                ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+                msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
                 if(msg_id == -1){
                     mqtt_send_adv = false;
-                    mqtt_packets_fail++;
-                } else {
-                    mqtt_packets_send++;
                 }
             }
             if( dont_send_other_values_too || (humidity < CONFIG_HUMIDITY_LOW) || (humidity > CONFIG_HUMIDITY_HIGH) ){
@@ -70,31 +92,22 @@ bool send_to_mqtt(uint8_t idx, uint16_t maj, uint16_t min, float temp, float hum
             } else {
                 snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "humidity");
                 snprintf(buffer_payload, 128, "%.2f", humidity);
-                msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
-                ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+                msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
                 if(msg_id == -1){
                     mqtt_send_adv = false;
-                    mqtt_packets_fail++;
-                } else {
-                    mqtt_packets_send++;
                 }
             }
             snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "rssi");
             snprintf(buffer_payload, 128, "%d", rssi);
-            msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
-            ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+            msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
             if( (battery < CONFIG_BATTERY_LOW) || (battery > CONFIG_BATTERY_HIGH )){
                 ESP_LOGE(TAG, "battery out of range, not send");
             } else {
                 snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "battery");
                 snprintf(buffer_payload, 128, "%d", battery);
-                msg_id = esp_mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
-                ESP_LOGD(TAG, "sent publish successful, msg_id=%d", msg_id);
+                msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
                 if(msg_id == -1){
                     mqtt_send_adv = false;
-                    mqtt_packets_fail++;
-                } else {
-                    mqtt_packets_send++;
                 }
             }
         }

@@ -397,3 +397,18 @@ D (35724) BLEMQTTPROXY: 0x3ffba5a4   00 d2 00 ba 40 0b ca                       
 - ble devices
 - ota configuration
 - touch beacon/device to activate
+
+# M5Stack Fire configuration
+
+| Configuration             | Value |
+| ------------------------- | ----- |
+| DISP_SPI_MOSI             | 23    |
+| DISP_SPI_CLK              | 18    |
+| DISP_SPI_CS               | 14    |
+| ILI9341_DC                | 27    |
+| ILI9341_RST               | 33    |
+| ILI9341_BCKL              | 32    |
+| ILI9341_INVERT_DISPLAY    | 1     |
+| ILI9341_BCKL_ACTIVE_LVL   | 1     |
+| LVGL_TFT_DISPLAY_SPI_VSPI | 1     |
+
