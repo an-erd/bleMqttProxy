@@ -1,25 +1,15 @@
 menu "BLE-MQTT Proxy"
 
-    menu "Configure Device"
-
-        choice PROXY_DEVICE
-            prompt "Device to be used"
-            default DEVICE_M5STACK
-            help
-                Choose which device is used for the bleMqttProxy.
-            config DEVICE_BARE_ESP32
-                bool "Bare ESP32 board without display and buttons"
-            config DEVICE_WEMOS_LOLIN_OLED
-                bool "ESP32 WEMOS LOLIN board with OLED (ssd1306)"
-            config DEVICE_M5STACK
-                bool "M5Stack Fire device with ILI9341 TFT Display"
-        endchoice #PROXY_DEVICE
-
-        config DEVICE_BUTTON_ENABLED
-            bool "Enable the board button(s), in particular for display headless mode"
-            default y
-
-    endmenu
+    choice PROXY_DEVICE
+        prompt "Device to be used"
+        default DEVICE_M5STACK
+        help
+            Choose which device is used for the bleMqttProxy.
+        config DEVICE_WEMOS_LOLIN_OLED
+            bool "ESP32 WEMOS LOLIN board with OLED (ssd1306)"
+        config DEVICE_M5STACK
+            bool "M5Stack Fire device with ILI9341 TFT Display"
+    endchoice #PROXY_DEVICE
 
     menu "Wifi Configuration"
 
@@ -82,8 +72,6 @@ menu "BLE-MQTT Proxy"
             prompt "Display to be used"
             help
                 Choose which display to use or configure as a headless device.
-            config DISPLAY_HEADLESS
-                bool "Headless mode"
             config DISPLAY_SSD1306
                 bool "WEMOS Lolin SSD1306 OLED Display"
             config DISPLAY_M5STACK
@@ -386,34 +374,6 @@ menu "BLE-MQTT Proxy"
             int "ms to press for a long button press"
             range 0 10000
             default 2000
-    endmenu
-
-    menu "Local Sensors"
-
-        config ONE_WIRE_GPIO
-            int "OneWire GPIO number"
-	        range 0 34
-	        default 5
-	        help
-		        GPIO number (IOxx) to access One Wire Bus.
-        		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used.
-        		GPIOs 35-39 are input-only so cannot be used to drive the One Wire Bus.
-
-        config OWB_MAX_DEVICES
-            int "Max. number of OnwWireBus devices"
-            range 0 8
-            default 0
-
-        config LOCAL_SENSORS_TEMPERATURE
-            int "Enable local temperature sensor driver (ds18b20)"
-            range 0 1
-            default 1
-
-        config MENU_MIN_LOCAL_SENSOR
-            int "Show the display entry for local sensors only if there are at least X local sensors attached"
-            range 0 8
-            default 1
-
     endmenu
 
     menu "OTA"

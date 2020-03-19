@@ -2,25 +2,20 @@
 
 ## Overview
 
-**bleMqttProxy** is a software for ESP32 boards with display and a push button. It acts as a proxy or gateway service for BLE beacons to a configurable MQTT broker using a WiFi connection. Also, in addition or instead of the Beacons a local temperature sensor can be attached.
+**bleMqttProxy** is a software for ESP32 boards with display and at least one push button. It acts as a proxy or gateway service for BLE beacons to a configurable MQTT broker using a WiFi connection.
 
 Using the push button you can change the information to be displayed (e.g. detailed page per Beacon, local sensors, statistics) or activate/deactivate the Beacons used with this Proxy.
 
-The code is designed for an ESP32 board with OLED display. (It can be purchased using search for "Wemos Lolin ESP32 OLED Module"). Beside an USB connector there are two buttons (reset and a usable button). The display is based on the SSD1306 controller and has a resolution of 128x64 pixels.
+The code is designed for:
+
+- an ESP32 board with OLED display and two buttons (reset and an application usable button). The display is based on the SSD1306 controller and has a resolution of 128x64 pixels. (This board can be purchased using search for "Wemos Lolin ESP32 OLED Module"). 
+- an M5Stack (Fire), see [M5Stack Fire](https://m5stack.com/collections/m5-core/products/fire-iot-development-kit?variant=16804798169178), equipped with three push buttons and an ILI9341 based 320x240 px TFT display and diverse extension possibilities.
 
 ### Provided Services
 
 A web server is available providing status information of the Beacons (e.g., when the beacon was last seen, last MQTT message send, address) and of the proxy service (e.g., uptime, version). Also a reboot or start a OTA Update (over-the-air update) can be initiated.
 
 The BLE beacons provide an offline buffer. Using web server commands a download to the Proxy can be triggered, which, if then available, can be downloads using a browser.
-
-### Sensors to be attached
-
-Currently the following sensor can be attached to the board using the OWB (one-wire bus).
-
-| Sensor  | Description                                        | Data Sheet                                  |
-| ------- | -------------------------------------------------- | ------------------------------------------- |
-| DS18B20 | Programmable Resolution 1-Wire Digital Thermometer | [DS18B20 Data Sheet](Documents/DS18B20.pdf) |
 
 ### Available Buttons on Board
 
@@ -117,7 +112,6 @@ The main purpose of this device:
 
 - Retrieve data
   - from a BLE beacon (e.g. temperature, humidity, acceleration data)
-  - from a locally attached temperature sensor
 - Display data
   - on the OLED display
   - on the web interface
@@ -149,10 +143,6 @@ Step 6) Configure whether the device active mask is to store in persistent memor
 Step 7) Configure the proximity threshold to activate/identify a device by "touching" the board. (not yet implemented)
 
 Step 8) Configure the size of the offline buffer. This value must be the same as in the ble_beacon software, too. It defaults to 1250 entries.
-
-### Retrieve Data from a locally attached temperature sensor
-
-to be done
 
 ### Display Data on the OLED Display
 
@@ -216,15 +206,14 @@ There is one tactile push button available for application usage (in addition to
 
 This section gives an overview on the different screens and the respective button actions.
 
-| Screen            | Number of pages                                              | Description                                                  | Button action (short push)                                   | Button action (long push) |
-| ----------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------- |
-| Splash            | one                                                          | The splash screen is shown for a limited time directly after startup | n/a                                                          | n/a                       |
-| Empty             | one                                                          | The empty screen can be used as a "screen saver". After a limited time, the display is shut down. Exceptions occur for... | Turn display on, show last screen shown again.               | n/a                       |
-| Beacon details    | Multiple, one page per  configured beacon                    | Information screen with detailed information, see details below. | Move to next **"Beacon details"** screen or **"last seen"** screen | toggle active/inactive    |
-| Last seen         | Multiple, each page shows a list with max. 5 entries         | Shows when the beacon was last seen and when the MQTT message was last send. | Move to next **"Last seen"** screen or **"Local temperature"** screen | n/a                       |
-| Local temperature | Multiple, one page per configured local temperature sensor, or none. | Shows information on the temperature from local temperature sensor. <br />**NOT IMPLEMENTED YET!** | Move to next **"App version"** screen                        | n/a                       |
-| App version       | one                                                          | Information on the application and IDF version, project name, IP address, active beacon mask. | Move to next **"Statistics"** screen                         | n/a                       |
-| Statistics        | one                                                          | Information on uptime, WiFi/MQTT status, WiFi connections/failures, MQTT messages send/failed. | Move to next **"Beacon details"** screen again               | Clear statistics values   |
+| Screen         | Number of pages                                      | Description                                                  | Button action (short push)                                   | Button action (long push) |
+| -------------- | ---------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------- |
+| Splash         | one                                                  | The splash screen is shown for a limited time directly after startup | n/a                                                          | n/a                       |
+| Empty          | one                                                  | The empty screen can be used as a "screen saver". After a limited time, the display is shut down. Exceptions occur for... | Turn display on, show last screen shown again.               | n/a                       |
+| Beacon details | Multiple, one page per  configured beacon            | Information screen with detailed information, see details below. | Move to next **"Beacon details"** screen or **"last seen"** screen | toggle active/inactive    |
+| Last seen      | Multiple, each page shows a list with max. 5 entries | Shows when the beacon was last seen and when the MQTT message was last send. | Move to next **"Last seen"** screen or **"App version"** screen | n/a                       |
+| App version    | one                                                  | Information on the application and IDF version, project name, IP address, active beacon mask. | Move to next **"Statistics"** screen                         | n/a                       |
+| Statistics     | one                                                  | Information on uptime, WiFi/MQTT status, WiFi connections/failures, MQTT messages send/failed. | Move to next **"Beacon details"** screen again               | Clear statistics values   |
 
 ##### Screen "Splash"
 
@@ -237,10 +226,6 @@ This section gives an overview on the different screens and the respective butto
 ##### Screen "Last seen"
 
 ![screen_webinterface](Documents/Graphics/screen2.jpg?raw=true "Last seen")
-
-##### Screen "Local temperature"
-
-(not yet available)
 
 ##### Screen "App version"
 

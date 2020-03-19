@@ -164,30 +164,6 @@ void update_display_message(ssd1306_canvas_t *canvas)
         }
         else
         {
-#if CONFIG_LOCAL_SENSORS_TEMPERATURE == 1
-            if (s_owb_num_devices >= CONFIG_MENU_MIN_LOCAL_SENSOR)
-            {
-                display_status.screen_to_show = LOCALTEMP_SCREEN;
-                display_status.localtemp_to_show = 1;
-            }
-            else
-#endif // CONFIG_LOCAL_SENSORS_TEMPERATURE
-            {
-                // skip empty local temperature screen
-                display_status.screen_to_show = APPVERSION_SCREEN;
-            }
-        }
-        break;
-
-    case LOCALTEMP_SCREEN:
-#if CONFIG_LOCAL_SENSORS_TEMPERATURE == 1
-        if (display_status.localtemp_to_show < display_status.num_localtemp_pages)
-        {
-            display_status.localtemp_to_show++;
-        }
-        else
-#endif // CONFIG_LOCAL_SENSORS_TEMPERATURE
-        {
             display_status.screen_to_show = APPVERSION_SCREEN;
         }
         break;
@@ -433,25 +409,6 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, ssd1306_canvas_t *canvas_mess
         return ssd1306_refresh_gram(canvas);
         break;
     }
-
-    case LOCALTEMP_SCREEN:
-#if CONFIG_LOCAL_SENSORS_TEMPERATURE == 1
-        ssd1306_clear_canvas(canvas, 0x00);
-        if (s_owb_num_devices == 0)
-        {
-            snprintf(buffer, 128, "No local temperature!");
-            ssd1306_draw_string(canvas, 0, 0, (const uint8_t *)buffer, 10, 1);
-        }
-        else
-        {
-            // localtemp_to_show
-        }
-        draw_pagenumber(canvas, display_status.localtemp_to_show, display_status.num_localtemp_pages);
-
-        display_status.current_screen = display_status.screen_to_show;
-        return ssd1306_refresh_gram(canvas);
-#endif // CONFIG_LOCAL_SENSORS_TEMPERATURE
-        break;
 
     case APPVERSION_SCREEN:
     {

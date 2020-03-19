@@ -43,7 +43,6 @@
 #include "display.h"
 #include "ble.h"
 #include "beacon.h"
-#include "localsensor.h"
 #include "ble_mqtt.h"
 #include "timer.h"
 #include "web_file_server.h"
@@ -121,8 +120,6 @@ static EventGroupHandle_t s_wdt_evg;
 #define WDT_TIMER_DURATION          (CONFIG_WDT_OWN_INTERVAL * 1000000)
 
 // Button
-#if CONFIG_DEVICE_BUTTON_ENABLED==1
-
 #if CONFIG_DEVICE_WEMOS_LOLIN_OLED==1
 #define BUTTON_IO_NUM           0
 #endif
@@ -136,8 +133,6 @@ static EventGroupHandle_t s_wdt_evg;
 #define BUTTON_ACTIVE_LEVEL     0
 static int64_t time_button_long_press = 0;  // long button press -> empty display
 
-#endif // CONFIG_DEVICE_BUTTON_ENABLED==1
-
 // TODO put to different position
 void clear_stats_values()
 {
@@ -147,7 +142,6 @@ void clear_stats_values()
     mqtt_packets_fail = 0;
 }
 
-#if CONFIG_DEVICE_BUTTON_ENABLED==1
 void button_push_cb(void* arg)
 {
     char* pstr = (char*) arg;
@@ -259,7 +253,6 @@ void button_release_cb(void* arg)
     ESP_LOGD(TAG, "button_release_cb: display_status.current_screen %d screen_to_show %d <",
         display_status.current_screen, display_status.screen_to_show);
 }
-#endif // CONFIG_DEVICE_BUTTON_ENABLED==1
 
 __attribute__((unused)) void periodic_wdt_timer_start(){
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_wdt_timer, WDT_TIMER_DURATION));
@@ -1530,7 +1523,6 @@ void app_main()
 
     create_timer();
 
-#if CONFIG_DEVICE_BUTTON_ENABLED==1
 #if CONFIG_DEVICE_M5STACK==1
     button_handle_t btn_handle_a = iot_button_create(BUTTON_IO_NUM_A, BUTTON_ACTIVE_LEVEL);
     button_handle_t btn_handle_b = iot_button_create(BUTTON_IO_NUM_B, BUTTON_ACTIVE_LEVEL);
@@ -1544,7 +1536,6 @@ void app_main()
     iot_button_set_evt_cb(btn_handle, BUTTON_CB_PUSH, button_push_cb, "PUSH");
     iot_button_set_evt_cb(btn_handle, BUTTON_CB_RELEASE, button_release_cb, "RELEASE");
 #endif
-#endif // CONFIG_DEVICE_BUTTON_ENABLED
 
 #ifdef CONFIG_DISPLAY_SSD1306
     xTaskCreate(&ssd1306_task, "ssd1306_task", 2048 * 2, NULL, 5, NULL);
@@ -1567,12 +1558,6 @@ void app_main()
 
     initialize_ble();
     initialize_ble_security();
-
-#if CONFIG_LOCAL_SENSORS_TEMPERATURE==1
-    init_owb_tempsensor();
-    display_status.num_localtemp_pages = (!s_owb_num_devices ? 1 : s_owb_num_devices);
-    xTaskCreate(&localsensor_task, "localsensor_task", 2048 * 2, NULL, 5, NULL);
-#endif // CONFIG_LOCAL_SENSORS_TEMPERATURE
 
 #if (CONFIG_WDT_REBOOT_LAST_SEEN_THRESHOLD==1 || CONFIG_WDT_SEND_MQTT_BEFORE_REBOOT==1)
     xTaskCreate(&wdt_task, "wdt_task", 2048 * 2, NULL, 5, NULL);
