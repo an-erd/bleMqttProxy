@@ -8,19 +8,22 @@
 #include "helperfunctions.h"
 #include "ble_mqtt.h"
 
+#ifdef CONFIG_DISPLAY_SSD1306
 #include "ssd1306.h"
 #include "ssd1306_fonts.h"
 #include "splashscreen.h"
+#endif
 
 static const char *TAG = "display";
 
-// #ifdef CONFIG_DISPLAY_SSD1306
 
 EventGroupHandle_t s_values_evg;
 extern EventGroupHandle_t wifi_evg;
 extern uint16_t wifi_connections_count_connect;
 extern uint16_t wifi_connections_count_disconnect;
 #define WIFI_CONNECTED_BIT          (BIT0)
+
+#if CONFIG_DISPLAY_HEADLESS==0
 
 esp_timer_handle_t oneshot_display_message_timer;
 #define DISPLAY_MESSAGE_TIME_DURATION       (CONFIG_DISPLAY_MESSAGE_TIME * 1000000)
@@ -48,8 +51,10 @@ display_message_content_t display_message_content =
 
 volatile bool turn_display_off = false;
 
+#ifdef CONFIG_DISPLAY_SSD1306
 ssd1306_canvas_t *display_canvas;
 ssd1306_canvas_t *display_canvas_message;
+#endif // CONFIG_DISPLAY_SSD1306
 
 void oneshot_display_message_timer_callback(void* arg)
 {
@@ -105,6 +110,7 @@ void display_message_stop_show()
     xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
 }
 
+#ifdef CONFIG_DISPLAY_SSD1306
 void draw_pagenumber(ssd1306_canvas_t *canvas, uint8_t nr_act, uint8_t nr_total)
 {
     char buffer2[5];
@@ -121,6 +127,7 @@ void update_display_message(ssd1306_canvas_t *canvas)
     ssd1306_draw_string(canvas, 0, 24, (const uint8_t *)display_message_content.comment, 10, 1);
     ssd1306_draw_string(canvas, 0, 48, (const uint8_t *)display_message_content.action, 10, 1);
 }
+#endif // CONFIG_DISPLAY_SSD1306
 
  void set_next_display_show()
 {
@@ -200,6 +207,8 @@ void update_display_message(ssd1306_canvas_t *canvas)
         break;
     }
 }
+
+#ifdef CONFIG_DISPLAY_SSD1306
 
 esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, ssd1306_canvas_t *canvas_message)
 {
@@ -552,4 +561,7 @@ void ssd1306_task(void *pvParameters)
     }
     vTaskDelete(NULL);
 }
-// #endif // CONFIG_DISPLAY_SSD1306
+
+#endif // CONFIG_DISPLAY_SSD1306
+
+#endif // CONFIG_DISPLAY_HEADLESS==0

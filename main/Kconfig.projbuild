@@ -1,5 +1,26 @@
 menu "BLE-MQTT Proxy"
 
+    menu "Configure Device"
+
+        choice PROXY_DEVICE
+            prompt "Device to be used"
+            default DEVICE_M5STACK
+            help
+                Choose which device is used for the bleMqttProxy.
+            config DEVICE_BARE_ESP32
+                bool "Bare ESP32 board without display and buttons"
+            config DEVICE_WEMOS_LOLIN_OLED
+                bool "ESP32 WEMOS LOLIN board with OLED (ssd1306)"
+            config DEVICE_M5STACK
+                bool "M5Stack Fire device with ILI9341 TFT Display"
+        endchoice #PROXY_DEVICE
+
+        config DEVICE_BUTTON_ENABLED
+            bool "Enable the board button(s), in particular for display headless mode"
+            default y
+
+    endmenu
+
     menu "Wifi Configuration"
 
         config WIFI_SSID
@@ -58,20 +79,16 @@ menu "BLE-MQTT Proxy"
     menu "Display"
 
         choice DISPLAY_MODE
-            prompt "Display to used"
-            default DISPLAY_SSD1306
+            prompt "Display to be used"
             help
-                Choose which display to use or compile as a headless device.
+                Choose which display to use or configure as a headless device.
             config DISPLAY_HEADLESS
                 bool "Headless mode"
             config DISPLAY_SSD1306
-                bool "SSD1306 Display"
+                bool "WEMOS Lolin SSD1306 OLED Display"
+            config DISPLAY_M5STACK
+                bool "M5Stack Fire ILI9341 Display"
         endchoice #DISPLAY_MODE
-
-        config DISABLE_BUTTON_HEADLESS
-            int "Disable button in Headless mode"
-            default 1
-            range 0 1
 
         config DISPLAY_IDLE_TIMER
             int "Display idle timer"

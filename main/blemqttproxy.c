@@ -57,8 +57,6 @@
 
 static const char* TAG = "BLEMQTTPROXY";
 
-#define CONFIG_M5STACK  1
-
 // IOT param
 #define PARAM_NAMESPACE "blemqttproxy"
 #define PARAM_KEY       "activebeac"
@@ -123,14 +121,33 @@ static EventGroupHandle_t s_wdt_evg;
 #define WDT_TIMER_DURATION          (CONFIG_WDT_OWN_INTERVAL * 1000000)
 
 // Button
-#define BUTTON_IO_NUM           0       // for WEMOS LOLIN board
-#define BUTTON_IO_NUM_A         39      // for M5Stack Fire board
+#if CONFIG_DEVICE_BUTTON_ENABLED==1
+
+#if CONFIG_DEVICE_WEMOS_LOLIN_OLED==1
+#define BUTTON_IO_NUM           0
+#endif
+
+#if CONFIG_DEVICE_M5STACK==1
+#define BUTTON_IO_NUM_A         39
 #define BUTTON_IO_NUM_B         38
 #define BUTTON_IO_NUM_C         37
+#endif
+
 #define BUTTON_ACTIVE_LEVEL     0
 static int64_t time_button_long_press = 0;  // long button press -> empty display
 
-#if CONFIG_DISABLE_BUTTON_HEADLESS==0
+#endif // CONFIG_DEVICE_BUTTON_ENABLED==1
+
+// TODO put to different position
+void clear_stats_values()
+{
+    wifi_connections_count_connect = 0;
+    wifi_connections_count_disconnect = 0;
+    mqtt_packets_send = 0;
+    mqtt_packets_fail = 0;
+}
+
+#if CONFIG_DEVICE_BUTTON_ENABLED==1
 void button_push_cb(void* arg)
 {
     char* pstr = (char*) arg;
@@ -145,17 +162,7 @@ void button_push_cb(void* arg)
 
     ESP_LOGD(TAG, "button_push_cb");
 }
-#endif // CONFIG_DISABLE_BUTTON_HEADLESS
 
-void clear_stats_values()
-{
-    wifi_connections_count_connect = 0;
-    wifi_connections_count_disconnect = 0;
-    mqtt_packets_send = 0;
-    mqtt_packets_fail = 0;
-}
-
-#if CONFIG_DISABLE_BUTTON_HEADLESS==0
 void handle_long_button_push()
 {
     switch(display_status.current_screen){
@@ -252,7 +259,7 @@ void button_release_cb(void* arg)
     ESP_LOGD(TAG, "button_release_cb: display_status.current_screen %d screen_to_show %d <",
         display_status.current_screen, display_status.screen_to_show);
 }
-#endif // CONFIG_DISABLE_BUTTON_HEADLESS
+#endif // CONFIG_DEVICE_BUTTON_ENABLED==1
 
 __attribute__((unused)) void periodic_wdt_timer_start(){
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_wdt_timer, WDT_TIMER_DURATION));
@@ -1473,6 +1480,7 @@ static void IRAM_ATTR lv_tick_task(void) {
 	lv_tick_inc(portTICK_RATE_MS);
 }
 
+#ifdef CONFIG_DISPLAY_M5STACK
 void initialize_lv()
 {
     lv_init();
@@ -1493,13 +1501,17 @@ void initialize_lv()
     esp_register_freertos_tick_hook(lv_tick_task);
 
     lv_testdisplay_create();
+}
 
+static void lv_task(void* pvParameters)
+{
     while (1) {
         vTaskDelay(1);
         lv_task_handler();
     }
+    vTaskDelete(NULL);
 }
-
+#endif
 
 void app_main()
 {
@@ -1518,20 +1530,21 @@ void app_main()
 
     create_timer();
 
-#if CONFIG_DISABLE_BUTTON_HEADLESS==0
-#if CONFIG_M5STACK==1
+#if CONFIG_DEVICE_BUTTON_ENABLED==1
+#if CONFIG_DEVICE_M5STACK==1
     button_handle_t btn_handle_a = iot_button_create(BUTTON_IO_NUM_A, BUTTON_ACTIVE_LEVEL);
     button_handle_t btn_handle_b = iot_button_create(BUTTON_IO_NUM_B, BUTTON_ACTIVE_LEVEL);
     button_handle_t btn_handle_c = iot_button_create(BUTTON_IO_NUM_C, BUTTON_ACTIVE_LEVEL);
     iot_button_set_evt_cb(btn_handle_a, BUTTON_CB_PUSH, button_push_cb, "PUSH");
     iot_button_set_evt_cb(btn_handle_b, BUTTON_CB_PUSH, button_push_cb, "PUSH");
     iot_button_set_evt_cb(btn_handle_c, BUTTON_CB_PUSH, button_push_cb, "PUSH");
-#else
+#endif
+#if CONFIG_DEVICE_WEMOS_LOLIN_OLED
     button_handle_t btn_handle = iot_button_create(BUTTON_IO_NUM, BUTTON_ACTIVE_LEVEL);
     iot_button_set_evt_cb(btn_handle, BUTTON_CB_PUSH, button_push_cb, "PUSH");
     iot_button_set_evt_cb(btn_handle, BUTTON_CB_RELEASE, button_release_cb, "RELEASE");
 #endif
-#endif // CONFIG_DISABLE_BUTTON_HEADLESS
+#endif // CONFIG_DEVICE_BUTTON_ENABLED
 
 #ifdef CONFIG_DISPLAY_SSD1306
     xTaskCreate(&ssd1306_task, "ssd1306_task", 2048 * 2, NULL, 5, NULL);
@@ -1544,8 +1557,12 @@ void app_main()
     ESP_ERROR_CHECK(esp_timer_start_once(oneshot_timer, SPLASH_SCREEN_TIMER_DURATION));
 #endif // CONFIG_DISPLAY_SSD1306
 
+#ifdef CONFIG_DISPLAY_M5STACK
     initialize_lv();
+    // xTaskCreate(&lv_task, "lv_task", 1024, NULL, 5, NULL);
+#endif
 
+    ESP_LOGI(TAG, "Passed point X1");
     xTaskCreate(&wifi_mqtt_task, "wifi_mqtt_task", 2048 * 2, NULL, 5, NULL);
 
     initialize_ble();

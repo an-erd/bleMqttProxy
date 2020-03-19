@@ -3,7 +3,10 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
+
+#ifdef CONFIG_DISPLAY_SSD1306
 #include "ssd1306.h"
+#endif
 
 #define UPDATE_DISPLAY      (BIT0)
 extern EventGroupHandle_t s_values_evg;
@@ -66,10 +69,12 @@ typedef struct {
 
 extern display_message_content_t display_message_content;
 
+#ifdef CONFIG_DISPLAY_SSD1306
 extern ssd1306_canvas_t *display_canvas;
 extern ssd1306_canvas_t *display_canvas_message;
-
 void ssd1306_task(void* pvParameters);
+#endif // CONFIG_DISPLAY_SSD1306
+
 void set_next_display_show();
 
 #endif // __DISPLAY_H__

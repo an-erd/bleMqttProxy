@@ -412,3 +412,188 @@ D (35724) BLEMQTTPROXY: 0x3ffba5a4   00 d2 00 ba 40 0b ca                       
 | ILI9341_BCKL_ACTIVE_LVL   | 1     |
 | LVGL_TFT_DISPLAY_SPI_VSPI | 1     |
 
+# Strange issues, things to remember, ...
+
+### region `iram0_0_seg' overflowed by 1673 bytes
+
+```
+$ make size-components
+Toolchain path: /opt/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc
+Toolchain version: crosstool-ng-1.22.0-80-g6c4433a5
+Compiler version: 5.2.0
+App "blemqttproxy" version: 0.4-1-g724391e-dirty
+LD build/blemqttproxy.elf
+c:/msys32/opt/xtensa-esp32-elf/bin/../lib/gcc/xtensa-esp32-elf/5.2.0/../../../../xtensa-esp32-elf/bin/ld.exe: C:/msys32/home/AKAEM/esp/bleMqttProxy/build/blemqttproxy.elf section `.iram0.text' will not fit in region `iram0_0_seg'
+c:/msys32/opt/xtensa-esp32-elf/bin/../lib/gcc/xtensa-esp32-elf/5.2.0/../../../../xtensa-esp32-elf/bin/ld.exe: IRAM0 segment data does not fit.
+c:/msys32/opt/xtensa-esp32-elf/bin/../lib/gcc/xtensa-esp32-elf/5.2.0/../../../../xtensa-esp32-elf/bin/ld.exe: region `iram0_0_seg' overflowed by 1673 bytes
+collect2.exe: error: ld returned 1 exit status
+make: *** [C:/msys32/home/AKAEM/esp/esp-idf/make/project.mk:483: /home/AKAEM/esp/bleMqttProxy/build/blemqttproxy.elf] Fehler 1
+```
+
+See [https://esp32.com/viewtopic.php?t=8460](https://esp32.com/viewtopic.php?t=8460)
+
+Call `make size-components` will give no information, since it stops with the error above, too. 
+
+You can temporarily bump IRAM to 0x40000, call again, and retrieve the information required:
+
+- Change in file `~/esp/esp-idf/components/esp32/ld/esp32.ld`  the line
+
+  ```
+  /* IRAM for PRO cpu. Not sure if happy with this, this is MMU area... */
+    iram0_0_seg (RX) :                 org = 0x40080000, len = 0x20000
+  ```
+
+  to 
+
+  ```
+  iram0_0_seg (RX) :                 org = 0x40080000, len = 0x40000 
+  ```
+
+- Call `make size-components`
+
+  ```
+  $ make size-components
+  Toolchain path: /opt/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc
+  Toolchain version: crosstool-ng-1.22.0-80-g6c4433a5
+  Compiler version: 5.2.0
+  App "blemqttproxy" version: 0.4-1-g724391e-dirty
+  Python requirements from C:/msys32/home/AKAEM/esp/esp-idf/requirements.txt are satisfied.
+  Total sizes:
+   DRAM .data size:   20856 bytes
+   DRAM .bss  size:   96928 bytes
+  Used static DRAM:  117784 bytes (   6796 available, 94.5% used)
+  Used static IRAM:  132745 bytes ( 129399 available, 50.6% used)
+        Flash code: 1045371 bytes
+      Flash rodata:  334080 bytes
+  Total image size:~1533052 bytes (.bin may be padded larger)
+  Per-archive contributions to ELF file:
+              Archive File DRAM .data & .bss   IRAM Flash code & rodata   Total
+                   libbt.a        453      0    366     301204   137819  439842
+             libnet80211.a        937      0  11492     109778    21554  143761
+              libmbedtls.a        100    264     30     102488    20299  123181
+   libc-psram-workaround.a       1514     28  12228      83961     8093  105824
+                 liblwip.a         21      0      0      89004    15431  104456
+                 libmain.a       1036  53390     10      20469    19978   94883
+             libbtdm_app.a        337   2386  21158      61200     4119   89200
+                 liblvgl.a       3046  34355     44      35325    12208   84978
+                   libpp.a       1317      0  23872      38292     5096   68577
+                libesp32.a       2440   2669  14133      17744    22658   59644
+                  libphy.a       1604    930   6483      30555        0   39572
+               libdriver.a        123     77   4180      13587    16273   34240
+                  libwpa.a          0    686      0      21577     2577   24840
+             libfreertos.a       4148    776  14228          0     1986   21138
+                 libmqtt.a          0      0      0      12320     5820   18140
+      libesp_http_server.a          0      8      0      10305     6538   16851
+       libwpa_supplicant.a          0      0      0      13317     2318   15635
+            libnvs_flash.a          0     32      0      11017     3604   14653
+               libnghttp.a          0      0      0      10714     3873   14587
+      libesp_http_client.a          0      0      0       7397     3478   10875
+              libcoexist.a       2012     28   3862       4386      315   10603
+                  libsoc.a        160      4   5304        703     4231   10402
+            libspi_flash.a         24    291   5999       1350      955    8619
+                  libvfs.a        240    103      0       6579      555    7477
+        libtcp_transport.a          0      0      0       5471     1998    7469
+                  libgcc.a          4     20    104       5572      888    6588
+   libbootloader_support.a          0      4      0       3715     2227    5946
+        libtcpip_adapter.a          0    124      0       3496     2323    5943
+                 libheap.a        840      8   2715       1363      993    5919
+              libesp-tls.a          0      4      0       2679     1977    4660
+               libstdc++.a          8     20      0       2689     1253    3970
+           libapp_update.a          0     12    102       2174     1674    3962
+                libefuse.a         36      4      0        942     2248    3230
+               libnewlib.a        152    272    790       1018      241    2473
+                  librtc.a          0      4   2247          0        0    2251
+             liblvgl_tft.a          0     10     75       1417      276    1778
+              libpthread.a         16     12    236        771      683    1718
+                  liblog.a          8    268    458        694      114    1542
+               libbutton.a          0      0      0       1184      172    1356
+      libsmartconfig_ack.a          0      1      0        960      349    1310
+                 libcore.a          0     29      0        825      302    1156
+          libesp_ringbuf.a          0      0    739          0      207     946
+                libparam.a          0      0      0        528      199     727
+                  libhal.a          0      0    519          0       32     551
+                  libcxx.a          0      0      0         11        0      11
+   liblvgl_esp32_drivers.a          0      0      0         10        0      10
+  libxtensa-debug-module.a          0      0      8          0        0       8
+                 libwpa2.a          0      1      0          0        0       1
+                  libwps.a          0      1      0          0        0       1
+             libethernet.a          0      0      0          0        0       0
+                 libmesh.a          0      0      0          0        0       0
+  ```
+
+- Don't forget to change IRAM in file `~/esp/esp-idf/components/esp32/ld/esp32.ld`  back to the original value.
+
+- For comparison, without psram-workaround enabled:
+
+  ```
+  $ make size-components
+  Toolchain path: /opt/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc
+  Toolchain version: crosstool-ng-1.22.0-80-g6c4433a5
+  Compiler version: 5.2.0
+  App "blemqttproxy" version: 0.4-1-g724391e-dirty
+  Python requirements from C:/msys32/home/AKAEM/esp/esp-idf/requirements.txt are satisfied.
+  Total sizes:
+   DRAM .data size:   19340 bytes
+   DRAM .bss  size:   96904 bytes
+  Used static DRAM:  116244 bytes (   8336 available, 93.3% used)
+  Used static IRAM:  117189 bytes (  13883 available, 89.4% used)
+        Flash code:  981312 bytes
+      Flash rodata:  334032 bytes
+  Total image size:~1451873 bytes (.bin may be padded larger)
+  Per-archive contributions to ELF file:
+              Archive File DRAM .data & .bss   IRAM Flash code & rodata   Total
+                   libbt.a        453      0    366     276645   137819  415283
+             libnet80211.a        937      0  11532     110358    21554  144381
+              libmbedtls.a        100    264     30      94924    20299  115617
+                 liblwip.a         21      0      0      79360    15431   94812
+                 libmain.a       1036  53390     10      19354    19978   93768
+             libbtdm_app.a        337   2386  21194      61156     4119   89192
+                    libc.a          0      0      0      74764     7963   82727
+                 liblvgl.a       3046  34355     33      31676    12208   81318
+                   libpp.a       1317      0  23916      38360     5096   68689
+                libesp32.a       2440   2669  12936      16098    22737   56880
+                  libphy.a       1604    930   6483      30555        0   39572
+               libdriver.a        123     77   3625      12738    16273   32836
+                  libwpa.a          0    686      0      21685     2577   24948
+             libfreertos.a       4148    776  13726          0     1986   20636
+                 libmqtt.a          0      0      0      11087     5820   16907
+      libesp_http_server.a          0      8      0       9893     6538   16439
+       libwpa_supplicant.a          0      0      0      12281     2318   14599
+            libnvs_flash.a          0     32      0      10538     3604   14174
+               libnghttp.a          0      0      0      10030     3873   13903
+              libcoexist.a       2012     28   3870       4386      315   10611
+      libesp_http_client.a          0      0      0       6685     3478   10163
+                  libsoc.a        160      4   4664        637     4231    9696
+            libspi_flash.a         24    291   5513       1263      955    8046
+        libtcp_transport.a          0      0      0       5086     1998    7084
+                  libvfs.a        240    103      0       6163      555    7061
+                  libgcc.a          4     20    104       5556      888    6572
+                 libheap.a        840      8   2815       1257      993    5913
+   libbootloader_support.a          0      4      0       3515     2227    5746
+        libtcpip_adapter.a          0    124      0       3214     2323    5661
+              libesp-tls.a          0      4      0       2607     1977    4588
+               libstdc++.a          8     20      0       2689     1253    3970
+           libapp_update.a          0     12     85       2125     1674    3896
+                libefuse.a         36      4      0        907     2248    3195
+               libnewlib.a        152    272    774        966      298    2462
+                  librtc.a          0      4   2247          0        0    2251
+              libpthread.a         16     12    236        743      683    1690
+             liblvgl_tft.a          0     10     71       1326      276    1683
+                  liblog.a          8    268    434        666      114    1490
+               libbutton.a          0      0      0       1109      172    1281
+      libsmartconfig_ack.a          0      1      0        833      349    1183
+                 libcore.a          0     29      0        821      302    1152
+          libesp_ringbuf.a          0      0    707          0      207     914
+                libparam.a          0      0      0        508      199     707
+                  libhal.a          0      0    519          0       32     551
+                    libm.a          0      0      0         84        0      84
+                  libcxx.a          0      0      0         11        0      11
+   liblvgl_esp32_drivers.a          0      0      0         10        0      10
+  libxtensa-debug-module.a          0      0      8          0        0       8
+                 libwpa2.a          0      1      0          0        0       1
+                  libwps.a          0      1      0          0        0       1
+             libethernet.a          0      0      0          0        0       0
+                 libmesh.a          0      0      0          0        0       0
+  ```
+
+  
