@@ -86,6 +86,30 @@ make erase_flash
 
 Use `make monitor` to get the console messages to check that everything is fine, alternatively use `putty` (on the appropriate COM port and speed as defined using `menuconfig`).
 
+#### Step 4 (optional): Getting Information on ESP32 chip on board
+
+Use `esptool.py --chip esp32 --port /dev/COM6 flash_id` to get more information on the ESP32 chip used on your board:
+
+```
+$ python2.7 /home/AKAEM/esp/esp-idf/components/esptool_py/esptool/esptool.py --chip esp32 --port /dev/COM6 flash_id
+esptool.py v2.8
+Serial port C:/msys32/dev/COM6
+Connecting....
+Chip is ESP32D0WDQ6 (revision 1)
+Features: WiFi, BT, Dual Core, 240MHz, VRef calibration in efuse, Coding Scheme None
+Crystal is 40MHz
+MAC: 84:0d:8e:25:92:34
+Uploading stub...     
+Running stub...
+Stub running...
+Manufacturer: c8
+Device: 4018
+Detected flash size: 16MB    
+Hard resetting via RTS pin...
+```
+
+
+
 ### Update the App using OTA
 
 You can use OTA (over-the-air updates) to update the app. Use `menuconfig` to configure an secure web server and path/file name, and put the application image created during application build on this server.
