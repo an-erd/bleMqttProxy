@@ -1550,10 +1550,9 @@ void app_main()
 
 #ifdef CONFIG_DISPLAY_M5STACK
     initialize_lv();
-    // xTaskCreate(&lv_task, "lv_task", 1024, NULL, 5, NULL);
+    xTaskCreate(&lv_task, "lv_task", 2048, NULL, 5, NULL);
 #endif
 
-    ESP_LOGI(TAG, "Passed point X1");
     xTaskCreate(&wifi_mqtt_task, "wifi_mqtt_task", 2048 * 2, NULL, 5, NULL);
 
     initialize_ble();

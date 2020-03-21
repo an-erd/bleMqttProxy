@@ -4,8 +4,62 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "lvgl.h"
+#include "lvgl/lvgl.h"
 #include "lv_testdisplay.h"
+
+// Create the display objects
+//
+// 1 Screen Beacon Details
+//      Label       Name
+//      Label       Temperature
+//      Label       Humidity
+//      Label       Battery Level
+//      Label       RSSI
+//      Checkbox    Active
+//      Label       Page Number
+//      Option 1) List view similar to OLED display
+//      Option 2) Nice view with Thermometer and Humidity Gauge
+//
+// 2 Screen Last Seen/Last send List
+//      Multiple Lines
+//          Label Name      Label Time last seen       Label Time Label last send
+//      Label       Page Number
+//
+// 3 Screen App Version
+//      Label       App version
+//      Label       App naem
+//      Label       Git Commit
+//      Label       MAC Address
+//      Label       IP Address
+//      Label       MQTT Address
+//      Label       WIFI SSID
+//      Label       Active bit field
+//
+// 4 Screen Stats
+//      Label       Uptime
+//      Label       WIFI Num OK/Fail
+//      Label       MQTT Num OK/Fail
+//      Label       WIFI Status
+//      Label       MQTT Status configured/connected
+//
+// 5 Screen OTA (or as a window?)
+//      Button      request OTA
+//      Button      reboot
+//      Bar         Download in %
+//
+// 6 Bond devices (or as a window?)
+//      List of bond devices
+//      Button      delete bond
+//
+// 7 CSV Download
+//      List of devices with status (similar toweb interface)
+//      Button      request download
+//      Button      store download on SD card
+//
+
+lv_obj_t * scr = lv_<type>_create(NULL, copy).
+
+
 
 void lv_testdisplay_create()
 {
