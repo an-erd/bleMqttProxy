@@ -14,11 +14,11 @@ esp_timer_handle_t oneshot_timer;
 oneshot_timer_usage_t oneshot_timer_usage       = { TIMER_NO_USAGE };
 
 static volatile bool periodic_timer_running     = false;    // status of the timer
-static volatile bool run_periodic_timer         = false;    // start/stop periodic timer, set during cb, will be handled in ssd1306_update
+static volatile bool run_periodic_timer         = false;    // start/stop periodic timer, set during cb, will be handled in display_update
 
 static volatile bool idle_timer_running         = false;    // status of the timer
-static volatile bool run_idle_timer             = false;    // start/stop idle timer, set during cb, will be handled in ssd1306_update
-static volatile bool run_idle_timer_touch       = false;    // touch the idle timer, will be handled in ssd1306_update
+static volatile bool run_idle_timer             = false;    // start/stop idle timer, set during cb, will be handled in display_update
+static volatile bool run_idle_timer_touch       = false;    // touch the idle timer, will be handled in display_update
 
 
 void set_run_periodic_timer(bool stat) { run_periodic_timer = stat; }

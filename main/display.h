@@ -8,6 +8,10 @@
 #include "ssd1306.h"
 #endif
 
+#ifdef CONFIG_DISPLAY_M5STACK
+#include "lvgl/lvgl.h"
+#endif // CONFIG_DISPLAY_M5STACK
+
 #define UPDATE_DISPLAY      (BIT0)
 extern EventGroupHandle_t s_values_evg;
 
@@ -55,7 +59,7 @@ typedef struct {
 } display_status_t;
 
 extern display_status_t display_status;
-extern volatile bool turn_display_off;           // switch display on/off as idle timer action, will be handled in ssd1306_update
+extern volatile bool turn_display_off;           // switch display on/off as idle timer action, will be handled in display_update
 
 // pop-up message screen values
 typedef struct {
@@ -69,12 +73,126 @@ typedef struct {
 
 extern display_message_content_t display_message_content;
 
+void set_next_display_show();
+void display_task(void* pvParameters);
+esp_err_t display_update(void *canvas, void *canvas_message);
+
 #ifdef CONFIG_DISPLAY_SSD1306
 extern ssd1306_canvas_t *display_canvas;
 extern ssd1306_canvas_t *display_canvas_message;
-void ssd1306_task(void* pvParameters);
+void initialize_ssd1306();
 #endif // CONFIG_DISPLAY_SSD1306
 
-void set_next_display_show();
+#ifdef CONFIG_DISPLAY_M5STACK
+
+// Create the display objects
+//
+// 1 Screen Beacon Details
+//      Label       Name
+//      Label       Temperature
+//      Label       Humidity
+//      Label       Battery Level
+//      Label       RSSI
+//      Checkbox    Active
+//      Label       Page Number
+//      Option 1) List view similar to OLED display
+//      Option 2) Nice view with Thermometer and Humidity Gauge
+//
+// 2 Screen Last Seen/Last send List
+//      Multiple Lines
+//          Label Name      Label Time last seen       Label Time Label last send
+//      Label       Page Number
+//
+// 3 Screen App Version
+//      Label       App version
+//      Label       App naem
+//      Label       Git Commit
+//      Label       MAC Address
+//      Label       IP Address
+//      Label       MQTT Address
+//      Label       WIFI SSID
+//      Label       Active bit field
+//
+// 4 Screen Stats
+//      Label       Uptime
+//      Label       WIFI Num OK/Fail
+//      Label       MQTT Num OK/Fail
+//      Label       WIFI Status
+//      Label       MQTT Status configured/connected
+//
+// 5 Screen OTA (or as a window?)
+//      Button      request OTA
+//      Button      reboot
+//      Bar         Download in %
+//
+// 6 Bond devices (or as a window?)
+//      List of bond devices
+//      Button      delete bond
+//
+// 7 CSV Download
+//      List of devices with status (similar toweb interface)
+//      Button      request download
+//      Button      store download on SD card
+//
+
+typedef struct {
+    lv_obj_t * scr;                     // obj
+} src_splash_t;
+
+typedef struct {
+    lv_obj_t * scr;                     // obj
+    lv_obj_t * name;                    // label
+    lv_obj_t * temperature;             // label
+    lv_obj_t * humidity;                // label
+    lv_obj_t * battery;                 // label
+    lv_obj_t * rssi;                    // label
+    lv_obj_t * active;                  // led
+} src_beacon_details_t;
+
+typedef struct {
+    lv_obj_t * scr;                     // obj
+    lv_obj_t * name;                    // label
+} src_last_seen_t;
+
+typedef struct {
+    lv_obj_t * scr;                     // obj
+    lv_obj_t * app_name;                // label
+    lv_obj_t * git_commit;              // label
+    lv_obj_t * mac_addr;                // label
+    lv_obj_t * ip_addr;                 // label
+    lv_obj_t * mqtt_addr;               // label
+    lv_obj_t * wifi_ssid;               // label
+    lv_obj_t * active;                  // label
+} src_app_version_t;
+
+typedef struct {
+    lv_obj_t * scr;                     // obj
+    lv_obj_t * uptime;                  // label
+    lv_obj_t * wifi_stats;              // label
+    lv_obj_t * mqtt_stats;              // label
+    lv_obj_t * wifi_status;             // label
+    lv_obj_t * mqtt_status;             // label
+} src_stats_t;
+
+typedef struct {
+    lv_obj_t * scr;                     // obj
+    lv_obj_t * name;                    // label
+} src_empty_t;
+
+typedef struct {
+    src_splash_t splash;
+    src_beacon_details_t beacon_details;
+    src_last_seen_t last_seen;
+    src_app_version_t app_version;
+    src_stats_t stats;
+    src_empty_t empty;
+} lv_screens_t;
+
+extern lv_screens_t lv_screens;
+
+void lv_init_screens();
+void lv_display_create();
+
+#endif // CONFIG_DISPLAY_M5STACK
 
 #endif // __DISPLAY_H__

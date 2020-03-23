@@ -14,6 +14,10 @@
 #include "splashscreen.h"
 #endif
 
+#ifdef CONFIG_DISPLAY_M5STACK
+#include "lvgl/lvgl.h"
+#endif // CONFIG_DISPLAY_M5STACK
+
 static const char *TAG = "display";
 
 
@@ -53,6 +57,12 @@ volatile bool turn_display_off = false;
 ssd1306_canvas_t *display_canvas;
 ssd1306_canvas_t *display_canvas_message;
 #endif // CONFIG_DISPLAY_SSD1306
+
+#ifdef CONFIG_DISPLAY_M5STACK
+    static lv_style_t st;
+    LV_IMG_DECLARE(splash);
+    lv_screens_t lv_screens;
+#endif // CONFIG_DISPLAY_M5STACK
 
 void oneshot_display_message_timer_callback(void* arg)
 {
@@ -219,7 +229,7 @@ void display_update_check_timer()
     if (get_run_idle_timer_touch())
     {
         set_run_idle_timer_touch(false);
-        ESP_LOGD(TAG, "ssd1306_update idle_timer_is_running() = %d", idle_timer_is_running());
+        ESP_LOGD(TAG, "display_update_check_timer idle_timer_is_running() = %d", idle_timer_is_running());
 
         if (idle_timer_is_running())
         {
@@ -228,31 +238,31 @@ void display_update_check_timer()
     }
 }
 
-// return true if display to be switched off
+// return true if display switched off
 bool display_update_check_display_off()
 {
-    if (turn_display_off)
-    {
-        if (display_status.display_on)
-        {
+#ifdef CONFIG_DISPLAY_M5STACK
+    static lv_obj_t * prev_scr;
+#endif
+
+    if (turn_display_off){
+        if (display_status.display_on){
             display_status.display_on = false;
 #ifdef CONFIG_DISPLAY_SSD1306
             ssd1306_display_off();
 #elif CONFIG_DISPLAY_M5STACK
-            // TODO
+            prev_scr = lv_disp_get_scr_act(NULL);
+            lv_scr_load(lv_screens.empty.scr);
 #endif
-            return true;
         }
-    }
-    else
-    {
-        if (!display_status.display_on)
-        {
+        return true;
+    } else {
+        if (!display_status.display_on) {
             display_status.display_on = true;
 #ifdef CONFIG_DISPLAY_SSD1306
             ssd1306_display_on();
 #elif CONFIG_DISPLAY_M5STACK
-            // TODO
+            lv_scr_load(prev_scr);
 #endif
         }
     }
@@ -428,13 +438,289 @@ esp_err_t ssd1306_show_stats_screen(ssd1306_canvas_t *canvas)
     return ssd1306_refresh_gram(canvas);
 }
 
-esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, ssd1306_canvas_t *canvas_message)
+
+void initialize_ssd1306()
+{
+    // canvas for a full screen display and a pop-up message
+    display_canvas = create_ssd1306_canvas(OLED_COLUMNS, OLED_PAGES, 0, 0, 0);
+    display_canvas_message = create_ssd1306_canvas(OLED_COLUMNS, OLED_PAGES, 0, 0, 0);
+
+    i2c_master_init();
+    ssd1306_init();
+}
+#endif // CONFIG_DISPLAY_SSD1306
+
+#ifdef CONFIG_DISPLAY_M5STACK
+
+esp_err_t lv_show_splash_screen()
+{
+    lv_img_set_src(lv_screens.splash.scr, &splash);
+    lv_scr_load(lv_screens.splash.scr);
+    return ESP_OK;
+}
+
+esp_err_t lv_show_beacon_screen(int idx)
+{
+    char buffer[128], buffer2[32];
+
+    snprintf(buffer, 128, "%s", ble_beacons[idx].beacon_data.name);
+    lv_label_set_text(lv_screens.beacon_details.name, buffer);
+    if (is_beacon_idx_active(idx) && (ble_beacons[idx].adv_data.last_seen != 0)){
+        snprintf(buffer, 128, "Temperature %5.2fC", ble_beacons[idx].adv_data.temp);
+        lv_label_set_text(lv_screens.beacon_details.temperature, buffer);
+
+        snprintf(buffer, 128, "Humidity %5.2f%%H", ble_beacons[idx].adv_data.humidity);
+        lv_label_set_text(lv_screens.beacon_details.humidity, buffer);
+
+        snprintf(buffer, 128, "Battery %4d mV", ble_beacons[idx].adv_data.battery);
+        lv_label_set_text(lv_screens.beacon_details.battery, buffer);
+
+        snprintf(buffer, 128, "RSSI  %3d dBm", ble_beacons[idx].adv_data.measured_power);
+        lv_label_set_text(lv_screens.beacon_details.rssi, buffer);
+    } else {
+        lv_label_set_text(lv_screens.beacon_details.temperature, "  -  C");
+        lv_label_set_text(lv_screens.beacon_details.humidity, "  -  %%H");
+        lv_label_set_text(lv_screens.beacon_details.battery, "Batt   -  mV");
+        lv_label_set_text(lv_screens.beacon_details.rssi, "RSSI   -  dBm");
+    }
+
+    lv_led_set_bright(lv_screens.beacon_details.active, (is_beacon_idx_active(idx) ? 255: 0));
+    // draw_pagenumber(canvas, idx + 1, CONFIG_BLE_DEVICE_COUNT_USE);
+    lv_scr_load(lv_screens.beacon_details.scr);
+
+    return ESP_OK;
+}
+/*
+esp_err_t lv_show_last_seen_screen(ssd1306_canvas_t *canvas, uint8_t num_act_beac)
+{
+    char buffer[128], buffer2[32];
+
+    ssd1306_clear_canvas(canvas, 0x00);
+
+    snprintf(buffer, 128, "Last seen/send:");
+    ssd1306_draw_string(canvas, 0, 0, (const uint8_t *)buffer, 10, 1);
+    if (!num_act_beac)
+    {
+        display_status.lastseen_page_to_show = 1;
+        snprintf(buffer, 128, "No active beacon!");
+        ssd1306_draw_string(canvas, 0, 10, (const uint8_t *)buffer, 10, 1);
+    }
+    else
+    {
+        int skip = (display_status.lastseen_page_to_show - 1) * BEAC_PER_PAGE_LASTSEEN;
+        int line = 1;
+        for (int i = 0; i < CONFIG_BLE_DEVICE_COUNT_USE; i++)        {
+            if (is_beacon_idx_active(i))            {
+                if (skip)                {
+                    skip--;
+                } else {
+                    bool never_seen = (ble_beacons[i].adv_data.last_seen == 0);
+                    if (never_seen)                    {
+                        snprintf(buffer, 128, "%s: %c", ble_beacons[i].beacon_data.name, '/');
+                    }else {
+                        uint16_t last_seen_sec_gone = (esp_timer_get_time() - ble_beacons[i].adv_data.last_seen) / 1000000;
+                        uint16_t mqtt_last_send_sec_gone = (esp_timer_get_time() - ble_beacons[i].adv_data.mqtt_last_send) / 1000000;
+                        uint8_t h, m, s, hq, mq, sq;
+                        convert_s_hhmmss(last_seen_sec_gone, &h, &m, &s);
+                        convert_s_hhmmss(mqtt_last_send_sec_gone, &hq, &mq, &sq);
+                        if (h > 99) {
+                            snprintf(buffer, 128, "%s: %s", ble_beacons[i].beacon_data.name, "seen >99h");
+                        } else {
+                            snprintf(buffer, 128, "%s: %02d:%02d:%02d %02d:%02d:%02d", ble_beacons[i].beacon_data.name, h, m, s, hq, mq, sq);
+                        }
+                    }
+                    ssd1306_draw_string(canvas, 0, line * 10, (const uint8_t *)buffer, 10, 1);
+                    if (BEAC_PER_PAGE_LASTSEEN == line++) {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    draw_pagenumber(canvas, display_status.lastseen_page_to_show, display_status.num_last_seen_pages);
+
+    return ssd1306_refresh_gram(canvas);
+}
+
+
+esp_err_t lv_show_app_version_screen(ssd1306_canvas_t *canvas)
+{
+    char buffer[128], buffer2[32];
+    const esp_app_desc_t *app_desc = esp_ota_get_app_description();
+    tcpip_adapter_ip_info_t ipinfo;
+    uint8_t mac[6];
+    ESP_ERROR_CHECK(esp_efuse_mac_get_default(mac));
+
+    ssd1306_clear_canvas(canvas, 0x00);
+    snprintf(buffer, 128, "%s", app_desc->version);
+    ssd1306_draw_string(canvas, 0, 0, (const uint8_t *)buffer, 10, 1);
+    snprintf(buffer, 128, "%s", app_desc->project_name);
+    ssd1306_draw_string(canvas, 0, 11, (const uint8_t *)buffer, 10, 1);
+    snprintf(buffer, 128, "%s", app_desc->idf_ver);
+    ssd1306_draw_string(canvas, 0, 22, (const uint8_t *)buffer, 10, 1);
+    snprintf(buffer, 128, "%2X:%2X:%2X:%2X:%2X:%2X",
+                mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    ssd1306_draw_string(canvas, 0, 33, (const uint8_t *)buffer, 10, 1);
+
+    tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ipinfo);
+    sprintf(buffer, IPSTR, IP2STR(&ipinfo.ip));
+    ssd1306_draw_string(canvas, 0, 44, (const uint8_t *)buffer, 10, 1);
+
+    itoa(s_active_beacon_mask, buffer2, 2);
+    int num_lead_zeros = CONFIG_BLE_DEVICE_COUNT_USE - strlen(buffer2);
+    if (!num_lead_zeros)
+    {
+        snprintf(buffer, 128, "Act:  %s (%d..1)", buffer2, CONFIG_BLE_DEVICE_COUNT_USE);
+    }
+    else
+    {
+        snprintf(buffer, 128, "Act:  %0*d%s (%d..1)", num_lead_zeros, 0, buffer2, CONFIG_BLE_DEVICE_COUNT_USE);
+    }
+    ssd1306_draw_string(canvas, 0, 55, (const uint8_t *)buffer, 10, 1);
+
+    return ssd1306_refresh_gram(canvas);
+}
+
+esp_err_t lv_show_stats_screen(ssd1306_canvas_t *canvas)
+{
+    char buffer[128], buffer2[32];
+    uint32_t uptime_sec = esp_timer_get_time() / 1000000;
+    uint16_t up_d;
+    uint8_t up_h, up_m, up_s;
+    EventBits_t uxReturn;
+
+    ssd1306_clear_canvas(canvas, 0x00);
+
+    snprintf(buffer, 128, "%s", "Statistics/Status:");
+    ssd1306_draw_string(canvas, 0, 0, (const uint8_t *)buffer, 10, 1);
+
+    convert_s_ddhhmmss(uptime_sec, &up_d, &up_h, &up_m, &up_s);
+    snprintf(buffer, 128, "%-6s      %3dd %2d:%02d:%02d", "uptime", up_d, up_h, up_m, up_s);
+    ssd1306_draw_string(canvas, 0, 11, (const uint8_t *)buffer, 10, 1);
+
+    snprintf(buffer, 128, "%-9s %6d/%5d", "WiFi ok/fail", wifi_connections_count_connect, wifi_connections_count_disconnect);
+    ssd1306_draw_string(canvas, 0, 22, (const uint8_t *)buffer, 10, 1);
+
+    snprintf(buffer, 128, "%-9s %6d/%5d", "MQTT ok/fail", mqtt_packets_send, mqtt_packets_fail);
+    ssd1306_draw_string(canvas, 0, 33, (const uint8_t *)buffer, 10, 1);
+
+    uxReturn = xEventGroupWaitBits(mqtt_evg, MQTT_CONNECTED_BIT, false, true, 0);
+    bool mqtt_connected = uxReturn & MQTT_CONNECTED_BIT;
+
+    uxReturn = xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, 0);
+    bool wifi_connected = uxReturn & WIFI_CONNECTED_BIT;
+
+    snprintf(buffer, 128, "WIFI: %s, MQTT: %s/%s", (wifi_connected ? "y" : "n"), (CONFIG_USE_MQTT ? "y" : "n"), (mqtt_connected ? "y" : "n"));
+    ssd1306_draw_string(canvas, 0, 44, (const uint8_t *)buffer, 10, 1);
+    return ssd1306_refresh_gram(canvas);
+}
+*/
+
+void lv_init_screens()
+{
+    lv_obj_t * scr;
+
+    lv_screens.splash.scr = lv_img_create(NULL, NULL);
+    lv_img_cache_invalidate_src(NULL);
+
+    lv_screens.beacon_details.scr = lv_obj_create(NULL, NULL);
+    scr = lv_screens.beacon_details.scr;
+    lv_screens.beacon_details.name =  lv_label_create(scr, NULL);
+    lv_style_copy(&st, &lv_style_plain);
+    st.text.font = &lv_font_roboto_22;
+    lv_obj_set_style(lv_screens.beacon_details.name, &st);
+    lv_screens.beacon_details.temperature = lv_label_create(scr, NULL);
+    lv_screens.beacon_details.humidity = lv_label_create(scr, NULL);
+    lv_screens.beacon_details.battery = lv_label_create(scr, NULL);
+    lv_screens.beacon_details.rssi = lv_label_create(scr, NULL);
+    lv_screens.beacon_details.active = lv_led_create(scr, NULL);
+
+    lv_screens.last_seen.scr = lv_obj_create(NULL, NULL);
+    scr = lv_screens.last_seen.scr;
+    lv_screens.last_seen.name = lv_label_create(scr, NULL);
+
+    lv_screens.app_version.scr = lv_obj_create(NULL, NULL);
+    scr = lv_screens.app_version.scr;
+    lv_screens.app_version.app_name = lv_label_create(scr, NULL);
+    lv_screens.app_version.git_commit = lv_label_create(scr, NULL);
+    lv_screens.app_version.mac_addr = lv_label_create(scr, NULL);
+    lv_screens.app_version.ip_addr = lv_label_create(scr, NULL);
+    lv_screens.app_version.mqtt_addr = lv_label_create(scr, NULL);
+    lv_screens.app_version.wifi_ssid = lv_label_create(scr, NULL);
+    lv_screens.app_version.active = lv_label_create(scr, NULL);
+
+    lv_screens.stats.scr = lv_obj_create(NULL, NULL);
+    scr = lv_screens.stats.scr;
+    lv_screens.stats.uptime = lv_label_create(scr, NULL);
+    lv_screens.stats.wifi_stats = lv_label_create(scr, NULL);
+    lv_screens.stats.mqtt_stats = lv_label_create(scr, NULL);
+    lv_screens.stats.wifi_status = lv_label_create(scr, NULL);
+    lv_screens.stats.mqtt_status = lv_label_create(scr, NULL);
+
+    lv_screens.empty.scr = lv_obj_create(NULL, NULL);
+    scr = lv_screens.empty.scr;
+    lv_screens.empty.name = lv_label_create(scr, NULL);
+
+    lv_obj_align(lv_screens.beacon_details.name, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+    lv_obj_align(lv_screens.beacon_details.temperature, lv_screens.beacon_details.name, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
+    lv_obj_align(lv_screens.beacon_details.humidity, lv_screens.beacon_details.temperature, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
+    lv_obj_align(lv_screens.beacon_details.battery, lv_screens.beacon_details.humidity, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
+    lv_obj_align(lv_screens.beacon_details.rssi, lv_screens.beacon_details.battery, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
+    lv_obj_align(lv_screens.beacon_details.active, lv_screens.beacon_details.rssi, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
+
+    lv_obj_align(lv_screens.last_seen.name, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+
+    lv_obj_align(lv_screens.app_version.app_name, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+    lv_obj_align(lv_screens.app_version.git_commit, lv_screens.app_version.app_name, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
+    lv_obj_align(lv_screens.app_version.mac_addr, lv_screens.app_version.app_name, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
+    lv_obj_align(lv_screens.app_version.ip_addr, lv_screens.app_version.app_name, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
+    lv_obj_align(lv_screens.app_version.mqtt_addr, lv_screens.app_version.app_name, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
+    lv_obj_align(lv_screens.app_version.wifi_ssid, lv_screens.app_version.app_name, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
+    lv_obj_align(lv_screens.app_version.active, lv_screens.app_version.app_name, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
+
+    lv_obj_align(lv_screens.stats.uptime, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+    lv_obj_align(lv_screens.stats.wifi_stats, lv_screens.stats.uptime, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
+    lv_obj_align(lv_screens.stats.mqtt_stats, lv_screens.stats.uptime, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
+    lv_obj_align(lv_screens.stats.wifi_status, lv_screens.stats.uptime, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
+    lv_obj_align(lv_screens.stats.mqtt_status, lv_screens.stats.uptime, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
+
+    lv_obj_align(lv_screens.empty.name, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+}
+
+void lv_display_create()
+{
+    lv_init_screens();
+    lv_scr_load(lv_screens.empty.scr);
+
+    lv_label_set_text(lv_screens.beacon_details.name, "Bx0706");
+    lv_label_set_text(lv_screens.beacon_details.temperature, "Temperature: 23,45");
+    lv_label_set_text(lv_screens.beacon_details.humidity, "Humidity 43");
+    lv_label_set_text(lv_screens.beacon_details.battery, "Battery 3.012 V");
+    lv_label_set_text(lv_screens.beacon_details.rssi, "-56 dBm");
+    lv_led_set_bright(lv_screens.beacon_details.active, 255);
+
+    lv_label_set_text(lv_screens.last_seen.name, "Last seen");
+    lv_label_set_text(lv_screens.app_version.app_name, "App Version");
+    lv_label_set_text(lv_screens.stats.uptime, "Uptime");
+    lv_label_set_text(lv_screens.empty.name, "Empty Screen");
+}
+
+#endif // CONFIG_DISPLAY_M5STACK
+
+
+esp_err_t display_update(void* _canvas, void * _canvas_message)
 {
     esp_err_t ret;
     // char buffer[128], buffer2[32];
     EventBits_t uxReturn;
+    UNUSED(uxReturn);
 
-    // ESP_LOGD(TAG, "ssd1306_update >, run_periodic_timer %d, run_idle_timer_touch %d, periodic_timer_is_running %d, ssd1306_update current_screen %d, screen_to_show %d",
+#ifdef CONFIG_DISPLAY_SSD1306
+    ssd1306_canvas_t *canvas = (ssd1306_canvas_t *) _canvas;
+    ssd1306_canvas_t *canvas_message = (ssd1306_canvas_t *) _canvas_message;
+#endif
+    // ESP_LOGD(TAG, "display_update >, run_periodic_timer %d, run_idle_timer_touch %d, periodic_timer_is_running %d, display_update current_screen %d, screen_to_show %d",
     //     run_periodic_timer, run_idle_timer_touch, periodic_timer_running, display_status.current_screen, display_status.screen_to_show);
 
     display_update_check_timer();
@@ -443,7 +729,7 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, ssd1306_canvas_t *canvas_mess
         return ESP_OK;
     }
 
-    // ESP_LOGD(TAG, "ssd1306_update display_message %d, display_message_is_shown %d", display_status.display_message, display_status.display_message_is_shown);
+    ESP_LOGD(TAG, "display_update display_message %d, display_message_is_shown %d", display_status.display_message, display_status.display_message_is_shown);
     if(display_status.display_message){
         if(display_status.display_message_is_shown && !display_message_content.need_refresh){
             // SOLL: anzeigen, IST: wird gezeigt
@@ -469,17 +755,17 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, ssd1306_canvas_t *canvas_mess
         }
     }
 
-    // ESP_LOGD(TAG, "ssd1306_update current_screen %d, screen_to_show %d", display_status.current_screen, display_status.screen_to_show);
+    ESP_LOGD(TAG, "display_update current_screen %d, screen_to_show %d", display_status.current_screen, display_status.screen_to_show);
 
     switch (display_status.screen_to_show)
     {
 
     case SPLASH_SCREEN:
-        ESP_LOGD(TAG, "ssd1306_update SPLASH_SCREEN current_screen %d, screen_to_show %d", display_status.current_screen, display_status.screen_to_show);
+        ESP_LOGD(TAG, "display_update SPLASH_SCREEN current_screen %d, screen_to_show %d", display_status.current_screen, display_status.screen_to_show);
 #ifdef CONFIG_DISPLAY_SSD1306
         ret = ssd1306_show_splash_screen(canvas);
 #elif CONFIG_DISPLAY_M5STACK
-            // TODO
+        ret = lv_show_splash_screen();
 #endif
         display_status.current_screen = display_status.screen_to_show;
 
@@ -488,7 +774,6 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, ssd1306_canvas_t *canvas_mess
 
     case BEACON_SCREEN:
     {
-
         int idx = display_status.beac_to_show;
         if ((display_status.current_screen != display_status.screen_to_show)
             || (display_status.current_beac != display_status.beac_to_show))
@@ -497,14 +782,14 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, ssd1306_canvas_t *canvas_mess
 #ifdef CONFIG_DISPLAY_SSD1306
             ret = ssd1306_show_beacon_screen(canvas, idx);
 #elif CONFIG_DISPLAY_M5STACK
-            // TODO
+            ret = lv_show_beacon_screen(idx);
 #endif
             display_status.current_screen = display_status.screen_to_show;
             return ret;
         }
         else
         {
-            ESP_LOGD(TAG, "ssd1306_update: not current screen to udate, exit");
+            ESP_LOGD(TAG, "display_update: not current screen to udate, exit");
             return ESP_OK;
         }
         break;
@@ -524,9 +809,9 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, ssd1306_canvas_t *canvas_mess
 #ifdef CONFIG_DISPLAY_SSD1306
             ret = ssd1306_show_last_seen_screen(canvas, num_act_beac);
 #elif CONFIG_DISPLAY_M5STACK
-            // TODO
+            lv_scr_load(lv_screens.last_seen.scr);
+            ret = ESP_OK;
 #endif
-
         display_status.current_screen = display_status.screen_to_show;
 
         return ret;
@@ -538,7 +823,8 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, ssd1306_canvas_t *canvas_mess
 #ifdef CONFIG_DISPLAY_SSD1306
         ret = ssd1306_show_app_version_screen(canvas);
 #elif CONFIG_DISPLAY_M5STACK
-        // TODO
+        lv_scr_load(lv_screens.app_version.scr);
+        ret = ESP_OK;
 #endif
         display_status.current_screen = display_status.screen_to_show;
         return ret;
@@ -550,7 +836,8 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, ssd1306_canvas_t *canvas_mess
 #ifdef CONFIG_DISPLAY_SSD1306
         ret = ssd1306_show_stats_screen(canvas);
 #elif CONFIG_DISPLAY_M5STACK
-        // TODO
+        lv_scr_load(lv_screens.stats.scr);
+        ret = ESP_OK;
 #endif
 
         display_status.current_screen = display_status.screen_to_show;
@@ -559,38 +846,34 @@ esp_err_t ssd1306_update(ssd1306_canvas_t *canvas, ssd1306_canvas_t *canvas_mess
     break;
 
     default:
-        ESP_LOGE(TAG, "unhandled ssd1306_update screen");
+        ESP_LOGE(TAG, "unhandled display_update screen");
         break;
     }
 
-    ESP_LOGE(TAG, "ssd1306_update: this line should not be reached");
+    ESP_LOGE(TAG, "display_update: this line should not be reached");
     return ESP_FAIL;
 }
 
-void ssd1306_task(void *pvParameters)
+void display_task(void *pvParameters)
 {
     const esp_timer_create_args_t oneshot_display_message_timer_args = {
         .callback = &oneshot_display_message_timer_callback,
         .name     = "oneshot_display_message"
     };
 
-    // canvas for a full screen display and a pop-up message
-    display_canvas = create_ssd1306_canvas(OLED_COLUMNS, OLED_PAGES, 0, 0, 0);
-    display_canvas_message = create_ssd1306_canvas(OLED_COLUMNS, OLED_PAGES, 0, 0, 0);
-
     EventBits_t uxBits;
     UNUSED(uxBits);
 
     ESP_ERROR_CHECK(esp_timer_create(&oneshot_display_message_timer_args, &oneshot_display_message_timer));
-    i2c_master_init();
-    ssd1306_init();
 
     while (1)
     {
         uxBits = xEventGroupWaitBits(s_values_evg, UPDATE_DISPLAY, pdTRUE, pdFALSE, portMAX_DELAY);
-        ssd1306_update(display_canvas, display_canvas_message);
+#ifdef CONFIG_DISPLAY_SSD1306
+        display_update((void *)display_canvas, (void *)display_canvas_message);
+#elif CONFIG_DISPLAY_M5STACK
+        display_update(NULL, NULL);
+#endif
     }
     vTaskDelete(NULL);
 }
-
-#endif // CONFIG_DISPLAY_SSD1306

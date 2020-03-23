@@ -52,7 +52,6 @@
 #include "esp_freertos_hooks.h"
 #include "lvgl.h"
 #include "lvgl_driver.h"
-#include "lv_testdisplay.h"
 
 static const char* TAG = "BLEMQTTPROXY";
 
@@ -311,7 +310,6 @@ void periodic_wdt_timer_callback(void* arg)
     uint16_t lowest_last_send_sec = CONFIG_WDT_LAST_SEND_THRESHOLD;
     uint16_t temp_last_seen_sec, temp_last_send_sec;
     uint8_t num_active = num_active_beacon();
-
 
     for(int i=0; i < CONFIG_BLE_DEVICE_COUNT_USE; i++){
         if(is_beacon_idx_active(i)){
@@ -1429,7 +1427,7 @@ void adjust_log_level()
     esp_log_level_set("event", ESP_LOG_INFO);
     esp_log_level_set("ble_mqtt", ESP_LOG_INFO);
     esp_log_level_set("web_file_server", ESP_LOG_INFO);
-    esp_log_level_set("BLEMQTTPROXY", ESP_LOG_DEBUG);
+    esp_log_level_set("BLEMQTTPROXY", ESP_LOG_INFO);
 }
 
 void initialize_ble()
@@ -1493,7 +1491,8 @@ void initialize_lv()
 
     esp_register_freertos_tick_hook(lv_tick_task);
 
-    lv_testdisplay_create();
+    lv_init_screens();
+    lv_display_create();
 }
 
 static void lv_task(void* pvParameters)
@@ -1530,6 +1529,9 @@ void app_main()
     iot_button_set_evt_cb(btn_handle_a, BUTTON_CB_PUSH, button_push_cb, "PUSH");
     iot_button_set_evt_cb(btn_handle_b, BUTTON_CB_PUSH, button_push_cb, "PUSH");
     iot_button_set_evt_cb(btn_handle_c, BUTTON_CB_PUSH, button_push_cb, "PUSH");
+    iot_button_set_evt_cb(btn_handle_a, BUTTON_CB_RELEASE, button_release_cb, "RELEASE");
+    iot_button_set_evt_cb(btn_handle_b, BUTTON_CB_RELEASE, button_release_cb, "RELEASE");
+    iot_button_set_evt_cb(btn_handle_c, BUTTON_CB_RELEASE, button_release_cb, "RELEASE");
 #endif
 #if CONFIG_DEVICE_WEMOS_LOLIN_OLED
     button_handle_t btn_handle = iot_button_create(BUTTON_IO_NUM, BUTTON_ACTIVE_LEVEL);
@@ -1538,20 +1540,19 @@ void app_main()
 #endif
 
 #ifdef CONFIG_DISPLAY_SSD1306
-    xTaskCreate(&ssd1306_task, "ssd1306_task", 2048 * 2, NULL, 5, NULL);
+    initialize_ssd1306();
+#elif CONFIG_DISPLAY_M5STACK
+    initialize_lv();
+    xTaskCreate(&lv_task, "lv_task", 4096, NULL, 5, NULL);
+#endif
     vTaskDelay(50 / portTICK_PERIOD_MS);
 
+    xTaskCreate(&display_task, "display_task", 2048 * 2, NULL, 5, NULL);
     oneshot_timer_usage = TIMER_SPLASH_SCREEN;
     xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
 
     ESP_LOGI(TAG, "app_main, start oneshot timer, %d", SPLASH_SCREEN_TIMER_DURATION);
     ESP_ERROR_CHECK(esp_timer_start_once(oneshot_timer, SPLASH_SCREEN_TIMER_DURATION));
-#endif // CONFIG_DISPLAY_SSD1306
-
-#ifdef CONFIG_DISPLAY_M5STACK
-    initialize_lv();
-    xTaskCreate(&lv_task, "lv_task", 2048, NULL, 5, NULL);
-#endif
 
     xTaskCreate(&wifi_mqtt_task, "wifi_mqtt_task", 2048 * 2, NULL, 5, NULL);
 
