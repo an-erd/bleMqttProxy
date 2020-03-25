@@ -58,3 +58,24 @@ void convert_s_mmss(uint32_t sec, uint8_t *m, uint8_t *s)
 
     *s = tmp_sec;
 }
+
+uint8_t battery_level_in_percent(const uint16_t mvolts)
+{
+    uint8_t battery_level;
+
+    if (mvolts >= 3000){
+        battery_level = 100;
+    } else if (mvolts > 2900) {
+        battery_level = 100 - ((3000 - mvolts) * 58) / 100;
+    } else if (mvolts > 2740) {
+        battery_level = 42 - ((2900 - mvolts) * 24) / 160;
+    } else if (mvolts > 2440) {
+        battery_level = 18 - ((2740 - mvolts) * 12) / 300;
+    } else if (mvolts > 2100) {
+        battery_level = 6 - ((2440 - mvolts) * 6) / 340;
+    } else {
+        battery_level = 0;
+    }
+
+    return battery_level;
+}

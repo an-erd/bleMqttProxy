@@ -136,22 +136,45 @@ void initialize_ssd1306();
 //
 
 typedef struct {
+    // lv_obj_t * btn1;
+    lv_obj_t * label1;
+
+    // lv_obj_t * btn2;
+    lv_obj_t * label2;
+
+    // lv_obj_t * btn3;
+    lv_obj_t * label3;
+} src_buttons_t;
+
+typedef struct {
+    lv_obj_t * symbol_battery;
+    lv_obj_t * symbol_eye;
+} src_symbol_t;
+
+typedef struct {
+    lv_obj_t * pagenum;
+} src_pagenum_t;
+
+typedef struct {
     lv_obj_t * scr;                     // obj
 } src_splash_t;
 
 typedef struct {
     lv_obj_t * scr;                     // obj
     lv_obj_t * name;                    // label
-    lv_obj_t * temperature;             // label
-    lv_obj_t * humidity;                // label
-    lv_obj_t * battery;                 // label
-    lv_obj_t * rssi;                    // label
-    lv_obj_t * active;                  // led
+    lv_obj_t * temp_hum;                // label
+    src_buttons_t buttons;
+    src_symbol_t symbols;
+    src_pagenum_t pagenum;
 } src_beacon_details_t;
 
 typedef struct {
     lv_obj_t * scr;                     // obj
-    lv_obj_t * name;                    // label
+    lv_obj_t * title;                   // label
+    lv_obj_t * table;                   // table
+    src_buttons_t buttons;
+    src_symbol_t symbols;
+    src_pagenum_t pagenum;
 } src_last_seen_t;
 
 typedef struct {
@@ -191,7 +214,6 @@ typedef struct {
 extern lv_screens_t lv_screens;
 
 void lv_init_screens();
-void lv_display_create();
 
 #endif // CONFIG_DISPLAY_M5STACK
 

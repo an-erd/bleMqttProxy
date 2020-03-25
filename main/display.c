@@ -59,9 +59,28 @@ ssd1306_canvas_t *display_canvas_message;
 #endif // CONFIG_DISPLAY_SSD1306
 
 #ifdef CONFIG_DISPLAY_M5STACK
-    static lv_style_t st;
+    static lv_style_t style_screen;
+    static lv_style_t style_title;
+    static lv_style_t style_bigvalues;
+    static lv_style_t style_cell1;
+    static lv_style_t style_cell2;
+
     LV_IMG_DECLARE(splash);
     lv_screens_t lv_screens;
+
+    LV_FONT_DECLARE(m5stack_16);
+    // LV_FONT_DECLARE(m5stack_22);
+    LV_FONT_DECLARE(m5stack_22_font_symbol);
+    // LV_FONT_DECLARE(m5stack_28);
+    // LV_FONT_DECLARE(m5stack_36);
+    LV_FONT_DECLARE(m5stack_36_font_symbol);
+    LV_FONT_DECLARE(m5stack_48_font_symbol);
+    // LV_FONT_DECLARE(m5stack_64);
+
+#define X_BUTTON_A	    65          // display button x position (for center of button)
+#define X_BUTTON_B	    160
+#define X_BUTTON_C	    255
+
 #endif // CONFIG_DISPLAY_M5STACK
 
 void oneshot_display_message_timer_callback(void* arg)
@@ -461,41 +480,48 @@ esp_err_t lv_show_splash_screen()
 
 esp_err_t lv_show_beacon_screen(int idx)
 {
-    char buffer[128], buffer2[32];
+    char buffer[32];
+    uint8_t battery_level;
 
-    snprintf(buffer, 128, "%s", ble_beacons[idx].beacon_data.name);
-    lv_label_set_text(lv_screens.beacon_details.name, buffer);
+    lv_label_set_text_fmt(lv_screens.beacon_details.name, "%s", ble_beacons[idx].beacon_data.name);
     if (is_beacon_idx_active(idx) && (ble_beacons[idx].adv_data.last_seen != 0)){
-        snprintf(buffer, 128, "Temperature %5.2fC", ble_beacons[idx].adv_data.temp);
-        lv_label_set_text(lv_screens.beacon_details.temperature, buffer);
+        lv_label_set_text_fmt(lv_screens.beacon_details.temp_hum, "%4.1f°C  %3.0f%%",
+            ble_beacons[idx].adv_data.temp, ble_beacons[idx].adv_data.humidity);
 
-        snprintf(buffer, 128, "Humidity %5.2f%%H", ble_beacons[idx].adv_data.humidity);
-        lv_label_set_text(lv_screens.beacon_details.humidity, buffer);
-
-        snprintf(buffer, 128, "Battery %4d mV", ble_beacons[idx].adv_data.battery);
-        lv_label_set_text(lv_screens.beacon_details.battery, buffer);
-
-        snprintf(buffer, 128, "RSSI  %3d dBm", ble_beacons[idx].adv_data.measured_power);
-        lv_label_set_text(lv_screens.beacon_details.rssi, buffer);
+        battery_level = battery_level_in_percent(ble_beacons[idx].adv_data.battery);
+        if(battery_level < 20){
+            sprintf(buffer, "%s", LV_SYMBOL_BATTERY_EMPTY);
+        } else if(battery_level < 40){
+            sprintf(buffer, "%s", LV_SYMBOL_BATTERY_1);
+        } else if(battery_level < 60){
+            sprintf(buffer, "%s", LV_SYMBOL_BATTERY_2);
+        } else if(battery_level < 80){
+            sprintf(buffer, "%s", LV_SYMBOL_BATTERY_3);
+        } else {
+            sprintf(buffer, "%s", LV_SYMBOL_BATTERY_FULL);
+        }
+        lv_label_set_text_fmt(lv_screens.beacon_details.symbols.symbol_battery, "%s", buffer);
     } else {
-        lv_label_set_text(lv_screens.beacon_details.temperature, "  -  C");
-        lv_label_set_text(lv_screens.beacon_details.humidity, "  -  %%H");
-        lv_label_set_text(lv_screens.beacon_details.battery, "Batt   -  mV");
-        lv_label_set_text(lv_screens.beacon_details.rssi, "RSSI   -  dBm");
+        lv_label_set_text(lv_screens.beacon_details.temp_hum, "   -  °C    -  %H");
+        lv_label_set_text_fmt(lv_screens.beacon_details.symbols.symbol_battery, "");
     }
 
-    lv_led_set_bright(lv_screens.beacon_details.active, (is_beacon_idx_active(idx) ? 255: 0));
-    // draw_pagenumber(canvas, idx + 1, CONFIG_BLE_DEVICE_COUNT_USE);
+    lv_label_set_text_fmt(lv_screens.beacon_details.symbols.symbol_eye, "%s",
+        (is_beacon_idx_active(idx) ? LV_SYMBOL_EYE_OPEN : LV_SYMBOL_EYE_CLOSE));
+
+    lv_label_set_text_fmt(lv_screens.beacon_details.buttons.label1, "%s",
+        (is_beacon_idx_active(idx) ? LV_SYMBOL_EYE_CLOSE : LV_SYMBOL_EYE_OPEN));
+
+    lv_label_set_text_fmt(lv_screens.beacon_details.pagenum.pagenum, "%d/%d", idx + 1, CONFIG_BLE_DEVICE_COUNT_USE);
+
     lv_scr_load(lv_screens.beacon_details.scr);
 
     return ESP_OK;
 }
 /*
-esp_err_t lv_show_last_seen_screen(ssd1306_canvas_t *canvas, uint8_t num_act_beac)
+esp_err_t lv_show_last_seen_screen(uint8_t num_act_beac)
 {
     char buffer[128], buffer2[32];
-
-    ssd1306_clear_canvas(canvas, 0x00);
 
     snprintf(buffer, 128, "Last seen/send:");
     ssd1306_draw_string(canvas, 0, 0, (const uint8_t *)buffer, 10, 1);
@@ -542,7 +568,8 @@ esp_err_t lv_show_last_seen_screen(ssd1306_canvas_t *canvas, uint8_t num_act_bea
 
     return ssd1306_refresh_gram(canvas);
 }
-
+*/
+/*
 
 esp_err_t lv_show_app_version_screen(ssd1306_canvas_t *canvas)
 {
@@ -617,29 +644,157 @@ esp_err_t lv_show_stats_screen(ssd1306_canvas_t *canvas)
 }
 */
 
+void lv_init_styles()
+{
+    // Styles for title text, big numbers, ...
+    lv_style_copy(&style_screen, &lv_style_plain);
+    style_screen.body.main_color = LV_COLOR_WHITE;
+    style_screen.body.grad_color = LV_COLOR_WHITE;
+    style_screen.text.color = LV_COLOR_GRAY;
+
+    lv_style_copy(&style_title, &style_screen);
+    style_title.text.font = &m5stack_22_font_symbol;
+
+    lv_style_copy(&style_bigvalues, &style_screen);
+    style_bigvalues.text.font = &m5stack_48_font_symbol;
+
+    // table style normal cell
+    lv_style_copy(&style_cell1, &lv_style_plain);
+    style_cell1.body.border.width = 1;
+    style_cell1.body.border.color = LV_COLOR_GRAY;
+    style_cell1.body.padding.top = 2;
+    style_cell1.body.padding.bottom = 2;
+
+    // table style header cell
+    lv_style_copy(&style_cell2, &lv_style_plain);
+    style_cell2.body.border.width = 1;
+    style_cell2.body.border.color = LV_COLOR_BLACK;
+    style_cell2.body.main_color = LV_COLOR_SILVER;
+    style_cell2.body.grad_color = LV_COLOR_SILVER;
+    style_cell2.body.padding.top = 2;
+    style_cell2.body.padding.bottom = 2;
+}
+
+
 void lv_init_screens()
 {
     lv_obj_t * scr;
 
+    lv_init_styles();
+
+    // TODO will be display off later
+    lv_screens.empty.scr = lv_obj_create(NULL, NULL);
+    scr = lv_screens.empty.scr;
+    lv_screens.empty.name = lv_label_create(scr, NULL);
+    lv_scr_load(lv_screens.empty.scr);
+
+    // Splash screen
     lv_screens.splash.scr = lv_img_create(NULL, NULL);
     lv_img_cache_invalidate_src(NULL);
 
+    // Beacon details screen
     lv_screens.beacon_details.scr = lv_obj_create(NULL, NULL);
+    lv_obj_set_style(lv_screens.beacon_details.scr, &style_screen);
     scr = lv_screens.beacon_details.scr;
+
+    // - content
     lv_screens.beacon_details.name =  lv_label_create(scr, NULL);
-    lv_style_copy(&st, &lv_style_plain);
-    st.text.font = &lv_font_roboto_22;
-    lv_obj_set_style(lv_screens.beacon_details.name, &st);
-    lv_screens.beacon_details.temperature = lv_label_create(scr, NULL);
-    lv_screens.beacon_details.humidity = lv_label_create(scr, NULL);
-    lv_screens.beacon_details.battery = lv_label_create(scr, NULL);
-    lv_screens.beacon_details.rssi = lv_label_create(scr, NULL);
-    lv_screens.beacon_details.active = lv_led_create(scr, NULL);
+    lv_obj_set_style(lv_screens.beacon_details.name, &style_title);
+    lv_obj_align(lv_screens.beacon_details.name, NULL, LV_ALIGN_IN_TOP_MID, 0, 5);
+    lv_obj_set_auto_realign(lv_screens.beacon_details.name, true);
 
-    lv_screens.last_seen.scr = lv_obj_create(NULL, NULL);
+    lv_screens.beacon_details.temp_hum = lv_label_create(scr, NULL);
+    lv_obj_set_style(lv_screens.beacon_details.temp_hum, &style_bigvalues);
+    lv_obj_align(lv_screens.beacon_details.temp_hum, lv_screens.beacon_details.name, LV_ALIGN_OUT_BOTTOM_MID, 0, 15);
+    lv_obj_set_auto_realign(lv_screens.beacon_details.temp_hum, true);
+
+    // - buttons
+    lv_screens.beacon_details.buttons.label1 = lv_label_create(scr, NULL);
+    lv_obj_align(lv_screens.beacon_details.buttons.label1, NULL, LV_ALIGN_IN_BOTTOM_MID, -95, 0);
+    lv_obj_set_auto_realign(lv_screens.beacon_details.buttons.label1, true);
+
+    lv_screens.beacon_details.buttons.label3 = lv_label_create(scr, NULL);
+    lv_obj_align(lv_screens.beacon_details.buttons.label3, NULL, LV_ALIGN_IN_BOTTOM_MID, +95, 0);
+    lv_label_set_text(lv_screens.beacon_details.buttons.label3, LV_SYMBOL_RIGHT);
+    lv_obj_set_auto_realign(lv_screens.beacon_details.buttons.label3, true);
+
+    // - symbols
+    lv_screens.beacon_details.symbols.symbol_eye = lv_label_create(scr, NULL);
+    lv_obj_align(lv_screens.beacon_details.symbols.symbol_eye, NULL, LV_ALIGN_IN_TOP_LEFT, 5, 5);
+    lv_obj_set_auto_realign(lv_screens.beacon_details.symbols.symbol_eye, true);
+
+    lv_screens.beacon_details.symbols.symbol_battery = lv_label_create(scr, NULL);
+    lv_obj_align(lv_screens.beacon_details.symbols.symbol_battery, lv_screens.beacon_details.symbols.symbol_eye, LV_ALIGN_OUT_RIGHT_MID, 5, 0);
+    lv_obj_set_auto_realign(lv_screens.beacon_details.symbols.symbol_battery, true);
+
+    // - pagenum
+    lv_screens.beacon_details.pagenum.pagenum = lv_label_create(scr, NULL);
+    lv_obj_align(lv_screens.beacon_details.pagenum.pagenum, NULL, LV_ALIGN_IN_TOP_RIGHT, -5, 5);
+    lv_obj_set_auto_realign(lv_screens.beacon_details.pagenum.pagenum, true);
+
+    // Last seen screen
+    lv_screens.last_seen.scr =  lv_obj_create(NULL, NULL);
+    lv_obj_set_style(lv_screens.last_seen.scr, &style_screen);
     scr = lv_screens.last_seen.scr;
-    lv_screens.last_seen.name = lv_label_create(scr, NULL);
 
+    lv_screens.last_seen.title = lv_label_create(scr, NULL);
+    lv_obj_set_style(lv_screens.last_seen.title, &style_title);
+    lv_obj_align(lv_screens.last_seen.title, NULL, LV_ALIGN_IN_TOP_MID, 0, 5);
+    lv_obj_set_auto_realign(lv_screens.last_seen.title, true);
+
+    lv_screens.last_seen.table = lv_table_create(scr, NULL);
+    lv_obj_t * table = lv_screens.last_seen.table;
+
+    lv_table_set_style(table, LV_TABLE_STYLE_CELL1, &style_cell1);
+    lv_table_set_style(table, LV_TABLE_STYLE_CELL2, &style_cell2);
+    lv_table_set_style(table, LV_TABLE_STYLE_BG, &lv_style_transp_tight);
+    lv_table_set_col_cnt(table, 3);
+    lv_table_set_row_cnt(table, 6);
+    lv_obj_align(table, lv_screens.last_seen.title, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
+
+    /*Make the cells of the first row center aligned */
+    lv_table_set_cell_align(table, 0, 0, LV_LABEL_ALIGN_CENTER);
+    lv_table_set_cell_align(table, 0, 1, LV_LABEL_ALIGN_CENTER);
+
+    /*Make the cells of the first row TYPE = 2 (use `style_cell2`) */
+    lv_table_set_cell_type(table, 0, 0, 2);
+    lv_table_set_cell_type(table, 0, 1, 2);
+    lv_table_set_cell_type(table, 0, 2, 2);
+
+    /*Fill the first column*/
+    lv_table_set_cell_value(table, 0, 0, "Name");
+    lv_table_set_cell_value(table, 1, 0, "Bx0701");
+    lv_table_set_cell_value(table, 2, 0, "Bx0706");
+    lv_table_set_cell_value(table, 3, 0, "Bx0708");
+    lv_table_set_cell_value(table, 4, 0, "Bx0709");
+    lv_table_set_cell_value(table, 5, 0, "Bx0709");
+
+    lv_table_set_cell_value(table, 0, 1, "Last Seen");
+    lv_table_set_cell_value(table, 1, 1, "01:23:45");
+    lv_table_set_cell_value(table, 2, 1, "01:23:45");
+    lv_table_set_cell_value(table, 3, 1, "01:23:45");
+    lv_table_set_cell_value(table, 4, 1, "01:23:32");
+    lv_table_set_cell_value(table, 5, 1, "01:23:32");
+
+    lv_table_set_cell_value(table, 0, 2, "Last Send");
+    lv_table_set_cell_value(table, 1, 2, "01:23:45");
+    lv_table_set_cell_value(table, 2, 2, "01:23:45");
+    lv_table_set_cell_value(table, 3, 2, "01:23:45");
+    lv_table_set_cell_value(table, 4, 2, "01:23:45");
+    lv_table_set_cell_value(table, 5, 2, "01:23:45");
+
+    // - buttons
+    lv_screens.last_seen.buttons.label3 = lv_label_create(scr, NULL);
+    lv_obj_align(lv_screens.last_seen.buttons.label3, NULL, LV_ALIGN_IN_BOTTOM_MID, +95, 0);
+    lv_label_set_text(lv_screens.last_seen.buttons.label3, LV_SYMBOL_RIGHT);
+    lv_obj_set_auto_realign(lv_screens.last_seen.buttons.label3, true);
+
+    // - pagenum
+    lv_screens.last_seen.pagenum.pagenum = lv_label_create(scr, NULL);
+    lv_obj_align(lv_screens.last_seen.pagenum.pagenum, NULL, LV_ALIGN_IN_TOP_RIGHT, -5, 5);
+    lv_obj_set_auto_realign(lv_screens.last_seen.pagenum.pagenum, true);
+
+    // App version screen
     lv_screens.app_version.scr = lv_obj_create(NULL, NULL);
     scr = lv_screens.app_version.scr;
     lv_screens.app_version.app_name = lv_label_create(scr, NULL);
@@ -650,6 +805,7 @@ void lv_init_screens()
     lv_screens.app_version.wifi_ssid = lv_label_create(scr, NULL);
     lv_screens.app_version.active = lv_label_create(scr, NULL);
 
+    // Stats screen
     lv_screens.stats.scr = lv_obj_create(NULL, NULL);
     scr = lv_screens.stats.scr;
     lv_screens.stats.uptime = lv_label_create(scr, NULL);
@@ -658,18 +814,15 @@ void lv_init_screens()
     lv_screens.stats.wifi_status = lv_label_create(scr, NULL);
     lv_screens.stats.mqtt_status = lv_label_create(scr, NULL);
 
-    lv_screens.empty.scr = lv_obj_create(NULL, NULL);
-    scr = lv_screens.empty.scr;
-    lv_screens.empty.name = lv_label_create(scr, NULL);
+    // Placeholder text
 
-    lv_obj_align(lv_screens.beacon_details.name, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-    lv_obj_align(lv_screens.beacon_details.temperature, lv_screens.beacon_details.name, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
-    lv_obj_align(lv_screens.beacon_details.humidity, lv_screens.beacon_details.temperature, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
-    lv_obj_align(lv_screens.beacon_details.battery, lv_screens.beacon_details.humidity, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
-    lv_obj_align(lv_screens.beacon_details.rssi, lv_screens.beacon_details.battery, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
-    lv_obj_align(lv_screens.beacon_details.active, lv_screens.beacon_details.rssi, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
+    // lv_label_set_text(lv_screens.last_seen.name, "Last seen");
+    lv_label_set_text(lv_screens.app_version.app_name, "App Version");
+    lv_label_set_text(lv_screens.stats.uptime, "Uptime");
+    lv_label_set_text(lv_screens.empty.name, "Empty Screen");
 
-    lv_obj_align(lv_screens.last_seen.name, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+
+    // lv_obj_align(lv_screens.last_seen.name, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 
     lv_obj_align(lv_screens.app_version.app_name, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
     lv_obj_align(lv_screens.app_version.git_commit, lv_screens.app_version.app_name, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
@@ -686,24 +839,6 @@ void lv_init_screens()
     lv_obj_align(lv_screens.stats.mqtt_status, lv_screens.stats.uptime, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
 
     lv_obj_align(lv_screens.empty.name, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-}
-
-void lv_display_create()
-{
-    lv_init_screens();
-    lv_scr_load(lv_screens.empty.scr);
-
-    lv_label_set_text(lv_screens.beacon_details.name, "Bx0706");
-    lv_label_set_text(lv_screens.beacon_details.temperature, "Temperature: 23,45");
-    lv_label_set_text(lv_screens.beacon_details.humidity, "Humidity 43");
-    lv_label_set_text(lv_screens.beacon_details.battery, "Battery 3.012 V");
-    lv_label_set_text(lv_screens.beacon_details.rssi, "-56 dBm");
-    lv_led_set_bright(lv_screens.beacon_details.active, 255);
-
-    lv_label_set_text(lv_screens.last_seen.name, "Last seen");
-    lv_label_set_text(lv_screens.app_version.app_name, "App Version");
-    lv_label_set_text(lv_screens.stats.uptime, "Uptime");
-    lv_label_set_text(lv_screens.empty.name, "Empty Screen");
 }
 
 #endif // CONFIG_DISPLAY_M5STACK

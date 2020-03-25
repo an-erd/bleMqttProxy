@@ -605,4 +605,22 @@ You can temporarily bump IRAM to 0x40000, call again, and retrieve the informati
                  libmesh.a          0      0      0          0        0       0
   ```
 
+  ### Generating Fonts for LittlevGL
+  
+  Since in the included fonts there is no degree symbol, you need to generate the fonts including these symbol.
+  
+  The online converter can be found here: [https://littlevgl.com/ttf-font-to-c-array](https://littlevgl.com/ttf-font-to-c-array)
+  
+  Configuration and usage:
+  
+  - Choose a name (e.g. m5stack_16)
+  - Input the size (e.g. 16)
+  - Set BPP to 4 bits-per-pixel
+  - Turn compressoin and subpixel hinting off
+  - TTF/WOFF file as can be found [here](https://github.com/littlevgl/lvgl/tree/master/scripts/built_in_font)
+  - Range: 0x20-0x7f + all symbols as listed on the link
+  - Symbols: "°" (this is our degree symbol)
+  
+  Generate the font and include using `LV_FONT_DECLARE(my_font_name);` and set the font in a style like this: `style.text.font = &my_font_name;`.
+  
   

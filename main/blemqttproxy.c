@@ -143,8 +143,7 @@ void clear_stats_values()
 
 void button_push_cb(void* arg)
 {
-    char* pstr = (char*) arg;
-    UNUSED(pstr);
+    uint8_t btn = *((uint8_t*) arg);
 
     if(!display_status.button_enabled){
         ESP_LOGD(TAG, "button_push_cb: button not enabled");
@@ -179,10 +178,10 @@ void handle_long_button_push()
 
 void button_release_cb(void* arg)
 {
-    char* pstr = (char*) arg;
-    UNUSED(pstr);
+    uint8_t btn = *((uint8_t*) arg);
 
     ESP_LOGD(TAG, "heap: %d", esp_get_free_heap_size());
+    ESP_LOGI(TAG, "button_release_cb, button %d pressed", btn);
 
     if(!display_status.button_enabled){
         ESP_LOGD(TAG, "button_release_cb: button not enabled");
@@ -220,7 +219,7 @@ void button_release_cb(void* arg)
     if(esp_timer_get_time() < time_button_long_press){
         set_next_display_show();
     } else {
-        handle_long_button_push();
+        handle_long_button_push(btn);
     }
 
     switch(display_status.screen_to_show){
@@ -1492,7 +1491,6 @@ void initialize_lv()
     esp_register_freertos_tick_hook(lv_tick_task);
 
     lv_init_screens();
-    lv_display_create();
 }
 
 static void lv_task(void* pvParameters)
@@ -1507,6 +1505,14 @@ static void lv_task(void* pvParameters)
 
 void app_main()
 {
+#if CONFIG_DEVICE_M5STACK==1
+    static uint8_t btn_a = 1;
+    static uint8_t btn_b = 2;
+    static uint8_t btn_c = 3;
+#elif CONFIG_DEVICE_WEMOS_LOLIN_OLED
+    static uint8_t btn = 0;
+#endif
+
     adjust_log_level();
 
     // NVS initialization and beacon mask retrieval
@@ -1526,17 +1532,17 @@ void app_main()
     button_handle_t btn_handle_a = iot_button_create(BUTTON_IO_NUM_A, BUTTON_ACTIVE_LEVEL);
     button_handle_t btn_handle_b = iot_button_create(BUTTON_IO_NUM_B, BUTTON_ACTIVE_LEVEL);
     button_handle_t btn_handle_c = iot_button_create(BUTTON_IO_NUM_C, BUTTON_ACTIVE_LEVEL);
-    iot_button_set_evt_cb(btn_handle_a, BUTTON_CB_PUSH, button_push_cb, "PUSH");
-    iot_button_set_evt_cb(btn_handle_b, BUTTON_CB_PUSH, button_push_cb, "PUSH");
-    iot_button_set_evt_cb(btn_handle_c, BUTTON_CB_PUSH, button_push_cb, "PUSH");
-    iot_button_set_evt_cb(btn_handle_a, BUTTON_CB_RELEASE, button_release_cb, "RELEASE");
-    iot_button_set_evt_cb(btn_handle_b, BUTTON_CB_RELEASE, button_release_cb, "RELEASE");
-    iot_button_set_evt_cb(btn_handle_c, BUTTON_CB_RELEASE, button_release_cb, "RELEASE");
+    iot_button_set_evt_cb(btn_handle_a, BUTTON_CB_PUSH, button_push_cb, &btn_a);
+    iot_button_set_evt_cb(btn_handle_b, BUTTON_CB_PUSH, button_push_cb, &btn_b);
+    iot_button_set_evt_cb(btn_handle_c, BUTTON_CB_PUSH, button_push_cb, &btn_c);
+    iot_button_set_evt_cb(btn_handle_a, BUTTON_CB_RELEASE, button_release_cb, &btn_a);
+    iot_button_set_evt_cb(btn_handle_b, BUTTON_CB_RELEASE, button_release_cb, &btn_b);
+    iot_button_set_evt_cb(btn_handle_c, BUTTON_CB_RELEASE, button_release_cb, &btn_c);
 #endif
 #if CONFIG_DEVICE_WEMOS_LOLIN_OLED
     button_handle_t btn_handle = iot_button_create(BUTTON_IO_NUM, BUTTON_ACTIVE_LEVEL);
-    iot_button_set_evt_cb(btn_handle, BUTTON_CB_PUSH, button_push_cb, "PUSH");
-    iot_button_set_evt_cb(btn_handle, BUTTON_CB_RELEASE, button_release_cb, "RELEASE");
+    iot_button_set_evt_cb(btn_handle, BUTTON_CB_PUSH, button_push_cb, &btn);
+    iot_button_set_evt_cb(btn_handle, BUTTON_CB_RELEASE, button_release_cb, &btn);
 #endif
 
 #ifdef CONFIG_DISPLAY_SSD1306
