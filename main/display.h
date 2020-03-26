@@ -179,22 +179,20 @@ typedef struct {
 
 typedef struct {
     lv_obj_t * scr;                     // obj
-    lv_obj_t * app_name;                // label
-    lv_obj_t * git_commit;              // label
-    lv_obj_t * mac_addr;                // label
-    lv_obj_t * ip_addr;                 // label
-    lv_obj_t * mqtt_addr;               // label
-    lv_obj_t * wifi_ssid;               // label
-    lv_obj_t * active;                  // label
+    lv_obj_t * title;                   // label
+    lv_obj_t * table;                   // table
+    src_buttons_t buttons;
+    src_symbol_t symbols;
+    src_pagenum_t pagenum;
 } src_app_version_t;
 
 typedef struct {
     lv_obj_t * scr;                     // obj
-    lv_obj_t * uptime;                  // label
-    lv_obj_t * wifi_stats;              // label
-    lv_obj_t * mqtt_stats;              // label
-    lv_obj_t * wifi_status;             // label
-    lv_obj_t * mqtt_status;             // label
+    lv_obj_t * title;                   // label
+    lv_obj_t * table;                   // table
+    src_buttons_t buttons;
+    src_symbol_t symbols;
+    src_pagenum_t pagenum;
 } src_stats_t;
 
 typedef struct {

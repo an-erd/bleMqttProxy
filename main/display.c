@@ -1,12 +1,14 @@
 #include "esp_log.h"
 #include "esp_ota_ops.h"
 #include "esp_timer.h"
+#include <sys/param.h>
 
 #include "display.h"
 #include "beacon.h"
 #include "timer.h"
 #include "helperfunctions.h"
 #include "ble_mqtt.h"
+#include "web_file_server.h"
 
 #ifdef CONFIG_DISPLAY_SSD1306
 #include "ssd1306.h"
@@ -172,12 +174,9 @@ void update_display_message(ssd1306_canvas_t *canvas)
         break;
 
     case BEACON_SCREEN:
-        if (display_status.beac_to_show < CONFIG_BLE_DEVICE_COUNT_USE - 1)
-        {
+        if (display_status.beac_to_show < CONFIG_BLE_DEVICE_COUNT_USE - 1) {
             display_status.beac_to_show++;
-        }
-        else
-        {
+        } else {
             display_status.current_beac = UNKNOWN_BEACON;
             display_status.screen_to_show = LASTSEEN_SCREEN;
             display_status.lastseen_page_to_show = 1;
@@ -185,12 +184,9 @@ void update_display_message(ssd1306_canvas_t *canvas)
         break;
 
     case LASTSEEN_SCREEN:
-        if (display_status.lastseen_page_to_show < display_status.num_last_seen_pages)
-        {
+        if (display_status.lastseen_page_to_show < display_status.num_last_seen_pages) {
             display_status.lastseen_page_to_show++;
-        }
-        else
-        {
+        } else {
             display_status.screen_to_show = APPVERSION_SCREEN;
         }
         break;
@@ -215,43 +211,34 @@ void display_update_check_timer()
 {
     // ESP_ERROR_CHECK(esp_timer_dump(stdout));
 
-    if (get_run_periodic_timer())
-    {
+    if (get_run_periodic_timer()) {
         if (!periodic_timer_is_running())
         {
             periodic_timer_start();
         }
-    }
-    else
-    {
+    } else {
         if (periodic_timer_is_running())
         {
             periodic_timer_stop();
         }
     }
 
-    if (get_run_idle_timer())
-    {
+    if (get_run_idle_timer()) {
         if (!idle_timer_is_running())
         {
             idle_timer_start();
         }
-    }
-    else
-    {
-        if (idle_timer_is_running())
-        {
+    } else {
+        if (idle_timer_is_running()) {
             idle_timer_stop();
         }
     }
 
-    if (get_run_idle_timer_touch())
-    {
+    if (get_run_idle_timer_touch()) {
         set_run_idle_timer_touch(false);
         ESP_LOGD(TAG, "display_update_check_timer idle_timer_is_running() = %d", idle_timer_is_running());
 
-        if (idle_timer_is_running())
-        {
+        if (idle_timer_is_running()) {
             idle_timer_touch();
         }
     }
@@ -299,32 +286,29 @@ esp_err_t ssd1306_show_splash_screen(ssd1306_canvas_t *canvas)
 
 esp_err_t ssd1306_show_beacon_screen(ssd1306_canvas_t *canvas, int idx)
 {
-    char buffer[128], buffer2[32];
+    char buffer[32], buffer2[32];
 
     ssd1306_clear_canvas(canvas, 0x00);
 
-    snprintf(buffer, 128, "%s", ble_beacons[idx].beacon_data.name);
+    snprintf(buffer, 32, "%s", ble_beacons[idx].beacon_data.name);
     ssd1306_draw_string(canvas, 0, 0, (const uint8_t *)buffer, 10, 1);
-    if (is_beacon_idx_active(idx) && (ble_beacons[idx].adv_data.last_seen != 0))
-    {
-        snprintf(buffer, 128, "%5.2fC, %5.2f%%H",
+    if (is_beacon_idx_active(idx) && (ble_beacons[idx].adv_data.last_seen != 0)) {
+        snprintf(buffer, 32, "%5.2fC, %5.2f%%H",
             ble_beacons[idx].adv_data.temp, ble_beacons[idx].adv_data.humidity);
         ssd1306_draw_string(canvas, 0, 12, (const uint8_t *)buffer, 10, 1);
-        snprintf(buffer, 128, "Batt %4d mV", ble_beacons[idx].adv_data.battery);
+        snprintf(buffer, 32, "Batt %4d mV", ble_beacons[idx].adv_data.battery);
         ssd1306_draw_string(canvas, 0, 24, (const uint8_t *)buffer, 10, 1);
-        snprintf(buffer, 128, "RSSI  %3d dBm", ble_beacons[idx].adv_data.measured_power);
+        snprintf(buffer, 32, "RSSI  %3d dBm", ble_beacons[idx].adv_data.measured_power);
         ssd1306_draw_string(canvas, 0, 36, (const uint8_t *)buffer, 10, 1);
-    }
-    else
-    {
-        snprintf(buffer, 128, "  -  C,   -  %%H");
+    } else {
+        snprintf(buffer, 32, "  -  C,   -  %%H");
         ssd1306_draw_string(canvas, 0, 12, (const uint8_t *)buffer, 10, 1);
-        snprintf(buffer, 128, "Batt   -  mV");
+        snprintf(buffer, 32, "Batt   -  mV");
         ssd1306_draw_string(canvas, 0, 24, (const uint8_t *)buffer, 10, 1);
-        snprintf(buffer, 128, "RSSI   -  dBm");
+        snprintf(buffer, 32, "RSSI   -  dBm");
         ssd1306_draw_string(canvas, 0, 36, (const uint8_t *)buffer, 10, 1);
     }
-    snprintf(buffer, 128, "active: %s", (is_beacon_idx_active(idx) ? "y" : "n"));
+    snprintf(buffer, 32, "active: %s", (is_beacon_idx_active(idx) ? "y" : "n"));
     ssd1306_draw_string(canvas, 0, 48, (const uint8_t *)buffer, 10, 1);
 
     draw_pagenumber(canvas, idx + 1, CONFIG_BLE_DEVICE_COUNT_USE);
@@ -334,40 +318,37 @@ esp_err_t ssd1306_show_beacon_screen(ssd1306_canvas_t *canvas, int idx)
 
 esp_err_t ssd1306_show_last_seen_screen(ssd1306_canvas_t *canvas, uint8_t num_act_beac)
 {
-    char buffer[128], buffer2[32];
+    char buffer[32], buffer2[32];
 
     ssd1306_clear_canvas(canvas, 0x00);
 
-    snprintf(buffer, 128, "Last seen/send:");
+    snprintf(buffer, 32, "Last seen/send:");
     ssd1306_draw_string(canvas, 0, 0, (const uint8_t *)buffer, 10, 1);
-    if (!num_act_beac)
-    {
+    if (!num_act_beac) {
         display_status.lastseen_page_to_show = 1;
-        snprintf(buffer, 128, "No active beacon!");
+        snprintf(buffer, 32, "No active beacon!");
         ssd1306_draw_string(canvas, 0, 10, (const uint8_t *)buffer, 10, 1);
-    }
-    else
-    {
+    } else {
         int skip = (display_status.lastseen_page_to_show - 1) * BEAC_PER_PAGE_LASTSEEN;
         int line = 1;
-        for (int i = 0; i < CONFIG_BLE_DEVICE_COUNT_USE; i++)        {
-            if (is_beacon_idx_active(i))            {
-                if (skip)                {
+        for (int i = 0; i < CONFIG_BLE_DEVICE_COUNT_USE; i++) {
+            if (is_beacon_idx_active(i)) {
+                if (skip) {
                     skip--;
                 } else {
                     bool never_seen = (ble_beacons[i].adv_data.last_seen == 0);
                     if (never_seen)                    {
-                        snprintf(buffer, 128, "%s: %c", ble_beacons[i].beacon_data.name, '/');
-                    }else {
+                        snprintf(buffer, 32, "%s: %c", ble_beacons[i].beacon_data.name, '/');
+                    } else {
                         uint16_t last_seen_sec_gone = (esp_timer_get_time() - ble_beacons[i].adv_data.last_seen) / 1000000;
                         uint16_t mqtt_last_send_sec_gone = (esp_timer_get_time() - ble_beacons[i].adv_data.mqtt_last_send) / 1000000;
                         uint8_t h, m, s, hq, mq, sq;
                         convert_s_hhmmss(last_seen_sec_gone, &h, &m, &s);
                         convert_s_hhmmss(mqtt_last_send_sec_gone, &hq, &mq, &sq);
                         if (h > 99) {
-                            snprintf(buffer, 128, "%s: %s", ble_beacons[i].beacon_data.name, "seen >99h");
+                            snprintf(buffer, 32, "%s: %s", ble_beacons[i].beacon_data.name, "seen >99h");
                         } else {
-                            snprintf(buffer, 128, "%s: %02d:%02d:%02d %02d:%02d:%02d", ble_beacons[i].beacon_data.name, h, m, s, hq, mq, sq);
+                            snprintf(buffer, 32, "%s: %02d:%02d:%02d %02d:%02d:%02d", ble_beacons[i].beacon_data.name, h, m, s, hq, mq, sq);
                         }
                     }
                     ssd1306_draw_string(canvas, 0, line * 10, (const uint8_t *)buffer, 10, 1);
@@ -384,24 +365,23 @@ esp_err_t ssd1306_show_last_seen_screen(ssd1306_canvas_t *canvas, uint8_t num_ac
     return ssd1306_refresh_gram(canvas);
 }
 
-
 esp_err_t ssd1306_show_app_version_screen(ssd1306_canvas_t *canvas)
 {
-    char buffer[128], buffer2[32];
+    char buffer[32], buffer2[32];
     const esp_app_desc_t *app_desc = esp_ota_get_app_description();
     tcpip_adapter_ip_info_t ipinfo;
     uint8_t mac[6];
     ESP_ERROR_CHECK(esp_efuse_mac_get_default(mac));
 
     ssd1306_clear_canvas(canvas, 0x00);
-    snprintf(buffer, 128, "%s", app_desc->version);
+    snprintf(buffer, 32, "%s", app_desc->version);
     ssd1306_draw_string(canvas, 0, 0, (const uint8_t *)buffer, 10, 1);
-    snprintf(buffer, 128, "%s", app_desc->project_name);
+    snprintf(buffer, 32, "%s", app_desc->project_name);
     ssd1306_draw_string(canvas, 0, 11, (const uint8_t *)buffer, 10, 1);
-    snprintf(buffer, 128, "%s", app_desc->idf_ver);
+    snprintf(buffer, 32, "%s", app_desc->idf_ver);
     ssd1306_draw_string(canvas, 0, 22, (const uint8_t *)buffer, 10, 1);
-    snprintf(buffer, 128, "%2X:%2X:%2X:%2X:%2X:%2X",
-                mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    snprintf(buffer, 32, "%02X:%02X:%02X:%02X:%02X:%02X",
+        mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     ssd1306_draw_string(canvas, 0, 33, (const uint8_t *)buffer, 10, 1);
 
     tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ipinfo);
@@ -412,11 +392,11 @@ esp_err_t ssd1306_show_app_version_screen(ssd1306_canvas_t *canvas)
     int num_lead_zeros = CONFIG_BLE_DEVICE_COUNT_USE - strlen(buffer2);
     if (!num_lead_zeros)
     {
-        snprintf(buffer, 128, "Act:  %s (%d..1)", buffer2, CONFIG_BLE_DEVICE_COUNT_USE);
+        snprintf(buffer, 32, "Act:  %s (%d..1)", buffer2, CONFIG_BLE_DEVICE_COUNT_USE);
     }
     else
     {
-        snprintf(buffer, 128, "Act:  %0*d%s (%d..1)", num_lead_zeros, 0, buffer2, CONFIG_BLE_DEVICE_COUNT_USE);
+        snprintf(buffer, 32, "Act:  %0*d%s (%d..1)", num_lead_zeros, 0, buffer2, CONFIG_BLE_DEVICE_COUNT_USE);
     }
     ssd1306_draw_string(canvas, 0, 55, (const uint8_t *)buffer, 10, 1);
 
@@ -425,7 +405,7 @@ esp_err_t ssd1306_show_app_version_screen(ssd1306_canvas_t *canvas)
 
 esp_err_t ssd1306_show_stats_screen(ssd1306_canvas_t *canvas)
 {
-    char buffer[128], buffer2[32];
+    char buffer[32], buffer2[32];
     uint32_t uptime_sec = esp_timer_get_time() / 1000000;
     uint16_t up_d;
     uint8_t up_h, up_m, up_s;
@@ -433,17 +413,17 @@ esp_err_t ssd1306_show_stats_screen(ssd1306_canvas_t *canvas)
 
     ssd1306_clear_canvas(canvas, 0x00);
 
-    snprintf(buffer, 128, "%s", "Statistics/Status:");
+    snprintf(buffer, 32, "%s", "Statistics/Status:");
     ssd1306_draw_string(canvas, 0, 0, (const uint8_t *)buffer, 10, 1);
 
     convert_s_ddhhmmss(uptime_sec, &up_d, &up_h, &up_m, &up_s);
-    snprintf(buffer, 128, "%-6s      %3dd %2d:%02d:%02d", "uptime", up_d, up_h, up_m, up_s);
+    snprintf(buffer, 32, "%-6s      %3dd %2d:%02d:%02d", "uptime", up_d, up_h, up_m, up_s);
     ssd1306_draw_string(canvas, 0, 11, (const uint8_t *)buffer, 10, 1);
 
-    snprintf(buffer, 128, "%-9s %6d/%5d", "WiFi ok/fail", wifi_connections_count_connect, wifi_connections_count_disconnect);
+    snprintf(buffer, 32, "%-9s %6d/%5d", "WiFi ok/fail", wifi_connections_count_connect, wifi_connections_count_disconnect);
     ssd1306_draw_string(canvas, 0, 22, (const uint8_t *)buffer, 10, 1);
 
-    snprintf(buffer, 128, "%-9s %6d/%5d", "MQTT ok/fail", mqtt_packets_send, mqtt_packets_fail);
+    snprintf(buffer, 32, "%-9s %6d/%5d", "MQTT ok/fail", mqtt_packets_send, mqtt_packets_fail);
     ssd1306_draw_string(canvas, 0, 33, (const uint8_t *)buffer, 10, 1);
 
     uxReturn = xEventGroupWaitBits(mqtt_evg, MQTT_CONNECTED_BIT, false, true, 0);
@@ -452,7 +432,7 @@ esp_err_t ssd1306_show_stats_screen(ssd1306_canvas_t *canvas)
     uxReturn = xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, 0);
     bool wifi_connected = uxReturn & WIFI_CONNECTED_BIT;
 
-    snprintf(buffer, 128, "WIFI: %s, MQTT: %s/%s", (wifi_connected ? "y" : "n"), (CONFIG_USE_MQTT ? "y" : "n"), (mqtt_connected ? "y" : "n"));
+    snprintf(buffer, 32, "WIFI: %s, MQTT: %s/%s", (wifi_connected ? "y" : "n"), (CONFIG_USE_MQTT ? "y" : "n"), (mqtt_connected ? "y" : "n"));
     ssd1306_draw_string(canvas, 0, 44, (const uint8_t *)buffer, 10, 1);
     return ssd1306_refresh_gram(canvas);
 }
@@ -509,7 +489,7 @@ esp_err_t lv_show_beacon_screen(int idx)
     lv_label_set_text_fmt(lv_screens.beacon_details.symbols.symbol_eye, "%s",
         (is_beacon_idx_active(idx) ? LV_SYMBOL_EYE_OPEN : LV_SYMBOL_EYE_CLOSE));
 
-    lv_label_set_text_fmt(lv_screens.beacon_details.buttons.label1, "%s",
+    lv_label_set_text_fmt(lv_screens.beacon_details.buttons.label2, "%s",
         (is_beacon_idx_active(idx) ? LV_SYMBOL_EYE_CLOSE : LV_SYMBOL_EYE_OPEN));
 
     lv_label_set_text_fmt(lv_screens.beacon_details.pagenum.pagenum, "%d/%d", idx + 1, CONFIG_BLE_DEVICE_COUNT_USE);
@@ -518,44 +498,50 @@ esp_err_t lv_show_beacon_screen(int idx)
 
     return ESP_OK;
 }
-/*
+
 esp_err_t lv_show_last_seen_screen(uint8_t num_act_beac)
 {
-    char buffer[128], buffer2[32];
+    char buffer1[32], buffer2[32];
 
-    snprintf(buffer, 128, "Last seen/send:");
-    ssd1306_draw_string(canvas, 0, 0, (const uint8_t *)buffer, 10, 1);
     if (!num_act_beac)
     {
         display_status.lastseen_page_to_show = 1;
-        snprintf(buffer, 128, "No active beacon!");
-        ssd1306_draw_string(canvas, 0, 10, (const uint8_t *)buffer, 10, 1);
+        // snprintf(buffer, 32, "No active beacon!");
     }
     else
     {
         int skip = (display_status.lastseen_page_to_show - 1) * BEAC_PER_PAGE_LASTSEEN;
         int line = 1;
+        lv_obj_t * table = lv_screens.last_seen.table;
+        int num_rows = 1 + MIN(num_act_beac - skip, 5);
+        lv_table_set_row_cnt(table, num_rows);
+
         for (int i = 0; i < CONFIG_BLE_DEVICE_COUNT_USE; i++)        {
             if (is_beacon_idx_active(i))            {
                 if (skip)                {
                     skip--;
                 } else {
                     bool never_seen = (ble_beacons[i].adv_data.last_seen == 0);
-                    if (never_seen)                    {
-                        snprintf(buffer, 128, "%s: %c", ble_beacons[i].beacon_data.name, '/');
-                    }else {
+                    lv_table_set_cell_value(table, line, 0, ble_beacons[i].beacon_data.name);
+                    if (never_seen){
+                        lv_table_set_cell_value(table, line, 1, "/");
+                        lv_table_set_cell_value(table, line, 2, "/");
+                    } else {
                         uint16_t last_seen_sec_gone = (esp_timer_get_time() - ble_beacons[i].adv_data.last_seen) / 1000000;
                         uint16_t mqtt_last_send_sec_gone = (esp_timer_get_time() - ble_beacons[i].adv_data.mqtt_last_send) / 1000000;
                         uint8_t h, m, s, hq, mq, sq;
                         convert_s_hhmmss(last_seen_sec_gone, &h, &m, &s);
                         convert_s_hhmmss(mqtt_last_send_sec_gone, &hq, &mq, &sq);
                         if (h > 99) {
-                            snprintf(buffer, 128, "%s: %s", ble_beacons[i].beacon_data.name, "seen >99h");
+                            snprintf(buffer1, 32, "%s", "seen >99h");
+                            snprintf(buffer2, 32, "%s", "/");
                         } else {
-                            snprintf(buffer, 128, "%s: %02d:%02d:%02d %02d:%02d:%02d", ble_beacons[i].beacon_data.name, h, m, s, hq, mq, sq);
+                            snprintf(buffer1, 32, "%02d:%02d:%02d", h, m, s);
+                            snprintf(buffer2, 32, "%02d:%02d:%02d", hq, mq, sq);
                         }
                     }
-                    ssd1306_draw_string(canvas, 0, line * 10, (const uint8_t *)buffer, 10, 1);
+                    lv_table_set_cell_value(table, line, 1, buffer1);
+                    lv_table_set_cell_value(table, line, 2, buffer2);
                     if (BEAC_PER_PAGE_LASTSEEN == line++) {
                         break;
                     }
@@ -563,86 +549,115 @@ esp_err_t lv_show_last_seen_screen(uint8_t num_act_beac)
             }
         }
     }
+    lv_label_set_text_fmt(lv_screens.last_seen.pagenum.pagenum, "%d/%d", display_status.lastseen_page_to_show, display_status.num_last_seen_pages);
+    lv_scr_load(lv_screens.last_seen.scr);
 
-    draw_pagenumber(canvas, display_status.lastseen_page_to_show, display_status.num_last_seen_pages);
-
-    return ssd1306_refresh_gram(canvas);
+    return ESP_OK;
 }
-*/
-/*
 
-esp_err_t lv_show_app_version_screen(ssd1306_canvas_t *canvas)
+esp_err_t lv_show_app_version_screen()
 {
-    char buffer[128], buffer2[32];
+    char buffer[32], buffer2[32];
+    int line;
     const esp_app_desc_t *app_desc = esp_ota_get_app_description();
     tcpip_adapter_ip_info_t ipinfo;
     uint8_t mac[6];
     ESP_ERROR_CHECK(esp_efuse_mac_get_default(mac));
+    lv_obj_t * table = lv_screens.app_version.table;
 
-    ssd1306_clear_canvas(canvas, 0x00);
-    snprintf(buffer, 128, "%s", app_desc->version);
-    ssd1306_draw_string(canvas, 0, 0, (const uint8_t *)buffer, 10, 1);
-    snprintf(buffer, 128, "%s", app_desc->project_name);
-    ssd1306_draw_string(canvas, 0, 11, (const uint8_t *)buffer, 10, 1);
-    snprintf(buffer, 128, "%s", app_desc->idf_ver);
-    ssd1306_draw_string(canvas, 0, 22, (const uint8_t *)buffer, 10, 1);
-    snprintf(buffer, 128, "%2X:%2X:%2X:%2X:%2X:%2X",
-                mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    ssd1306_draw_string(canvas, 0, 33, (const uint8_t *)buffer, 10, 1);
+    line = 1;
+    snprintf(buffer, 32, "%s", app_desc->version);
+    lv_table_set_cell_value(table, line, 0, "App. version");
+    lv_table_set_cell_value(table, line, 1, buffer);
 
+    line++;
+    snprintf(buffer, 32, "%s", app_desc->project_name);
+    lv_table_set_cell_value(table, line, 0, "Project");
+    lv_table_set_cell_value(table, line, 1, buffer);
+
+    line++;
+    lv_table_set_cell_value(table, line, 0, "IDF version");
+    lv_table_set_cell_value(table, line, 1, app_desc->idf_ver);
+
+    line++;
+    lv_table_set_cell_value(table, line, 0, "MAC Addr");
+    snprintf(buffer, 32, "%02X:%02X:%02X:%02X:%02X:%02X",
+        mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    lv_table_set_cell_value(table, line, 1, buffer);
+
+    line++;
+    lv_table_set_cell_value(table, line, 0, "IP Addr");
     tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ipinfo);
     sprintf(buffer, IPSTR, IP2STR(&ipinfo.ip));
-    ssd1306_draw_string(canvas, 0, 44, (const uint8_t *)buffer, 10, 1);
+    lv_table_set_cell_value(table, line, 1, buffer);
 
+    line++;
+    lv_table_set_cell_value(table, line, 0, "Active");
     itoa(s_active_beacon_mask, buffer2, 2);
     int num_lead_zeros = CONFIG_BLE_DEVICE_COUNT_USE - strlen(buffer2);
-    if (!num_lead_zeros)
-    {
-        snprintf(buffer, 128, "Act:  %s (%d..1)", buffer2, CONFIG_BLE_DEVICE_COUNT_USE);
+    if (!num_lead_zeros) {
+        snprintf(buffer, 32, "%s (%d..1)", buffer2, CONFIG_BLE_DEVICE_COUNT_USE);
+    } else {
+        snprintf(buffer, 32, "%0*d%s (%d..1)", num_lead_zeros, 0, buffer2, CONFIG_BLE_DEVICE_COUNT_USE);
     }
-    else
-    {
-        snprintf(buffer, 128, "Act:  %0*d%s (%d..1)", num_lead_zeros, 0, buffer2, CONFIG_BLE_DEVICE_COUNT_USE);
-    }
-    ssd1306_draw_string(canvas, 0, 55, (const uint8_t *)buffer, 10, 1);
+    lv_table_set_cell_value(table, line, 1, buffer);
 
-    return ssd1306_refresh_gram(canvas);
+    lv_scr_load(lv_screens.app_version.scr);
+
+    return ESP_OK;
 }
 
-esp_err_t lv_show_stats_screen(ssd1306_canvas_t *canvas)
+esp_err_t lv_show_stats_screen()
 {
-    char buffer[128], buffer2[32];
+    char buffer[32];
+    int line;
     uint32_t uptime_sec = esp_timer_get_time() / 1000000;
     uint16_t up_d;
     uint8_t up_h, up_m, up_s;
     EventBits_t uxReturn;
 
-    ssd1306_clear_canvas(canvas, 0x00);
+    lv_obj_t * table = lv_screens.stats.table;
 
-    snprintf(buffer, 128, "%s", "Statistics/Status:");
-    ssd1306_draw_string(canvas, 0, 0, (const uint8_t *)buffer, 10, 1);
-
+    line = 1;
     convert_s_ddhhmmss(uptime_sec, &up_d, &up_h, &up_m, &up_s);
-    snprintf(buffer, 128, "%-6s      %3dd %2d:%02d:%02d", "uptime", up_d, up_h, up_m, up_s);
-    ssd1306_draw_string(canvas, 0, 11, (const uint8_t *)buffer, 10, 1);
+    snprintf(buffer, 32, "%dd %2d:%02d:%02d", up_d, up_h, up_m, up_s);
+    lv_table_set_cell_value(table, line, 0, "Uptime");
+    lv_table_set_cell_value(table, line, 1, buffer);
 
-    snprintf(buffer, 128, "%-9s %6d/%5d", "WiFi ok/fail", wifi_connections_count_connect, wifi_connections_count_disconnect);
-    ssd1306_draw_string(canvas, 0, 22, (const uint8_t *)buffer, 10, 1);
+    line++;
+    snprintf(buffer, 32, "%d / %d", wifi_connections_count_connect, wifi_connections_count_disconnect);
+    lv_table_set_cell_value(table, line, 0, "WiFi ok/fail");
+    lv_table_set_cell_value(table, line, 1, buffer);
 
-    snprintf(buffer, 128, "%-9s %6d/%5d", "MQTT ok/fail", mqtt_packets_send, mqtt_packets_fail);
-    ssd1306_draw_string(canvas, 0, 33, (const uint8_t *)buffer, 10, 1);
+    line++;
+    snprintf(buffer, 32, "%d / %d", mqtt_packets_send, mqtt_packets_fail);
+    lv_table_set_cell_value(table, line, 0, "MQTT ok/fail");
+    lv_table_set_cell_value(table, line, 1, buffer);
 
     uxReturn = xEventGroupWaitBits(mqtt_evg, MQTT_CONNECTED_BIT, false, true, 0);
     bool mqtt_connected = uxReturn & MQTT_CONNECTED_BIT;
-
     uxReturn = xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, 0);
     bool wifi_connected = uxReturn & WIFI_CONNECTED_BIT;
 
-    snprintf(buffer, 128, "WIFI: %s, MQTT: %s/%s", (wifi_connected ? "y" : "n"), (CONFIG_USE_MQTT ? "y" : "n"), (mqtt_connected ? "y" : "n"));
-    ssd1306_draw_string(canvas, 0, 44, (const uint8_t *)buffer, 10, 1);
-    return ssd1306_refresh_gram(canvas);
+    line++;
+    snprintf(buffer, 32, "%s", (wifi_connected ? "y" : "n"));
+    lv_table_set_cell_value(table, line, 0, "WiFi conn.");
+    lv_table_set_cell_value(table, line, 1, buffer);
+
+    line++;
+    snprintf(buffer, 32, "%s / %s", (CONFIG_USE_MQTT ? "y" : "n"), (mqtt_connected ? "y" : "n"));
+    lv_table_set_cell_value(table, line, 0, "MQTT use/conn");
+    lv_table_set_cell_value(table, line, 1, buffer);
+
+    line++;
+    snprintf(buffer, 32, "%s", (web_file_server_running ? "running" : "stopped"));
+    lv_table_set_cell_value(table, line, 0, "Webserver");
+    lv_table_set_cell_value(table, line, 1, buffer);
+
+    lv_scr_load(lv_screens.stats.scr);
+
+    return ESP_OK;
 }
-*/
 
 void lv_init_styles()
 {
@@ -686,6 +701,8 @@ void lv_init_screens()
     lv_screens.empty.scr = lv_obj_create(NULL, NULL);
     scr = lv_screens.empty.scr;
     lv_screens.empty.name = lv_label_create(scr, NULL);
+    lv_label_set_text(lv_screens.empty.name, "Empty Screen");
+    lv_obj_align(lv_screens.empty.name, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
     lv_scr_load(lv_screens.empty.scr);
 
     // Splash screen
@@ -709,9 +726,9 @@ void lv_init_screens()
     lv_obj_set_auto_realign(lv_screens.beacon_details.temp_hum, true);
 
     // - buttons
-    lv_screens.beacon_details.buttons.label1 = lv_label_create(scr, NULL);
-    lv_obj_align(lv_screens.beacon_details.buttons.label1, NULL, LV_ALIGN_IN_BOTTOM_MID, -95, 0);
-    lv_obj_set_auto_realign(lv_screens.beacon_details.buttons.label1, true);
+    lv_screens.beacon_details.buttons.label2 = lv_label_create(scr, NULL);
+    lv_obj_align(lv_screens.beacon_details.buttons.label2, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
+    lv_obj_set_auto_realign(lv_screens.beacon_details.buttons.label2, true);
 
     lv_screens.beacon_details.buttons.label3 = lv_label_create(scr, NULL);
     lv_obj_align(lv_screens.beacon_details.buttons.label3, NULL, LV_ALIGN_IN_BOTTOM_MID, +95, 0);
@@ -739,6 +756,7 @@ void lv_init_screens()
 
     lv_screens.last_seen.title = lv_label_create(scr, NULL);
     lv_obj_set_style(lv_screens.last_seen.title, &style_title);
+    lv_label_set_text(lv_screens.last_seen.title, "Last seen/MQTT send");
     lv_obj_align(lv_screens.last_seen.title, NULL, LV_ALIGN_IN_TOP_MID, 0, 5);
     lv_obj_set_auto_realign(lv_screens.last_seen.title, true);
 
@@ -750,38 +768,19 @@ void lv_init_screens()
     lv_table_set_style(table, LV_TABLE_STYLE_BG, &lv_style_transp_tight);
     lv_table_set_col_cnt(table, 3);
     lv_table_set_row_cnt(table, 6);
-    lv_obj_align(table, lv_screens.last_seen.title, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
-
-    /*Make the cells of the first row center aligned */
+    lv_obj_align(table, lv_screens.last_seen.title, LV_ALIGN_OUT_BOTTOM_MID, 0, 15);
     lv_table_set_cell_align(table, 0, 0, LV_LABEL_ALIGN_CENTER);
     lv_table_set_cell_align(table, 0, 1, LV_LABEL_ALIGN_CENTER);
-
-    /*Make the cells of the first row TYPE = 2 (use `style_cell2`) */
+    lv_table_set_cell_align(table, 0, 2, LV_LABEL_ALIGN_CENTER);
     lv_table_set_cell_type(table, 0, 0, 2);
     lv_table_set_cell_type(table, 0, 1, 2);
     lv_table_set_cell_type(table, 0, 2, 2);
 
-    /*Fill the first column*/
     lv_table_set_cell_value(table, 0, 0, "Name");
-    lv_table_set_cell_value(table, 1, 0, "Bx0701");
-    lv_table_set_cell_value(table, 2, 0, "Bx0706");
-    lv_table_set_cell_value(table, 3, 0, "Bx0708");
-    lv_table_set_cell_value(table, 4, 0, "Bx0709");
-    lv_table_set_cell_value(table, 5, 0, "Bx0709");
-
     lv_table_set_cell_value(table, 0, 1, "Last Seen");
-    lv_table_set_cell_value(table, 1, 1, "01:23:45");
-    lv_table_set_cell_value(table, 2, 1, "01:23:45");
-    lv_table_set_cell_value(table, 3, 1, "01:23:45");
-    lv_table_set_cell_value(table, 4, 1, "01:23:32");
-    lv_table_set_cell_value(table, 5, 1, "01:23:32");
-
     lv_table_set_cell_value(table, 0, 2, "Last Send");
-    lv_table_set_cell_value(table, 1, 2, "01:23:45");
-    lv_table_set_cell_value(table, 2, 2, "01:23:45");
-    lv_table_set_cell_value(table, 3, 2, "01:23:45");
-    lv_table_set_cell_value(table, 4, 2, "01:23:45");
-    lv_table_set_cell_value(table, 5, 2, "01:23:45");
+
+    lv_obj_set_auto_realign(table, true);
 
     // - buttons
     lv_screens.last_seen.buttons.label3 = lv_label_create(scr, NULL);
@@ -796,49 +795,84 @@ void lv_init_screens()
 
     // App version screen
     lv_screens.app_version.scr = lv_obj_create(NULL, NULL);
+    lv_obj_set_style(lv_screens.app_version.scr, &style_screen);
     scr = lv_screens.app_version.scr;
-    lv_screens.app_version.app_name = lv_label_create(scr, NULL);
-    lv_screens.app_version.git_commit = lv_label_create(scr, NULL);
-    lv_screens.app_version.mac_addr = lv_label_create(scr, NULL);
-    lv_screens.app_version.ip_addr = lv_label_create(scr, NULL);
-    lv_screens.app_version.mqtt_addr = lv_label_create(scr, NULL);
-    lv_screens.app_version.wifi_ssid = lv_label_create(scr, NULL);
-    lv_screens.app_version.active = lv_label_create(scr, NULL);
+
+    lv_screens.app_version.title = lv_label_create(scr, NULL);
+    lv_obj_set_style(lv_screens.app_version.title, &style_title);
+    lv_label_set_text(lv_screens.app_version.title, "App. version + Status");
+    lv_obj_align(lv_screens.app_version.title, NULL, LV_ALIGN_IN_TOP_MID, 0, 5);
+    lv_obj_set_auto_realign(lv_screens.app_version.title, true);
+
+    lv_screens.app_version.table = lv_table_create(scr, NULL);
+    table = lv_screens.app_version.table;
+
+    lv_table_set_style(table, LV_TABLE_STYLE_CELL1, &style_cell1);
+    lv_table_set_style(table, LV_TABLE_STYLE_CELL2, &style_cell2);
+    lv_table_set_style(table, LV_TABLE_STYLE_BG, &lv_style_transp_tight);
+    lv_table_set_col_cnt(table, 2);
+    lv_table_set_row_cnt(table, 7);
+    lv_table_set_col_width(table, 0, 100);
+    lv_table_set_col_width(table, 1, 200);
+    lv_obj_align(table, lv_screens.app_version.title, LV_ALIGN_OUT_BOTTOM_MID, 0, 15);
+    lv_table_set_cell_align(table, 0, 0, LV_LABEL_ALIGN_CENTER);
+    lv_table_set_cell_align(table, 0, 1, LV_LABEL_ALIGN_CENTER);
+    lv_table_set_cell_type(table, 0, 0, 2);
+    lv_table_set_cell_type(table, 0, 1, 2);
+
+    lv_table_set_cell_value(table, 0, 0, "Field");
+    lv_table_set_cell_value(table, 0, 1, "Value");
+
+    lv_obj_set_auto_realign(table, true);
+
+    // - buttons
+    lv_screens.app_version.buttons.label3 = lv_label_create(scr, NULL);
+    lv_obj_align(lv_screens.app_version.buttons.label3, NULL, LV_ALIGN_IN_BOTTOM_MID, +95, 0);
+    lv_label_set_text(lv_screens.app_version.buttons.label3, LV_SYMBOL_RIGHT);
+    lv_obj_set_auto_realign(lv_screens.app_version.buttons.label3, true);
 
     // Stats screen
     lv_screens.stats.scr = lv_obj_create(NULL, NULL);
+    lv_obj_set_style(lv_screens.stats.scr, &style_screen);
     scr = lv_screens.stats.scr;
-    lv_screens.stats.uptime = lv_label_create(scr, NULL);
-    lv_screens.stats.wifi_stats = lv_label_create(scr, NULL);
-    lv_screens.stats.mqtt_stats = lv_label_create(scr, NULL);
-    lv_screens.stats.wifi_status = lv_label_create(scr, NULL);
-    lv_screens.stats.mqtt_status = lv_label_create(scr, NULL);
 
-    // Placeholder text
+    lv_screens.stats.title = lv_label_create(scr, NULL);
+    lv_obj_set_style(lv_screens.stats.title, &style_title);
+    lv_label_set_text(lv_screens.stats.title, "Statistics");
+    lv_obj_align(lv_screens.stats.title, NULL, LV_ALIGN_IN_TOP_MID, 0, 5);
+    lv_obj_set_auto_realign(lv_screens.stats.title, true);
 
-    // lv_label_set_text(lv_screens.last_seen.name, "Last seen");
-    lv_label_set_text(lv_screens.app_version.app_name, "App Version");
-    lv_label_set_text(lv_screens.stats.uptime, "Uptime");
-    lv_label_set_text(lv_screens.empty.name, "Empty Screen");
+    lv_screens.stats.table = lv_table_create(scr, NULL);
+    table = lv_screens.stats.table;
 
+    lv_table_set_style(table, LV_TABLE_STYLE_CELL1, &style_cell1);
+    lv_table_set_style(table, LV_TABLE_STYLE_CELL2, &style_cell2);
+    lv_table_set_style(table, LV_TABLE_STYLE_BG, &lv_style_transp_tight);
+    lv_table_set_col_cnt(table, 2);
+    lv_table_set_row_cnt(table, 7);
+    lv_table_set_col_width(table, 0, 140);
+    lv_table_set_col_width(table, 1, 160);
+    lv_obj_align(table, lv_screens.stats.title, LV_ALIGN_OUT_BOTTOM_MID, 0, 15);
+    lv_table_set_cell_align(table, 0, 0, LV_LABEL_ALIGN_CENTER);
+    lv_table_set_cell_align(table, 0, 1, LV_LABEL_ALIGN_CENTER);
+    lv_table_set_cell_type(table, 0, 0, 2);
+    lv_table_set_cell_type(table, 0, 1, 2);
 
-    // lv_obj_align(lv_screens.last_seen.name, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+    lv_table_set_cell_value(table, 0, 0, "Field");
+    lv_table_set_cell_value(table, 0, 1, "Value");
 
-    lv_obj_align(lv_screens.app_version.app_name, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-    lv_obj_align(lv_screens.app_version.git_commit, lv_screens.app_version.app_name, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
-    lv_obj_align(lv_screens.app_version.mac_addr, lv_screens.app_version.app_name, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
-    lv_obj_align(lv_screens.app_version.ip_addr, lv_screens.app_version.app_name, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
-    lv_obj_align(lv_screens.app_version.mqtt_addr, lv_screens.app_version.app_name, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
-    lv_obj_align(lv_screens.app_version.wifi_ssid, lv_screens.app_version.app_name, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
-    lv_obj_align(lv_screens.app_version.active, lv_screens.app_version.app_name, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
+    lv_obj_set_auto_realign(table, true);
 
-    lv_obj_align(lv_screens.stats.uptime, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-    lv_obj_align(lv_screens.stats.wifi_stats, lv_screens.stats.uptime, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
-    lv_obj_align(lv_screens.stats.mqtt_stats, lv_screens.stats.uptime, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
-    lv_obj_align(lv_screens.stats.wifi_status, lv_screens.stats.uptime, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
-    lv_obj_align(lv_screens.stats.mqtt_status, lv_screens.stats.uptime, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
+    // - buttons
+    lv_screens.stats.buttons.label2 = lv_label_create(scr, NULL);
+    lv_obj_align(lv_screens.stats.buttons.label2, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
+    lv_label_set_text(lv_screens.stats.buttons.label2, LV_SYMBOL_TRASH);
+    lv_obj_set_auto_realign(lv_screens.stats.buttons.label2, true);
 
-    lv_obj_align(lv_screens.empty.name, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+    lv_screens.stats.buttons.label3 = lv_label_create(scr, NULL);
+    lv_obj_align(lv_screens.stats.buttons.label3, NULL, LV_ALIGN_IN_BOTTOM_MID, +95, 0);
+    lv_label_set_text(lv_screens.stats.buttons.label3, LV_SYMBOL_RIGHT);
+    lv_obj_set_auto_realign(lv_screens.stats.buttons.label3, true);
 }
 
 #endif // CONFIG_DISPLAY_M5STACK
@@ -944,8 +978,7 @@ esp_err_t display_update(void* _canvas, void * _canvas_message)
 #ifdef CONFIG_DISPLAY_SSD1306
             ret = ssd1306_show_last_seen_screen(canvas, num_act_beac);
 #elif CONFIG_DISPLAY_M5STACK
-            lv_scr_load(lv_screens.last_seen.scr);
-            ret = ESP_OK;
+            ret = lv_show_last_seen_screen(num_act_beac);
 #endif
         display_status.current_screen = display_status.screen_to_show;
 
@@ -958,8 +991,7 @@ esp_err_t display_update(void* _canvas, void * _canvas_message)
 #ifdef CONFIG_DISPLAY_SSD1306
         ret = ssd1306_show_app_version_screen(canvas);
 #elif CONFIG_DISPLAY_M5STACK
-        lv_scr_load(lv_screens.app_version.scr);
-        ret = ESP_OK;
+        ret = lv_show_app_version_screen();
 #endif
         display_status.current_screen = display_status.screen_to_show;
         return ret;
@@ -971,10 +1003,8 @@ esp_err_t display_update(void* _canvas, void * _canvas_message)
 #ifdef CONFIG_DISPLAY_SSD1306
         ret = ssd1306_show_stats_screen(canvas);
 #elif CONFIG_DISPLAY_M5STACK
-        lv_scr_load(lv_screens.stats.scr);
-        ret = ESP_OK;
+        ret = lv_show_stats_screen();
 #endif
-
         display_status.current_screen = display_status.screen_to_show;
         return ret;
     }

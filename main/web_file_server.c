@@ -24,6 +24,8 @@
 static const char *TAG = "web_file_server";
 extern void remove_bonded_devices_num(uint8_t num_bond_device);
 
+bool web_file_server_running;
+
 static const char *web_file_server_commands[WEBFILESERVER_NUM_ENTRIES] = {
     "stat",
     "req",
@@ -574,6 +576,9 @@ httpd_handle_t start_webserver(void)
         // Set URI handlers
         ESP_LOGI(TAG, "Registering URI handlers");
         httpd_register_uri_handler(server, &csv);
+
+        web_file_server_running = true;
+
         return server;
     }
 
@@ -585,4 +590,5 @@ void stop_webserver(httpd_handle_t server)
 {
     // Stop the httpd server
     httpd_stop(server);
+    web_file_server_running = false;
 }
