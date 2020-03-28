@@ -250,3 +250,8 @@ void decode_mybeacon_packet_v4(esp_ble_mybeacon_payload_t *mybeacon_payload, uin
     *y          = (int16_t)(mybeacon_payload->y);
     *z          = (int16_t)(mybeacon_payload->z);
 }
+
+void clear_beacon_idx_values(uint16_t idx)
+{
+    ble_beacons[idx].adv_data.last_seen = 0;
+}

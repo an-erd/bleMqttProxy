@@ -94,5 +94,6 @@ void set_beacon_idx_active(uint16_t idx);
 void clear_beacon_idx_active(uint16_t idx);
 bool toggle_beacon_idx_active(uint16_t idx);
 void persist_active_beacon_mask();
+void clear_beacon_idx_values(uint16_t idx);
 
 #endif // __BEACON_H__

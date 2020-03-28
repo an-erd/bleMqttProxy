@@ -121,16 +121,19 @@ static EventGroupHandle_t s_wdt_evg;
 // Button
 #if CONFIG_DEVICE_WEMOS_LOLIN_OLED==1
 #define BUTTON_IO_NUM           0
+static int64_t time_button_long_press = 0;  // long button press -> empty display
 #endif
 
 #if CONFIG_DEVICE_M5STACK==1
 #define BUTTON_IO_NUM_A         39
 #define BUTTON_IO_NUM_B         38
 #define BUTTON_IO_NUM_C         37
+static int64_t time_button_long_press_a = 0;
+static int64_t time_button_long_press_b = 0;
+static int64_t time_button_long_press_c = 0;
 #endif
 
 #define BUTTON_ACTIVE_LEVEL     0
-static int64_t time_button_long_press = 0;  // long button press -> empty display
 
 // TODO put to different position
 void clear_stats_values()
@@ -150,7 +153,23 @@ void button_push_cb(void* arg)
         return;
     }
 
+#if CONFIG_DEVICE_WEMOS_LOLIN_OLED==1
     time_button_long_press = esp_timer_get_time() + CONFIG_LONG_PRESS_TIME * 1000;
+#endif
+
+#if CONFIG_DEVICE_M5STACK==1
+    switch(btn){
+        case 1:
+            time_button_long_press_a = esp_timer_get_time() + CONFIG_LONG_PRESS_TIME * 1000;
+            break;
+        case 2:
+            time_button_long_press_b = esp_timer_get_time() + CONFIG_LONG_PRESS_TIME * 1000;
+            break;
+        case 3:
+            time_button_long_press_c = esp_timer_get_time() + CONFIG_LONG_PRESS_TIME * 1000;
+            break;
+    }
+#endif
 
     ESP_LOGD(TAG, "button_push_cb");
 }
@@ -163,8 +182,6 @@ void handle_long_button_push()
             break;
         case LASTSEEN_SCREEN:
             break;
-        case LOCALTEMP_SCREEN:
-            break;
         case APPVERSION_SCREEN:
             break;
         case STATS_SCREEN:
@@ -176,52 +193,51 @@ void handle_long_button_push()
     }
 }
 
-void button_release_cb(void* arg)
+void turn_display_on()
 {
-    uint8_t btn = *((uint8_t*) arg);
-
-    ESP_LOGD(TAG, "heap: %d", esp_get_free_heap_size());
-    ESP_LOGI(TAG, "button_release_cb, button %d pressed", btn);
-
-    if(!display_status.button_enabled){
-        ESP_LOGD(TAG, "button_release_cb: button not enabled");
-        return;
+    set_run_idle_timer(true);
+    if( (display_status.current_screen == LASTSEEN_SCREEN)
+        || (display_status.current_screen == APPVERSION_SCREEN)
+        || (display_status.current_screen == STATS_SCREEN) ){
+        set_run_periodic_timer(true);
     }
+    turn_display_off = false;
+    xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
+}
 
-    if(!display_status.display_on){
-        ESP_LOGD(TAG, "button_release_cb: turn display on again");
+void handle_button_display_message()
+{
+    oneshot_display_message_timer_touch();
+    toggle_beacon_idx_active(display_message_content.beac);
+    snprintf(display_message_content.comment, 128, "Activated: %c", (is_beacon_idx_active(display_message_content.beac)? 'y':'n'));
+    display_message_content.need_refresh = true;
+    xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
+}
 
-        set_run_idle_timer(true);
-        if( (display_status.current_screen == LASTSEEN_SCREEN)
-            || (display_status.current_screen == APPVERSION_SCREEN)
-            || (display_status.current_screen == STATS_SCREEN) ){
-            set_run_periodic_timer(true);
-        }
-        turn_display_off = false;
-        xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
-        return;
+bool is_button_long_press(uint8_t btn)
+{
+#if CONFIG_DEVICE_WEMOS_LOLIN_OLED==1
+    return esp_timer_get_time() >= time_button_long_press;
+#endif
+
+#if CONFIG_DEVICE_M5STACK==1
+    switch(btn){
+        case 1:
+            return esp_timer_get_time() >= time_button_long_press_a;
+            break;
+        case 2:
+            return esp_timer_get_time() >= time_button_long_press_b;
+            break;
+        case 3:
+            return esp_timer_get_time() >= time_button_long_press_c;
+            break;
     }
+#endif
+    return false;
+}
 
-    if(display_status.display_message_is_shown){
-        oneshot_display_message_timer_touch();
-        toggle_beacon_idx_active(display_message_content.beac);
-        snprintf(display_message_content.comment, 128, "Activated: %c", (is_beacon_idx_active(display_message_content.beac)? 'y':'n'));
-        display_message_content.need_refresh = true;
-        xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
-        return;
-    }
-
-    set_run_idle_timer_touch(true);
-
-    ESP_LOGD(TAG, "button_release_cb: display_status.current_screen %d screen_to_show %d >",
-        display_status.current_screen, display_status.screen_to_show);
-
-    if(esp_timer_get_time() < time_button_long_press){
-        set_next_display_show();
-    } else {
-        handle_long_button_push(btn);
-    }
-
+void handle_set_next_display_show()
+{
     switch(display_status.screen_to_show){
         case BEACON_SCREEN:
             set_run_periodic_timer(false);
@@ -229,10 +245,6 @@ void button_release_cb(void* arg)
             break;
         case LASTSEEN_SCREEN:
             set_run_periodic_timer(true);
-            xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
-            break;
-        case LOCALTEMP_SCREEN:
-            set_run_periodic_timer(false);
             xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
         case APPVERSION_SCREEN:
@@ -247,6 +259,78 @@ void button_release_cb(void* arg)
             ESP_LOGE(TAG, "handle_long_button_push: unhandled switch-case");
             break;
     }
+
+}
+
+void handle_m5stack_button(uint8_t btn, bool long_press)
+{
+    if((btn == 3) && !long_press){   // right button to switch to next screen
+        set_next_display_show();
+        return;
+    }
+
+    switch(display_status.current_screen){
+        case BEACON_SCREEN:
+            if(btn==1){
+                toggle_beacon_idx_active(display_status.beac_to_show);
+            } else if(btn==2){
+                clear_beacon_idx_values(display_status.beac_to_show);
+            }
+            break;
+        case LASTSEEN_SCREEN:
+            break;
+        case APPVERSION_SCREEN:
+            break;
+        case STATS_SCREEN:
+            if(btn==2){
+                clear_stats_values();
+            }
+            break;
+        default:
+            ESP_LOGE(TAG, "handle_long_button_push: unhandled switch-case");
+            break;
+    }
+}
+
+void button_release_cb(void* arg)
+{
+    uint8_t btn = *((uint8_t*) arg);
+    bool is_long_press;
+
+    if(!display_status.button_enabled){
+        ESP_LOGD(TAG, "button_release_cb: button not enabled");
+        return;
+    }
+
+    if(!display_status.display_on){
+        ESP_LOGD(TAG, "button_release_cb: turn display on again");
+        turn_display_on();
+        return;
+    }
+
+    if(display_status.display_message_is_shown){
+        handle_button_display_message();
+        return;
+    }
+    set_run_idle_timer_touch(true);
+
+    ESP_LOGD(TAG, "button_release_cb: display_status.current_screen %d screen_to_show %d >",
+        display_status.current_screen, display_status.screen_to_show);
+
+    is_long_press = is_button_long_press(btn);
+
+#if CONFIG_DEVICE_WEMOS_LOLIN_OLED==1
+    if(!is_button_long_press){
+        set_next_display_show();
+    } else {
+        handle_long_button_push(btn);
+    }
+    handle_set_next_display_show();
+#endif
+#if CONFIG_DEVICE_M5STACK==1
+    handle_m5stack_button(btn, is_long_press);
+    handle_set_next_display_show();
+#endif
 
     ESP_LOGD(TAG, "button_release_cb: display_status.current_screen %d screen_to_show %d <",
         display_status.current_screen, display_status.screen_to_show);
@@ -1145,7 +1229,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     snprintf(display_message_content.title, 32, "Beacon Identified");
                     snprintf(display_message_content.message, 32, "Name: %s", ble_beacons[idx].beacon_data.name);
                     snprintf(display_message_content.comment, 32, "Activated: %c", (is_beacon_idx_active(idx)? 'y':'n'));
-                    snprintf(display_message_content.action, 32, "%s", "Toggle active w/Button");
+                    snprintf(display_message_content.action, 32, "%s", "Toggle active w/Button or wait");
                     display_message_show();
                 }
 

@@ -158,7 +158,54 @@ void update_display_message(ssd1306_canvas_t *canvas)
 }
 #endif // CONFIG_DISPLAY_SSD1306
 
- void set_next_display_show()
+#ifdef CONFIG_DISPLAY_M5STACK
+void update_display_message_m5stack(bool show)
+{
+    static bool already_created = false;
+    static lv_style_t modal_style;
+    static lv_obj_t *mbox_obj, *mbox1;
+
+    ESP_LOGI(TAG, "update_display_message_m5stack, already_created %d, show %d", already_created, show);
+
+    static const char * btns[] ={"Toggle", ""};
+
+    if(show){
+        char message[128];
+        snprintf(message, 128, "%s\n\n%s\n%s\n\n%s",
+            display_message_content.title,
+            display_message_content.message,
+            display_message_content.comment,
+            display_message_content.action);
+
+        if(!already_created){
+            lv_style_copy(&modal_style, &lv_style_plain_color);
+    		modal_style.body.main_color = modal_style.body.grad_color = LV_COLOR_BLACK;
+	    	modal_style.body.opa = LV_OPA_50;
+
+            /* Create a base object for the modal background */
+            mbox_obj = lv_obj_create(lv_scr_act(), NULL);
+            lv_obj_set_style(mbox_obj, &modal_style);
+            lv_obj_set_pos(mbox_obj, 0, 0);
+            lv_obj_set_size(mbox_obj, LV_HOR_RES, LV_VER_RES);
+            lv_obj_set_opa_scale_enable(mbox_obj, true); /* Enable opacity scaling for the animation */
+
+            // mbox1 = lv_mbox_create(lv_scr_act(), NULL);
+            mbox1 = lv_mbox_create(mbox_obj, NULL);
+            lv_obj_set_width(mbox1, 280);
+            lv_mbox_add_btns(mbox1, btns);
+            lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0);
+            lv_obj_set_auto_realign(mbox1, true);
+            already_created = true;
+        }
+        lv_mbox_set_text(mbox1, message);
+    } else {
+        lv_obj_del(mbox_obj);
+        already_created = false;
+    }
+}
+#endif
+
+void set_next_display_show()
 {
     ESP_LOGD(TAG, "set_next_display_show: display_status.current_screen %d", display_status.current_screen);
 
@@ -489,8 +536,12 @@ esp_err_t lv_show_beacon_screen(int idx)
     lv_label_set_text_fmt(lv_screens.beacon_details.symbols.symbol_eye, "%s",
         (is_beacon_idx_active(idx) ? LV_SYMBOL_EYE_OPEN : LV_SYMBOL_EYE_CLOSE));
 
-    lv_label_set_text_fmt(lv_screens.beacon_details.buttons.label2, "%s",
+    lv_label_set_text_fmt(lv_screens.beacon_details.buttons.label1, "%s",
         (is_beacon_idx_active(idx) ? LV_SYMBOL_EYE_CLOSE : LV_SYMBOL_EYE_OPEN));
+
+    lv_label_set_text_fmt(lv_screens.beacon_details.buttons.label2, "%s",
+        (is_beacon_idx_active(idx) ? LV_SYMBOL_TRASH : ""));
+
 
     lv_label_set_text_fmt(lv_screens.beacon_details.pagenum.pagenum, "%d/%d", idx + 1, CONFIG_BLE_DEVICE_COUNT_USE);
 
@@ -502,20 +553,22 @@ esp_err_t lv_show_beacon_screen(int idx)
 esp_err_t lv_show_last_seen_screen(uint8_t num_act_beac)
 {
     char buffer1[32], buffer2[32];
+    lv_obj_t * table = lv_screens.last_seen.table;
+    int line;
 
-    if (!num_act_beac)
-    {
+    if (!num_act_beac) {
         display_status.lastseen_page_to_show = 1;
-        // snprintf(buffer, 32, "No active beacon!");
-    }
-    else
-    {
+        lv_table_set_row_cnt(table, 2);
+        line = 1;
+        lv_table_set_cell_value(table, line, 0, "no active Beacons");
+        lv_table_set_cell_value(table, line, 1, "");
+        lv_table_set_cell_value(table, line, 2, "");
+    } else {
         int skip = (display_status.lastseen_page_to_show - 1) * BEAC_PER_PAGE_LASTSEEN;
-        int line = 1;
-        lv_obj_t * table = lv_screens.last_seen.table;
         int num_rows = 1 + MIN(num_act_beac - skip, 5);
         lv_table_set_row_cnt(table, num_rows);
 
+        line = 1;
         for (int i = 0; i < CONFIG_BLE_DEVICE_COUNT_USE; i++)        {
             if (is_beacon_idx_active(i))            {
                 if (skip)                {
@@ -539,9 +592,9 @@ esp_err_t lv_show_last_seen_screen(uint8_t num_act_beac)
                             snprintf(buffer1, 32, "%02d:%02d:%02d", h, m, s);
                             snprintf(buffer2, 32, "%02d:%02d:%02d", hq, mq, sq);
                         }
+                        lv_table_set_cell_value(table, line, 1, buffer1);
+                        lv_table_set_cell_value(table, line, 2, buffer2);
                     }
-                    lv_table_set_cell_value(table, line, 1, buffer1);
-                    lv_table_set_cell_value(table, line, 2, buffer2);
                     if (BEAC_PER_PAGE_LASTSEEN == line++) {
                         break;
                     }
@@ -726,6 +779,10 @@ void lv_init_screens()
     lv_obj_set_auto_realign(lv_screens.beacon_details.temp_hum, true);
 
     // - buttons
+    lv_screens.beacon_details.buttons.label1 = lv_label_create(scr, NULL);
+    lv_obj_align(lv_screens.beacon_details.buttons.label1, NULL, LV_ALIGN_IN_BOTTOM_MID, -95, 0);
+    lv_obj_set_auto_realign(lv_screens.beacon_details.buttons.label1, true);
+
     lv_screens.beacon_details.buttons.label2 = lv_label_create(scr, NULL);
     lv_obj_align(lv_screens.beacon_details.buttons.label2, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
     lv_obj_set_auto_realign(lv_screens.beacon_details.buttons.label2, true);
@@ -911,7 +968,8 @@ esp_err_t display_update(void* _canvas, void * _canvas_message)
             update_display_message(canvas_message);
             return ssd1306_refresh_gram(canvas_message);
 #elif CONFIG_DISPLAY_M5STACK
-            // TODO
+            update_display_message_m5stack(true);
+            return ESP_OK;
 #endif
         }
     } else {
@@ -919,6 +977,9 @@ esp_err_t display_update(void* _canvas, void * _canvas_message)
             // SOLL: nicht anzeigen, IST: wird gezeigt
             display_status.current_screen = UNKNOWN_SCREEN;
             display_status.display_message_is_shown = false;
+#ifdef CONFIG_DISPLAY_M5STACK
+            update_display_message_m5stack(false);
+#endif
         } else {
             // SOLL: nicht anzeigen, IST: nicht gezeigt
         }
