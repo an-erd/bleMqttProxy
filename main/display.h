@@ -195,17 +195,11 @@ typedef struct {
 } src_stats_t;
 
 typedef struct {
-    lv_obj_t * scr;                     // obj
-    lv_obj_t * name;                    // label
-} src_empty_t;
-
-typedef struct {
     src_splash_t splash;
     src_beacon_details_t beacon_details;
     src_last_seen_t last_seen;
     src_app_version_t app_version;
     src_stats_t stats;
-    src_empty_t empty;
 } lv_screens_t;
 
 extern lv_screens_t lv_screens;

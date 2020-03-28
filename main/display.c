@@ -18,6 +18,7 @@
 
 #ifdef CONFIG_DISPLAY_M5STACK
 #include "lvgl/lvgl.h"
+#include "ili9341.h"
 #endif // CONFIG_DISPLAY_M5STACK
 
 static const char *TAG = "display";
@@ -162,7 +163,7 @@ void update_display_message(ssd1306_canvas_t *canvas)
 void update_display_message_m5stack(bool show)
 {
     static bool already_created = false;
-    static lv_style_t modal_style;
+    static lv_style_t modal_style, box_style;
     static lv_obj_t *mbox_obj, *mbox1;
 
     ESP_LOGI(TAG, "update_display_message_m5stack, already_created %d, show %d", already_created, show);
@@ -179,7 +180,7 @@ void update_display_message_m5stack(bool show)
 
         if(!already_created){
             lv_style_copy(&modal_style, &lv_style_plain_color);
-    		modal_style.body.main_color = modal_style.body.grad_color = LV_COLOR_BLACK;
+    		modal_style.body.main_color = modal_style.body.grad_color = LV_COLOR_WHITE;
 	    	modal_style.body.opa = LV_OPA_50;
 
             /* Create a base object for the modal background */
@@ -189,8 +190,13 @@ void update_display_message_m5stack(bool show)
             lv_obj_set_size(mbox_obj, LV_HOR_RES, LV_VER_RES);
             lv_obj_set_opa_scale_enable(mbox_obj, true); /* Enable opacity scaling for the animation */
 
-            // mbox1 = lv_mbox_create(lv_scr_act(), NULL);
+            lv_style_copy(&box_style, &lv_style_plain);
+            box_style.body.main_color = LV_COLOR_WHITE;
+            box_style.body.grad_color = LV_COLOR_WHITE;
+            box_style.text.color = LV_COLOR_GRAY;
+
             mbox1 = lv_mbox_create(mbox_obj, NULL);
+            // lv_obj_set_style(mbox_obj, &box_style);
             lv_obj_set_width(mbox1, 280);
             lv_mbox_add_btns(mbox1, btns);
             lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0);
@@ -295,7 +301,7 @@ void display_update_check_timer()
 bool display_update_check_display_off()
 {
 #ifdef CONFIG_DISPLAY_M5STACK
-    static lv_obj_t * prev_scr;
+    // static lv_obj_t * prev_scr;
 #endif
 
     if (turn_display_off){
@@ -304,8 +310,10 @@ bool display_update_check_display_off()
 #ifdef CONFIG_DISPLAY_SSD1306
             ssd1306_display_off();
 #elif CONFIG_DISPLAY_M5STACK
-            prev_scr = lv_disp_get_scr_act(NULL);
-            lv_scr_load(lv_screens.empty.scr);
+            // prev_scr = lv_disp_get_scr_act(NULL);
+            // lv_scr_load(lv_screens.empty.scr);
+            ili9341_enable_backlight(false);
+            ili9341_sleep_in();
 #endif
         }
         return true;
@@ -315,7 +323,10 @@ bool display_update_check_display_off()
 #ifdef CONFIG_DISPLAY_SSD1306
             ssd1306_display_on();
 #elif CONFIG_DISPLAY_M5STACK
-            lv_scr_load(prev_scr);
+            ili9341_sleep_out();
+            vTaskDelay(5 / portTICK_PERIOD_MS);
+            ili9341_enable_backlight(true);
+            // lv_scr_load(prev_scr);
 #endif
         }
     }
@@ -749,14 +760,6 @@ void lv_init_screens()
     lv_obj_t * scr;
 
     lv_init_styles();
-
-    // TODO will be display off later
-    lv_screens.empty.scr = lv_obj_create(NULL, NULL);
-    scr = lv_screens.empty.scr;
-    lv_screens.empty.name = lv_label_create(scr, NULL);
-    lv_label_set_text(lv_screens.empty.name, "Empty Screen");
-    lv_obj_align(lv_screens.empty.name, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-    lv_scr_load(lv_screens.empty.scr);
 
     // Splash screen
     lv_screens.splash.scr = lv_img_create(NULL, NULL);
