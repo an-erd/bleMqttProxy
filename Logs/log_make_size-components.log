@@ -1,16 +1,16 @@
 Toolchain path: /opt/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc
 Toolchain version: crosstool-ng-1.22.0-80-g6c4433a5
 Compiler version: 5.2.0
-App "blemqttproxy" version: 0.4-16-g510da57-dirty
+App "blemqttproxy" version: 0.4-17-gfc1aef2-dirty
 Python requirements from C:/msys32/home/AKAEM/esp/esp-idf/requirements.txt are satisfied.
 Total sizes:
  DRAM .data size:   16328 bytes
  DRAM .bss  size:   98952 bytes
 Used static DRAM:  115280 bytes (   9300 available, 92.5% used)
 Used static IRAM:  110701 bytes (  20371 available, 84.5% used)
-      Flash code:  865708 bytes
-    Flash rodata:  227756 bytes
-Total image size:~1220493 bytes (.bin may be padded larger)
+      Flash code:  865636 bytes
+    Flash rodata:  227652 bytes
+Total image size:~1220317 bytes (.bin may be padded larger)
 Per-archive contributions to ELF file:
             Archive File DRAM .data & .bss   IRAM Flash code & rodata   Total
                  libbt.a        196  24662    366     166985    15526  207735
@@ -52,8 +52,8 @@ Per-archive contributions to ELF file:
             libpthread.a         16     12    236        747      683    1694
                 liblog.a          8    268    426        684      114    1500
              libbutton.a          0      0      0       1121      172    1293
-           liblvgl_tft.a          0      0      0        840      410    1250
     libsmartconfig_ack.a          0      1      0        841      349    1191
+           liblvgl_tft.a          0      0      0        766      302    1068
                libcore.a          0     29      0        643      228     900
               libparam.a          0      0      0        480      199     679
                 libhal.a          0      0    519          0       32     551

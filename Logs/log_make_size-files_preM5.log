@@ -1,146 +1,135 @@
 Toolchain path: /opt/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc
 Toolchain version: crosstool-ng-1.22.0-80-g6c4433a5
 Compiler version: 5.2.0
-App "blemqttproxy" version: 0.4-17-gfc1aef2-dirty
+App "blemqttproxy" version: 0.4-dirty
 Python requirements from C:/msys32/home/AKAEM/esp/esp-idf/requirements.txt are satisfied.
 Total sizes:
- DRAM .data size:   16328 bytes
- DRAM .bss  size:   98952 bytes
-Used static DRAM:  115280 bytes (   9300 available, 92.5% used)
-Used static IRAM:  110701 bytes (  20371 available, 84.5% used)
-      Flash code:  865636 bytes
-    Flash rodata:  227652 bytes
-Total image size:~1220317 bytes (.bin may be padded larger)
+ DRAM .data size:   16072 bytes
+ DRAM .bss  size:   54576 bytes
+Used static DRAM:   70648 bytes (  53932 available, 56.7% used)
+Used static IRAM:  110393 bytes (  20679 available, 84.2% used)
+      Flash code:  809800 bytes
+    Flash rodata:  193488 bytes
+Total image size:~1129753 bytes (.bin may be padded larger)
 Per-file contributions to ELF file:
              Object File DRAM .data & .bss   IRAM Flash code & rodata   Total
-                lv_mem.o          0  32776      0        463      129   33368
-          blemqttproxy.o         68   8259     10      10667    10242   29246
+          blemqttproxy.o         68     30      0       9630     9417   19145
       ieee80211_output.o          3   2600   3291      11003      880   17777
                 wl_cnx.o          2     55    225      13723     3369   17374
            phy_chip_v7.o        921    829   1029      14283        0   17062
        ieee80211_ioctl.o        620    317      0      13455     2325   16717
                     pp.o        180    913   9533       5211      504   16341
-        lib_a-vfprintf.o          0      0      0      14269      756   15025
+        lib_a-vfprintf.o          0      0      0      14265      756   15021
        lib_a-svfprintf.o          0      0      0      13758      754   14512
            http_parser.o          0      0      0      10034     3873   13907
                   wdev.o         51     62   6146       6991      508   13758
-           mqtt_client.o          0      0      0       8300     5450   13750
-     lv_font_roboto_16.o         44      0      0          0    13283   13327
+           mqtt_client.o          0      0      0       8264     5450   13714
        phy_chip_v7_cal.o        477     53   3420       8739        0   12689
                    trc.o        636   1908   3776       5078     1203   12601
                btm_sec.o          0      0      0      11323       74   11397
          ieee80211_sta.o          0     34   5266       4340     1754   11394
-               ssl_tls.o         60      0      0      10913      399   11372
           ieee80211_ht.o          0     26   1591       8787      870   11274
+               ssl_tls.o         60      0      0      10805      407   11272
                sockets.o          0    729      0       9363      922   11014
       lib_a-svfiprintf.o          0      0      0       9650     1210   10860
                   lmac.o          2    235   1780       8147      619   10783
        lib_a-vfiprintf.o          0      0      0      10037      738   10775
-                   lld.o          0      0     59       9921      407   10387
-           btm_ble_gap.o          0     49      0       9954      326   10329
+                   lld.o          0      0     59       9917      407   10383
+           btm_ble_gap.o          0     49      0       9938      326   10313
         ieee80211_scan.o         14    284      0       7862     1868   10028
        phy_chip_v7_ana.o        206     48   2038       7509        0    9801
                lld_evt.o         33     16   5274       3849      218    9390
-      ieee80211_hostap.o          1     41      0       8570      613    9225
+      ieee80211_hostap.o          1     41      0       8574      613    9229
             bta_dm_act.o          0      0      0       8967      245    9212
               wpa_auth.o          0     68      0       8218      857    9143
+                   ecp.o          0     64      0       8248      716    9028
               btm_main.o          0   8912      0        110        0    9022
-                   ecp.o          0     64      0       8240      716    9020
                 bignum.o          0      0      0       8196      672    8868
-       web_file_server.o         16      1      0       4409     4359    8785
-                   nd6.o          8   1027      0       7324      105    8464
-          lv_draw_rect.o          0      0      0       8283       17    8300
+       web_file_server.o         16      0      0       4369     4299    8684
+                   nd6.o          8   1027      0       7316      105    8456
                    wpa.o          0    618      0       6471     1204    8293
-           splash_oled.o          0      0      0          0     8204    8204
-                   llm.o          0     28      0       7905      182    8115
-                   i2c.o         24      9   2001       4225     1797    8056
-                tcp_in.o          0     56      0       6958      921    7935
-            ecp_curves.o         28      0      0       5491     2320    7839
-                    pm.o          0    300    582       6303      594    7779
+                   llm.o          0     28      0       7901      182    8111
+                   i2c.o         24      9   2001       4165     1797    7996
+                tcp_in.o          0     56      0       6950      921    7927
+            ecp_curves.o         28      0      0       5503     2320    7851
+                    pm.o          0    300    582       6307      594    7783
        esp_http_client.o          0      0      0       4538     2844    7382
                  tasks.o         12    700   5763          0      822    7297
-               api_msg.o          0      1      0       5964     1272    7237
-               display.o        158    836      0       4267     1922    7183
-                   tcp.o          6     26      0       5647     1300    6979
-                  dhcp.o          0     65      0       5325     1487    6877
+               api_msg.o          0      1      0       5920     1272    7193
+                   tcp.o          6     26      0       5609     1300    6941
+                  dhcp.o          0     65      0       5301     1487    6853
        ieee80211_debug.o          0    576      0        158     5933    6667
          ieee80211_api.o         16   3169     20       2489      958    6652
-              x509_crt.o          0      0      0       4506     1982    6488
-                  gpio.o         12      8    171       3093     3108    6392
+              x509_crt.o          0      0      0       4486     1982    6468
         lib_a-svfscanf.o          0      0      0       6339       39    6378
                lc_task.o          0      0      0       5431      736    6167
               l2c_main.o          0   5008      0        847        0    5855
-               tcp_out.o          0      0      0       4735     1077    5812
        ieee80211_input.o          0      0      0       5147      650    5797
-                  uart.o         44     12      0       2480     3217    5753
+                  uart.o         44     12      0       2468     3217    5741
+               tcp_out.o          0      0      0       4652     1077    5729
          bta_gattc_act.o         28      0      0       5472      139    5639
              arch_main.o        206     89    758       4076      506    5635
 event_default_handlers.o          0    104      0       1980     3551    5635
+               display.o        150     19      0       2802     2610    5581
+                sha512.o          0      0      0       4858      640    5498
                    rsa.o          0      0      0       5493        0    5493
     tcpip_adapter_lwip.o          0    124      0       3034     2323    5481
-       bta_gattc_cache.o          0      0      0       5413       40    5453
-                sha512.o          0      0      0       4794      640    5434
+       bta_gattc_cache.o          0      0      0       5429       40    5469
                smp_act.o          0      0      0       5210      201    5411
          ieee80211_nvs.o          4   1024      0       3445      875    5348
                ssl_srv.o          0      0      0       5280       64    5344
           lib_a-strtod.o          0      0      0       3526     1798    5324
               nvs_page.o          0      0      0       3785     1536    5321
                    ota.o          0   2053      0       1328     1861    5242
-                lv_obj.o          0      9      0       4698      526    5233
-         sha1-internal.o          0      0      0       4995      149    5144
-   oled_16_font_symbol.o         44      0      0          0     5049    5093
-               ssl_cli.o          0      0      0       4950       72    5022
        lib_a-svfiscanf.o          0      0      0       4987       34    5021
+         sha1-internal.o          0      0      0       5015        4    5019
+               ssl_cli.o          0      0      0       4946       72    5018
               phy_init.o         16     38    180       2385     2393    5012
              gatt_main.o          0   3720      0       1279        1    5000
-                  sha1.o          0      0      0       4988        0    4988
+                  sha1.o          0      0      0       4996        0    4996
                hcicmds.o          0      0      0       4866        0    4866
       ssl_ciphersuites.o          0    200      0        211     4448    4859
-               btm_inq.o          0      0      0       4834       22    4856
+               btm_inq.o          0      0      0       4810       22    4832
+         ssd1306_fonts.o          0      0      0          0     4824    4824
            httpd_parse.o          0      0      0       2963     1816    4779
                    dns.o          0   1294      0       3210      217    4721
        esp_err_to_name.o          0      0      0         48     4651    4699
                btm_ble.o          0      1      0       4558       48    4607
                 ld_acl.o          0     56   1918       2282      319    4575
                esp_tls.o          0      4      0       2527     1977    4508
+                  gpio.o          0      0      0       1526     2978    4504
                btm_acl.o          0      0      0       4337       20    4357
-             l2c_utils.o          0      0      0       4342        0    4342
+             l2c_utils.o          0      0      0       4346        0    4346
             gatt_utils.o          0      0      0       3711      627    4338
            nvs_storage.o          0      0      0       3146     1157    4303
               smp_keys.o          0      0      0       4163      128    4291
-            httpd_main.o          0      0      0       2350     1936    4286
-   oled_12_font_symbol.o         44      0      0          0     4086    4130
-                   oid.o          0      0      0        523     3548    4071
-               pkparse.o          0      0      0       3466      403    3869
-        coexist_scheme.o       1229     28      0       2579       22    3858
+            httpd_main.o          0      0      0       2346     1936    4282
+                   oid.o          0      0      0        527     3548    4075
+               pkparse.o          0      0      0       3490      403    3893
+        coexist_scheme.o       1229     28      0       2583       22    3862
         unwind-dw2-fde.o          4     20      0       3348      404    3776
               vfs_uart.o         48     63      0       3221      420    3752
-              lv_label.o          0      4      0       3580      162    3746
                  panic.o       1827      5   1896          0        0    3728
                ringbuf.o          0      0   3124          0      539    3663
-           btc_gap_ble.o          0     88      0       3386      180    3654
+           btc_gap_ble.o          0     88      0       3374      180    3642
             controller.o          0    153      0       2361     1119    3633
-    oled_9_font_symbol.o         44      0      0          0     3521    3565
                portasm.o       3084      0    472          0        0    3556
             lib_a-dtoa.o          0      0      0       3530       13    3543
-           esp_ota_ops.o          0     12      0       2085     1418    3515
+           esp_ota_ops.o          0     12      0       2073     1418    3503
             httpd_txrx.o          0      0      0       1931     1546    3477
                gatt_cl.o         18      0      0       3337      116    3471
-            rtc_module.o         16     12      0       1059     2376    3463
-               lv_btnm.o         28      8      0       3284       81    3401
-                   vfs.o        192     40      0       2942      135    3309
-          lv_draw_line.o          0      0      0       3293        0    3293
+                   vfs.o        192     40      0       2934      135    3301
+            rtc_module.o         16     12      0        878     2344    3250
                md_wrap.o          0      0      0        596     2632    3228
-                  pbuf.o          0      1      0       2120     1089    3210
-                config.o          0      0      0       2796      367    3163
+                  pbuf.o          0      1      0       2100     1089    3190
                 sha256.o          0      0      0       2906      256    3162
-         lv_draw_basic.o          2    128      0       2859      166    3155
+                config.o          0      0      0       2780      367    3147
               btu_hcif.o          0      0      0       3071       28    3099
-                etharp.o          0    241      0       2219      636    3096
-          aes-internal.o          0      0      0        764     2314    3078
+          aes-internal.o          0      0      0        768     2314    3082
+                etharp.o          0    241      0       2203      636    3080
         lib_a-strerror.o          0      0      0        802     2258    3060
+                   md5.o          0      0      0       3033        0    3033
                lld_pdu.o          0      0   2212        739       68    3019
-                   md5.o          0      0      0       3017        0    3017
                esf_buf.o        308    192   1064       1055      381    3000
               smp_main.o          0    720      0        180     2093    2993
              smp_utils.o          0      0      0       2599      360    2959
@@ -148,28 +137,25 @@ event_default_handlers.o          0    104      0       1980     3551    5635
                    udp.o          2      4      0       2735      163    2904
     btm_ble_adv_filter.o          0    152      0       2667       54    2873
                llm_hci.o          0      0      0       2696      143    2839
-      esp_image_format.o          0      0      0       1712     1106    2818
-     esp_efuse_utility.o          0      0      0        689     2107    2796
-          transport_ws.o          0      0      0       1797      994    2791
-                 huart.o          0      4   1230       1497       52    2783
-            intr_alloc.o          8     22    542       1407      779    2758
-                   ip6.o          0      0      0       2614      138    2752
+      esp_image_format.o          0      0      0       1708     1106    2814
+     esp_efuse_utility.o          0      0      0        697     2107    2804
+          transport_ws.o          0      0      0       1789      996    2785
+                 huart.o          0      4   1230       1485       52    2771
+                   ip6.o          0      0      0       2610      138    2748
+            intr_alloc.o          8     22    542       1395      779    2746
                l2c_ble.o          0      0      0       2664       76    2740
               l2c_link.o          0      0      0       2712        0    2712
-              lv_table.o          0      8      0       1992      657    2657
-          coexist_core.o        344      0   1329        965       15    2653
    p_256_multprecision.o          0      0      0       2650        0    2650
-        lv_img_decoder.o          0      0      0       2147      458    2605
+          coexist_core.o        344      0   1329        929       15    2617
              cpu_start.o          0      1   1339        206     1046    2592
             hciblecmds.o          0      0      0       2590        0    2590
             multi_heap.o        836      0   1752          0        0    2588
-               lv_cont.o          0      4      0       2564        8    2576
-            dhcpserver.o          5     46      0       2409      107    2567
           rf_espressif.o          5      0    190       2276       92    2563
            bta_dm_main.o          0    908      0        191     1444    2543
      unwind-dw2-xtensa.o          0      0      0       2216      324    2540
-               api_lib.o          0      0      0       1707      833    2540
-             btc_gattc.o          0      0      0       2255      260    2515
+            dhcpserver.o          5     46      0       2373      107    2531
+             btc_gattc.o          0      0      0       2251      260    2511
+               api_lib.o          0      0      0       1663      833    2496
        btc_ble_storage.o          0      0      0       2257      232    2489
                  queue.o          0      0   2099          0      346    2445
                nvs_api.o          0     32      0       1929      479    2440
@@ -177,52 +163,49 @@ event_default_handlers.o          0    104      0       1980     3551    5635
            lib_a-mprec.o          0      0      0       2122      296    2418
                  ld_fm.o         37      0   2013         77      271    2398
                 vflash.o          0   2060      0        294        0    2354
-         lv_theme_mono.o          0   1396      0        943        0    2339
-                 netif.o          0    249      0       1695      374    2318
-                  igmp.o          0      8      0       1434      842    2284
+                 netif.o          0    249      0       1687      374    2310
+                  igmp.o          0      8      0       1426      842    2276
                llc_hci.o          0      4    268       1994        0    2266
-                beacon.o        747      2      0       1169      340    2258
              ieee80211.o          0    548      0       1479      218    2245
             bta_dm_api.o          0      0      0       2203       16    2219
+                beacon.o        747      2      0       1125      340    2214
              dbg_stubs.o          0   2072     32        108        0    2212
        btm_ble_privacy.o          0      0      0       2201        0    2201
-                btc_dm.o          0    214      0       1661      301    2176
-              ip6_frag.o          0      6      0       1769      395    2170
+                btc_dm.o          0    214      0       1649      301    2164
                  alarm.o          0   1208      0        797      157    2162
+              ip6_frag.o          0      6      0       1761      395    2162
              if_hwctrl.o          0     45      0       2036       66    2147
                rtc_clk.o        160      4   1937          0        0    2101
                   rwbt.o         14      0   2019         41       26    2100
           md5-internal.o          0      0      0       2092        0    2092
             rtc_periph.o          0      0      0          0     2080    2080
                  bt_bb.o          0      4   2062          0        0    2066
-     btm_ble_multi_adv.o          0     40      0       1980       32    2052
+     btm_ble_multi_adv.o          0     40      0       1964       32    2036
               pp_debug.o         76   1752     23        179        0    2030
-                wl_chm.o          4    252     26       1516      217    2015
-        eh_personality.o          0      0      0       1621      384    2005
+                wl_chm.o          4    252     26       1520      217    2019
             wpa_common.o          0      0      0       1894      105    1999
-            flash_mmap.o          0    264   1289         94      327    1974
    spi_flash_rom_patch.o          0      0   1973          0        0    1973
+            flash_mmap.o          0    264   1289         90      327    1970
+        eh_personality.o          0      0      0       1565      384    1949
                 hci_tl.o          0      1     30       1908        9    1948
-                 timer.o          0     17      0        948      979    1944
                    aes.o          0      0      0       1173      768    1941
+                 timer.o          0     17      0        931      979    1927
      btm_ble_batchscan.o          0    128      0       1791        0    1919
                    gcm.o          0      0      0       1786      128    1914
-                cipher.o          0      0      0       1877       20    1897
-               lv_refr.o          0      8      0       1701      185    1894
+                cipher.o          0      0      0       1873       20    1893
          bta_gattc_api.o          0      0      0       1869        8    1877
+                   aes.o          8      0      0       1865        0    1873
         bta_gattc_main.o          0   1128      0        378      364    1870
-                   aes.o          8      0      0       1857        0    1865
                   rwip.o          0      9    219       1564       58    1850
-                  x509.o          0      0      0       1698      138    1836
             httpd_sess.o          0      8      0       1300      527    1835
+                  x509.o          0      0      0       1694      138    1832
             system_api.o          0     14    466        410      933    1823
         xtensa_vectors.o          8      0   1765          0       36    1809
                    ip4.o          0      6      0       1594      206    1806
               task_wdt.o         53      4      0       1199      533    1789
-         transport_ssl.o          0      0      0       1270      503    1773
+         transport_ssl.o          0      0      0       1262      503    1765
         btm_ble_bgconn.o          0      4      0       1592      166    1762
        ieee80211_timer.o        136      0      0       1048      565    1749
-                lv_txt.o         24      0      0       1544      176    1744
               gatt_api.o          0      0      0       1741        0    1741
              hci_layer.o          0     62      0       1524      153    1739
              flash_ops.o         20      5   1650         53        0    1728
@@ -230,152 +213,138 @@ event_default_handlers.o          0    104      0       1980     3551    5635
                btm_dev.o          0      0      0       1683        0    1683
               btu_task.o          0     68      0       1255      356    1679
           att_protocol.o          0      0      0       1552      116    1668
+            btc_config.o          0      8      0       1219      439    1666
                     lc.o          0      0      0       1525      118    1643
-          bta_sys_main.o          1    312      0       1041      279    1633
-            btm_devctl.o          0      0      0       1611        9    1620
-            btc_config.o          0      8      0       1171      439    1618
+            btm_devctl.o          0      0      0       1627        9    1636
+          bta_sys_main.o          1    312      0       1033      279    1625
      hci_packet_parser.o          0      0      0        912      704    1616
              heap_caps.o          4      0    917         90      595    1606
-           cipher_wrap.o          0      0      0        407     1193    1600
+           cipher_wrap.o          0      0      0        411     1193    1604
           p_256_ecc_pp.o          0    456      0       1136        0    1592
            wpa_auth_ie.o          0      0      0       1514       68    1582
              httpd_uri.o          0      0      0        878      703    1581
-       lv_font_fmt_txt.o          0     19      0       1530       28    1577
               mqtt_msg.o          0      0      0       1564        5    1569
-     bootloader_common.o          0      0      0        709      844    1553
+               ssd1306.o          0      0      0       1259      302    1561
+     bootloader_common.o          0      0      0        705      844    1549
            esp_adapter.o        472      5    442        626        0    1545
           rsa_internal.o          0      0      0       1471       54    1525
                    log.o          8    268    426        684      114    1500
-                   raw.o          0      4      0       1252      235    1491
               lc_sniff.o          0      0      0       1479       11    1490
+                   raw.o          0      4      0       1248      235    1487
        ca_cert.pem.txt.o          0      0      0          0     1477    1477
          coexist_arbit.o        186      0    814        457       16    1473
             coexist_hw.o          1      0   1442          0        0    1443
-         transport_tcp.o          0      0      0       1074      363    1437
+                 ecdsa.o          0      0      0       1437        0    1437
         heap_caps_init.o          0      8      0       1025      398    1431
        esp_timer_esp32.o          8     25    691        255      450    1429
-                 ecdsa.o          0      0      0       1429        0    1429
                   vhci.o          0      4    594        784       43    1425
-                  mld6.o          0      0      0       1297       54    1351
-              sys_arch.o          0      8      0       1063      276    1347
-         lv_draw_label.o          0      0      0       1340        6    1346
+         transport_tcp.o          0      0      0       1062      363    1425
+                  mld6.o          0      0      0       1293       54    1347
        nvs_pagemanager.o          0      0      0       1082      261    1343
                 wpa_ie.o          0      0      0       1198      134    1332
-          bta_gattc_co.o          0   1012      0        317        0    1329
-                  list.o          0      0      0       1006      316    1322
-              lv_style.o          0    780      0        538        0    1318
+          bta_gattc_co.o          0   1012      0        309        0    1321
                    dhm.o          0      0      0       1313        0    1313
+                  list.o          0      0      0        994      316    1310
+              sys_arch.o          0      8      0       1015      276    1299
                     ea.o          0      4   1230         56        5    1295
-                button.o          0      0      0       1121      172    1293
     lib_a-gdtoa-gethex.o          0      0      0       1293        0    1293
         ieee80211_misc.o          0      0     24       1207       61    1292
              esp_timer.o          8     16    551        552      161    1288
-                lv_img.o          0      4      0       1061      219    1284
              http_auth.o          0      0      0        916      364    1280
              partition.o          0      8      0       1028      243    1279
-               lv_mbox.o          0      4      0       1186       72    1262
       aes-internal-dec.o          0      0      0       1261        0    1261
          ieee80211_phy.o          0      0      0        750      504    1254
                  rwble.o         48      0   1174         23        8    1253
-                timers.o          8     56    946          0      241    1251
-                   pem.o          0      0      0       1124      107    1231
-              ble_mqtt.o          0     16      0        836      360    1212
+                   pem.o          0      0      0       1132      107    1239
+              ble_mqtt.o          0     16      0        894      313    1223
        ieee80211_power.o          0      0      0       1173       35    1208
-                   ccm.o          0      0      0       1206        0    1206
            cache_utils.o          4     14    708         92      385    1203
+                   ccm.o          0      0      0       1202        0    1202
        smartconfig_ack.o          0      1      0        841      349    1191
                 ld_inq.o          0      0   1006          0      174    1180
               hash_map.o          0      0      0        918      253    1171
      soc_memory_layout.o          0      0      0          0     1147    1147
+                timers.o          8     56    861          0      219    1144
    memory_layout_utils.o          0      0      0        637      506    1143
-                pkcs12.o          0      0      0       1116        0    1116
+                pkcs12.o          0      0      0       1128        0    1128
               ecc_p256.o          0      0      0       1058       44    1102
       aes-internal-enc.o          0      0      0       1097        0    1097
               ctr_drbg.o          0      0      0       1095        0    1095
               llc_llcp.o          0      0     67       1016        0    1083
-          btm_ble_addr.o          0      0      0       1081        0    1081
        xtensa_intr_asm.o       1024      0     51          0        0    1075
+          btm_ble_addr.o          0      0      0       1073        0    1073
               wpa_main.o          0      0      0        982       79    1061
     hci_packet_factory.o          0      0      0        867      186    1053
                pthread.o          8      8    236        246      549    1047
            mqtt_outbox.o          0      0      0        811      228    1039
             hci_hal_h4.o          0     24      0        799      205    1028
-               ssd1306.o          0      0      0        726      302    1028
-           lv_draw_img.o          0      0      0        599      422    1021
          esp_gattc_api.o          0      0      0       1014        0    1014
                lm_task.o          0      0      0       1004       10    1014
            http_header.o          0      0      0        843      160    1003
            fixed_queue.o          0      0      0        716      278     994
                    clk.o          0      0     64        609      320     993
                   intc.o          0      0    642        256       61     959
-                 netdb.o          0    313      0        640        0     953
+                 netdb.o          0    313      0        644        0     957
              gatt_auth.o          0      0      0        948        0     948
               rtc_init.o          0      0    936          0        0     936
                l2c_api.o          0      0      0        918        0     918
                  icmp6.o          0      0      0        774      141     915
-                 pkcs5.o          0      0      0        874       32     906
+                 pkcs5.o          0      0      0        878       32     910
               rtc_time.o          0      0    714          0      191     905
               misc_nvs.o          0     29      0        643      228     900
      packet_fragmenter.o          0     16      0        706      175     897
-                  icmp.o          0      0      0        645      252     897
 bootloader_flash_config.          0      0    862         17       16     895
+                  icmp.o          0      0      0        641      252     893
                pk_wrap.o          0      0      0        653      235     888
-          lib_a-fseeko.o          0      0      0        870        0     870
+          lib_a-fseeko.o          0      0      0        874        0     874
              transport.o          0      0      0        727      136     863
-                 lv_ll.o          0      0      0        861        0     861
-                  memp.o          0      0      0        203      654     857
    ieee80211_regdomain.o         24      0      0        829        0     853
                   time.o          0     32    148        672        0     852
            periph_ctrl.o          8      0      0        561      280     849
-                 tcpip.o          0     16      0        557      272     845
              asn1parse.o          0      0      0        843        0     843
-              ip4_addr.o          0     16      0        638      162     816
-                base64.o          0      0      0        622      192     814
+                  memp.o          0      0      0        187      654     841
+                 tcpip.o          0     16      0        546      272     834
+              ip4_addr.o          0     16      0        642      162     820
        esp_gap_ble_api.o          0      0      0        806        0     806
+                base64.o          0      0      0        614      192     806
                    llc.o          0      1      0        796        6     803
           event_groups.o          0      0    657          0      146     803
-              lv_group.o          0      0      0        801        0     801
           dport_access.o          8     40    415        187      134     784
               llm_util.o          0      0      0        761       11     772
              ap_config.o          0      0      0        632      130     762
-              ip6_addr.o          0     40      0        701       20     761
-               lv_task.o          0     17      0        722        0     739
+              ip6_addr.o          0     40      0        697       20     757
                smp_api.o          0      0      0        724        0     724
-              timeouts.o          0     12      0        475      235     722
+              timeouts.o          0     12      0        471      235     718
              coex_schm.o          0     12     78        590       37     717
-              dbg_task.o          0      0      0        652       56     708
+              dbg_task.o          0      0      0        648       56     704
                   ecdh.o          0      0      0        698        0     698
                     md.o          0      0      0        674       24     698
                   port.o          0     16    537          0      142     695
-                bdaddr.o          0      0      0        442      237     679
+                bdaddr.o          0      0      0        446      237     683
                  param.o          0      0      0        480      199     679
       ets_timer_legacy.o          0      0    233        118      327     678
-          lv_img_cache.o          0      2      0        485      191     678
            coexist_api.o         96      0     58        249      262     665
-                    pk.o          0      0      0        634       16     650
+                    pk.o          0      0      0        638       16     654
  pthread_local_storage.o          8      4      0        501      134     647
           rate_control.o          0      0      0        292      344     636
              hmac_drbg.o          0      0      0        623        0     623
                rtc_wdt.o          0      0    616          0        0     616
             event_loop.o          0     13      0        359      242     614
-               lv_disp.o          0      0      0        141      470     611
-                   ipc.o          0     28    155        311      114     608
-               lv_anim.o          0      5      0        601        0     606
     nvs_item_hash_list.o          0      0      0        432      171     603
            bt_util_buf.o          0     20      0        571        0     591
                 common.o          0      0      0        581        0     581
                  locks.o          8      0    475          0       92     575
+                   ipc.o          0     28    155        273      114     570
                entropy.o          0      0      0        562        0     562
-                netbuf.o          0      0      0        161      379     540
            smp_br_main.o          0      0      0        174      362     536
-              smp_cmac.o         16      8      0        502        0     526
+                netbuf.o          0      0      0        153      379     532
+              smp_cmac.o         16      8      0        498        0     522
                smp_l2c.o          0      0      0        504        0     504
            inet_chksum.o          0      0      0        501        0     501
             bt_util_sp.o          0      0      0        472       28     500
-              ethernet.o          0      0      0        344      152     496
+              ethernet.o          0      0      0        340      152     492
     si_class_type_info.o          0      0      0        303      180     483
          crosscore_int.o          8      8    189        122      153     480
-           lv_hal_disp.o          0      4      0        464        0     468
          syscall_table.o        144    240      0         82        0     466
               vfs_lwip.o          0      0      0        295      168     463
          btc_gatt_util.o          0      0      0        436       16     452
@@ -383,25 +352,21 @@ bootloader_flash_config.          0      0    862         17       16     895
                     lm.o          0     10      0        375       61     446
          offlinebuffer.o          0      0      0        148      297     445
              lc_lmppdu.o          0      0      0        416       23     439
-                 lv_fs.o          0      0      0        431        1     432
  ieee80211_crypto_tkip.o         24      0      0        407        0     431
                   sha1.o          0      0      0        431        0     431
         flash_qio_mode.o          0      0      0        428        0     428
-       class_type_info.o          0      0      0        272      156     428
           reset_reason.o          0      4    101        130      192     427
                 wlanif.o          0      0      0        329       97     426
+       class_type_info.o          0      0      0        268      156     424
         bootloader_sha.o          0      0      0        267      156     423
               btu_init.o          0     32      0        371       11     414
              asn1write.o          0      0      0        414        0     414
-        freertos_hooks.o          8    128     39        237        0     412
            fast_sha256.o          0      0      0        408        0     408
                  timer.o         24      0      0        120      262     406
-           btc_storage.o          0      0      0        374       31     405
-       helperfunctions.o          0      0      0        405        0     405
               btc_task.o          0      8      0        297       97     402
-               lv_draw.o          0      4      0        328       68     400
+           btc_storage.o          0      0      0        370       31     401
  ieee80211_crypto_ccmp.o         24      0      0        372        0     396
-                   ble.o         55     26      0        173      138     392
+        freertos_hooks.o          8    128     39        216        0     391
          coexist_timer.o         42      0    231        108        0     381
               pp_timer.o         64      4      0        278       29     375
        ieee80211_proto.o          0      1      0        317       56     374
@@ -409,16 +374,15 @@ bootloader_flash_config.          0      0    862         17       16     895
               llm_task.o          0      0      0        372        0     372
                int_wdt.o          0      1     83        286        0     370
        lib_a-strtoll_r.o          0      0      0        367        0     367
-            eh_globals.o          0     16      0        153      193     362
       bootloader_flash.o          0      4      0        234      121     359
                 future.o          0      0      0        222      136     358
+            eh_globals.o          0     16      0        149      193     358
       lib_a-strtoull_r.o          0      0      0        355        0     355
             http_utils.o          0      0      0        244      110     354
           esp_app_desc.o          0      0     85         12      256     353
               brownout.o          0      0      0        153      196     349
-               lv_area.o          0      0      0        347        0     347
           bta_sys_conn.o          0      0      0        337        0     337
-    platform_esp32_idf.o          0      0      0        192      137     329
+    platform_esp32_idf.o          0      0      0        196      137     333
 ieee80211_action_vendor.          0     12      0        315        0     327
          esp_efuse_api.o          0      4      0        206      113     323
          ieee80211_ets.o          0      0      0        217      106     323
@@ -430,10 +394,10 @@ ieee80211_action_vendor.          0     12      0        315        0     327
             lib_printf.o          0      0      0        266       35     301
              bta_dm_co.o          8      0      0        291        0     299
         xtensa_context.o          0      0    299          0        0     299
-                   mem.o          0      0      0        136      162     298
+           net_sockets.o          0      0      0        295        0     295
                    md5.o          0      0      0        295        0     295
                 random.o          0      0      0        145      147     292
-           net_sockets.o          0      0      0        291        0     291
+                   mem.o          0      0      0        129      162     291
       ieee80211_crypto.o          0      0      0        259       27     286
 dport_panic_highint_hdl.         12      0    266          0        0     278
                interop.o          0      0      0         80      196     276
@@ -448,12 +412,14 @@ dport_panic_highint_hdl.         12      0    266          0        0     278
            sha1-pbkdf2.o          0      0      0        225        0     225
              hw_random.o          0      4     66         63       90     223
              bta_dm_pm.o          0    101      0        117        0     218
+        lib_a-snprintf.o          0      0      0        218        0     218
            esp_bt_main.o          0      2      0        212        0     214
-        lib_a-snprintf.o          0      0      0        214        0     214
                hci_msg.o          0      0      0        120       89     209
             sdk_config.o          0     40     59        110        0     209
                  mutex.o          0      4      0        200        0     204
+       helperfunctions.o          0      0      0        202        0     202
    btm_ble_cont_energy.o          0      4      0        197        0     201
+                   ble.o         55     26      0         98       16     195
           lib_a-sscanf.o          0      0      0        194        0     194
         lib_a-asprintf.o          0      0      0        192        0     192
   ieee80211_mesh_quick.o          1     98      0         92        0     191
@@ -462,21 +428,20 @@ dport_panic_highint_hdl.         12      0    266          0        0     278
   ieee80211_crypto_wep.o         24      0      0        162        0     186
             rtc_analog.o          0      0    185          0        0     185
          fast_aes-wrap.o          0      0      0        180        0     180
-              btc_main.o          0     16      0        163        0     179
-              lv_indev.o          0      8      0        169        0     177
+              btc_main.o          0     16      0        155        0     171
+         lib_a-sprintf.o          0      0      0        171        0     171
                    rc4.o          0      0      0        169        0     169
-         lib_a-sprintf.o          0      0      0        167        0     167
    ieee80211_ie_vendor.o          0      0      0        163        4     167
-               new_opv.o          0      0      0         42      124     166
              wpas_glue.o          0      0      0        166        0     166
+               new_opv.o          0      0      0         38      124     162
            gpio_periph.o          0      0      0          0      160     160
              ctrl_sock.o          0      0      0        147       10     157
                l2c_csm.o          0      0      0        146        0     146
           config_funcs.o          0      0      0        144        0     144
          coexist_param.o        144      0      0          0        0     144
              semaphore.o          0      0      0        142        0     142
-          lib_a-assert.o          0      0      0         80       60     140
               syscalls.o          0      0     83         55        0     138
+          lib_a-assert.o          0      0      0         76       60     136
                   list.o          0      0    136          0        0     136
            lib_a-flags.o          0      0      0        131        0     131
                    def.o          0      0      0        130        0     130
@@ -487,12 +452,10 @@ dport_panic_highint_hdl.         12      0    266          0        0     278
               btc_util.o          0      0      0        101       25     126
              plf_funcs.o          0     12      0          0      108     120
           lib_a-printf.o          0      0      0        120        0     120
-              bte_main.o          0      8      0        107        0     115
+              bte_main.o          0      8      0        111        0     119
                     ld.o          0      0      0        113        0     113
          lib_a-mbrtowc.o          0      0      0        112        1     113
          lib_a-s_frexp.o          0      0      0        110        0     110
-               lv_circ.o          0      0      0        108        0     108
-                 lv_gc.o          0    108      0          0        0     108
                 ethip6.o          0      0      0        108        0     108
                 new_op.o          0      0      0         68       40     108
                    err.o          0      0      0         39       68     107
@@ -500,28 +463,24 @@ dport_panic_highint_hdl.         12      0    266          0        0     278
              lib2funcs.o          0      0    104          0        0     104
              nvs_types.o          0      0      0        104        0     104
                    osi.o          0      4      0         74       25     103
-                lv_log.o          0      0      0         51       50     101
          lib_a-vprintf.o          0      0      0         98        0      98
             btc_manage.o          0     44      0         50        0      94
        lib_a-vasprintf.o          0      0      0         93        0      93
               ld_sched.o          0      0     69         23        0      92
-           lv_hal_tick.o          0      5     33         49        0      87
-             bad_alloc.o          0      0      0         52       35      87
+             allocator.o          0      0      0         86        0      86
             bta_dm_cfg.o         12      0      0          0       73      85
              wifi_init.o          0      8      0         63       14      85
                    dbg.o          0      0      0         68       16      84
         lib_a-fiprintf.o          0      0      0         84        0      84
        fast_crypto_ops.o          0      0      0          0       84      84
     lib_a-s_fpclassify.o          0      0      0         84        0      84
+             bad_alloc.o          0      0      0         48       35      83
   fast_sha256-internal.o          0      0      0         76        0      76
-             allocator.o          0      0      0         74        0      74
                gap_api.o          0     44      0         29        0      73
                  clock.o          0      0     72          0        0      72
    esp_gatt_common_api.o          0      0      0         71        0      71
-              lv_utils.o          0      0      0         68        0      68
         lib_a-mbtowc_r.o          0      0      0         60        4      64
        esp_efuse_table.o         36      0      0          0       28      64
-               lv_font.o          0      0      0         63        0      63
                     ll.o          0      0     51         11        0      62
 state_asm--restore_extra          0      0     62          0        0      62
 state_asm--save_extra_nw          0      0     62          0        0      62
@@ -537,8 +496,6 @@ xtensa_vector_defaults.o          0      0     46          0        0      46
                _moddi3.o          0      0      0          0       40      40
               _udivdi3.o          0      0      0          0       40      40
               _umoddi3.o          0      0      0          0       40      40
-              lv_theme.o          0      4      0         36        0      40
-           disp_driver.o          0      0      0         40        0      40
                nvs_ops.o          0      0      0         40        0      40
         lib_a-iswspace.o          0      0      0         34        0      34
        lib_a-sysgettod.o          0      0      0         32        0      32
@@ -548,11 +505,10 @@ xtensa_vector_defaults.o          0      0     46          0        0      46
          platform_util.o          4      0      0         26        0      30
                    osi.o          0      0      0         29        0      29
              wpa_debug.o          0      0      0         29        0      29
-                select.o          0      0      0         28        0      28
            new_handler.o          0      4      0         20        0      24
-          lv_hal_indev.o          0      0      0         23        0      23
           esp_hardware.o          0      0      0         23        0      23
         hash_functions.o          0      0      0         20        0      20
+                select.o          0      0      0         20        0      20
        btc_gatt_common.o          0      0      0         18        0      18
              btc_alarm.o          0      0      0         16        0      16
                    phy.o          0      0      0         16        0      16
@@ -565,7 +521,6 @@ xtensa_vector_defaults.o          0      0     46          0        0      46
   pm_for_bcn_only_mode.o          0      0      0         12        0      12
                  tinfo.o          0      0      0         12        0      12
        bta_gatt_common.o          0      0      0         11        0      11
-           lvgl_driver.o          0      0      0         10        0      10
                del_opv.o          0      0      0         10        0      10
               pm_esp32.o          0      0      0          8        0       8
  int_asm--set_intclear.o          0      0      8          0        0       8
@@ -620,8 +575,6 @@ xtensa_vector_defaults.o          0      0     46          0        0      46
                _muldf3.o          0      0      0          0        0       0
           _popcountsi2.o          0      0      0          0        0       0
            _truncdfsf2.o          0      0      0          0        0       0
-              lv_async.o          0      0      0          0        0       0
-               lv_math.o          0      0      0          0        0       0
             ethernetif.o          0      0      0          0        0       0
                  certs.o          0      0      0          0        0       0
                   mesh.o          0      0      0          0        0       0
