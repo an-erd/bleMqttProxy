@@ -1,0 +1,11 @@
+
+Only used for device button configuration
+    CONFIG_DEVICE_M5STACK
+    CONFIG_DEVICE_WEMOS
+
+
+TODO
+- optimize code wrt. button handling (not three vars but an array?)
+- check and optimize display tasks, i.e. lv_task and display_task
+- CONFIG_LVGL_DISPLAY_ORIENTATION_PORTRAIT is not supported in SSD1306
+

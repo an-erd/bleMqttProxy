@@ -5,10 +5,10 @@ menu "BLE-MQTT Proxy"
         default DEVICE_M5STACK
         help
             Choose which device is used for the bleMqttProxy.
-        config DEVICE_WEMOS_LOLIN_OLED
-            bool "ESP32 WEMOS LOLIN board with OLED (ssd1306)"
+        config DEVICE_WEMOS
+            bool "ESP32 WEMOS LOLIN board with OLED display (SSD1306)"
         config DEVICE_M5STACK
-            bool "M5Stack Fire device with ILI9341 TFT Display"
+            bool "M5Stack Fire device with TFT display (ILI9341)"
     endchoice #PROXY_DEVICE
 
     menu "Wifi Configuration"
@@ -67,16 +67,6 @@ menu "BLE-MQTT Proxy"
     endmenu
 
     menu "Display"
-
-        choice DISPLAY_MODE
-            prompt "Display to be used"
-            help
-                Choose which display to use or configure as a headless device.
-            config DISPLAY_SSD1306
-                bool "WEMOS Lolin SSD1306 OLED Display"
-            config DISPLAY_M5STACK
-                bool "M5Stack Fire ILI9341 Display"
-        endchoice #DISPLAY_MODE
 
         config DISPLAY_IDLE_TIMER
             int "Display idle timer"

@@ -3,14 +3,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
-
-#ifdef CONFIG_DISPLAY_SSD1306
-#include "ssd1306.h"
-#endif
-
-#ifdef CONFIG_DISPLAY_M5STACK
 #include "lvgl/lvgl.h"
-#endif // CONFIG_DISPLAY_M5STACK
 
 #define UPDATE_DISPLAY      (BIT0)
 extern EventGroupHandle_t s_values_evg;
@@ -74,65 +67,7 @@ extern display_message_content_t display_message_content;
 
 void set_next_display_show();
 void display_task(void* pvParameters);
-esp_err_t display_update(void *canvas, void *canvas_message);
-
-#ifdef CONFIG_DISPLAY_SSD1306
-extern ssd1306_canvas_t *display_canvas;
-extern ssd1306_canvas_t *display_canvas_message;
-void initialize_ssd1306();
-#endif // CONFIG_DISPLAY_SSD1306
-
-#ifdef CONFIG_DISPLAY_M5STACK
-
-// Create the display objects
-//
-// 1 Screen Beacon Details
-//      Label       Name
-//      Label       Temperature
-//      Label       Humidity
-//      Label       Battery Level
-//      Label       RSSI
-//      Checkbox    Active
-//      Label       Page Number
-//      Option 1) List view similar to OLED display
-//      Option 2) Nice view with Thermometer and Humidity Gauge
-//
-// 2 Screen Last Seen/Last send List
-//      Multiple Lines
-//          Label Name      Label Time last seen       Label Time Label last send
-//      Label       Page Number
-//
-// 3 Screen App Version
-//      Label       App version
-//      Label       App naem
-//      Label       Git Commit
-//      Label       MAC Address
-//      Label       IP Address
-//      Label       MQTT Address
-//      Label       WIFI SSID
-//      Label       Active bit field
-//
-// 4 Screen Stats
-//      Label       Uptime
-//      Label       WIFI Num OK/Fail
-//      Label       MQTT Num OK/Fail
-//      Label       WIFI Status
-//      Label       MQTT Status configured/connected
-//
-// 5 Screen OTA (or as a window?)
-//      Button      request OTA
-//      Button      reboot
-//      Bar         Download in %
-//
-// 6 Bond devices (or as a window?)
-//      List of bond devices
-//      Button      delete bond
-//
-// 7 CSV Download
-//      List of devices with status (similar toweb interface)
-//      Button      request download
-//      Button      store download on SD card
-//
+esp_err_t display_update();
 
 typedef struct {
     // lv_obj_t * btn1;
@@ -162,6 +97,8 @@ typedef struct {
     lv_obj_t * scr;                     // obj
     lv_obj_t * name;                    // label
     lv_obj_t * temp_hum;                // label
+    lv_obj_t * rssi;                    // label
+    lv_obj_t * battery;                 // label
     src_buttons_t buttons;
     src_symbol_t symbols;
     src_pagenum_t pagenum;
@@ -205,7 +142,5 @@ typedef struct {
 extern lv_screens_t lv_screens;
 
 void lv_init_screens();
-
-#endif // CONFIG_DISPLAY_M5STACK
 
 #endif // __DISPLAY_H__

@@ -623,4 +623,16 @@ You can temporarily bump IRAM to 0x40000, call again, and retrieve the informati
   
   Generate the font and include using `LV_FONT_DECLARE(my_font_name);` and set the font in a style like this: `style.text.font = &my_font_name;`.
   
+  ### Generating Splash screen
   
+  To change the splash screen image you need to generate an c-file containing the image.
+  
+  The online converter can be found here: [https://littlevgl.com/image-converter](https://littlevgl.com/image-converter)
+  
+  Configuration and usage:
+  
+  - Image File (e.g. an image generated with MS Paint and stored as .png)
+  - Name: as of your choice
+  - Color format: True color
+  - Output format: C array
+  - 

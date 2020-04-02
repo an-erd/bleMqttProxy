@@ -468,6 +468,7 @@ esp_err_t csv_get_handler(httpd_req_t *req)
             } else {
                 switch(ble_beacons[idx].offline_buffer_status){
                     case OFFLINE_BUFFER_STATUS_NONE:
+                        ESP_LOGD(TAG, "OFFLINE_BUFFER_STATUS_NONE, call alloc next");
                         alloc_offline_buffer(idx, OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED);
                         break;
                     case OFFLINE_BUFFER_STATUS_DOWNLOAD_REQUESTED:

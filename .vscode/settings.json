@@ -135,7 +135,16 @@
         "ota.h": "c",
         "lvgl.h": "c",
         "lv_ex_conf.h": "c",
-        "lv_disp.h": "c"
+        "lv_disp.h": "c",
+        "disp_spi.h": "c",
+        "disp_driver.h": "c",
+        "tp_spi.h": "c",
+        "lvgl_driver.h": "c",
+        "lvgl_spi_conf.h": "c",
+        "spi_master.h": "c",
+        "hx8357.h": "c",
+        "ili9488.h": "c",
+        "lv_test_theme_2.h": "c"
     },
 	"files.exclude": {
 		"**/.git": true,
