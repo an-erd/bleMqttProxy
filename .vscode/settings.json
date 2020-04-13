@@ -144,7 +144,10 @@
         "spi_master.h": "c",
         "hx8357.h": "c",
         "ili9488.h": "c",
-        "lv_test_theme_2.h": "c"
+        "lv_test_theme_2.h": "c",
+        "lv_mem.h": "c",
+        "sysmon.h": "c",
+        "string": "c"
     },
 	"files.exclude": {
 		"**/.git": true,

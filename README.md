@@ -635,4 +635,10 @@ You can temporarily bump IRAM to 0x40000, call again, and retrieve the informati
   - Name: as of your choice
   - Color format: True color
   - Output format: C array
-  - 
+  
+  
+
+### Github commands
+
+* https://stackoverflow.com/questions/7244321/how-do-i-update-a-github-forked-repository
+   

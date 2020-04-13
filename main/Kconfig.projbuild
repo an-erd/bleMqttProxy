@@ -9,6 +9,8 @@ menu "BLE-MQTT Proxy"
             bool "ESP32 WEMOS LOLIN board with OLED display (SSD1306)"
         config DEVICE_M5STACK
             bool "M5Stack Fire device with TFT display (ILI9341)"
+        config DEVICE_M5STICK
+            bool "M5Stick (gray) device with OLED display (SH1107)"
     endchoice #PROXY_DEVICE
 
     menu "Wifi Configuration"
@@ -354,6 +356,36 @@ menu "BLE-MQTT Proxy"
     endmenu
 
     menu "Button"
+        config BUTTON_COUNT
+            int "Number of buttons"
+            default 1 if DEVICE_WEMOS || DEVICE_M5STICK
+            default 3 if DEVICE_M5STACK
+            default 1
+            help
+                Number of available buttons on board.
+
+        config BUTTON_1_PIN
+            int "GPIO for Button 1"
+            default 0 if DEVICE_WEMOS
+            default 35 if DEVICE_M5STICK
+            default 39 if DEVICE_M5STACK
+            default 0
+            help
+                GPIO for Button 1.
+
+        config BUTTON_2_PIN
+            int "GPIO for Button 2"
+            default 38 if DEVICE_M5STACK
+            default -1
+            help
+                GPIO for Button 2.
+
+        config BUTTON_3_PIN
+            int "GPIO for Button 3"
+            default 37 if DEVICE_M5STACK
+            default -1
+            help
+                GPIO for Button 3.
 
         config IO_GLITCH_FILTER_TIME_MS
             int "IO glitch filter timer ms (10~100)"
@@ -398,6 +430,42 @@ menu "BLE-MQTT Proxy"
         config DISPLAY_TIME_TEST
             bool "Add extra display screen with tests (currently not in use!)"
             default n
+
+        choice PREDEFINED
+            prompt "Select predefined configuration"
+            default PREDEF_NONE
+
+            config PREDEF_NONE
+                bool "None"
+            config PREDEF_OPT_A
+                bool "Option A"
+                select BOARD_A
+                select FEATURE_A
+            config PREDEF_OPT_B
+                bool "Option B"
+                select BOARD_B
+                select FEATURE_B
+        endchoice
+
+        menu "Submenu"
+            visible if PREDEF_NONE
+
+            choice
+                prompt "Select Board"
+                config BOARD_A
+                    bool "Board A"
+                config BOARD_B
+                    bool "Board B"
+            endchoice
+
+            choice
+                prompt "Select Feature"
+                config FEATURE_A
+                    bool "Feature A"
+                config FEATURE_B
+                    bool "Feature B"
+            endchoice
+        endmenu
     endmenu
 
 endmenu

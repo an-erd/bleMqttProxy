@@ -120,15 +120,9 @@ static EventGroupHandle_t s_wdt_evg;
 #define WDT_TIMER_DURATION          (CONFIG_WDT_OWN_INTERVAL * 1000000)
 
 // Button
-#if CONFIG_DEVICE_WEMOS==1
-#define BUTTON_IO_NUM           0
+#if defined CONFIG_DEVICE_WEMOS || defined CONFIG_DEVICE_M5STICK
 static int64_t time_button_long_press = 0;  // long button press -> empty display
-#endif
-
-#if CONFIG_DEVICE_M5STACK==1
-#define BUTTON_IO_NUM_A         39
-#define BUTTON_IO_NUM_B         38
-#define BUTTON_IO_NUM_C         37
+#elif defined CONFIG_DEVICE_M5STACK
 static int64_t time_button_long_press_a = 0;
 static int64_t time_button_long_press_b = 0;
 static int64_t time_button_long_press_c = 0;
@@ -148,17 +142,16 @@ void clear_stats_values()
 void button_push_cb(void* arg)
 {
     uint8_t btn = *((uint8_t*) arg);
+    UNUSED(btn);
 
     if(!display_status.button_enabled){
         ESP_LOGD(TAG, "button_push_cb: button not enabled");
         return;
     }
 
-#if CONFIG_DEVICE_WEMOS==1
+#if defined CONFIG_DEVICE_WEMOS || defined CONFIG_DEVICE_M5STICK
     time_button_long_press = esp_timer_get_time() + CONFIG_LONG_PRESS_TIME * 1000;
-#endif
-
-#if CONFIG_DEVICE_M5STACK==1
+#elif defined CONFIG_DEVICE_M5STACK
     switch(btn){
         case 1:
             time_button_long_press_a = esp_timer_get_time() + CONFIG_LONG_PRESS_TIME * 1000;
@@ -217,11 +210,9 @@ void handle_button_display_message()
 
 bool is_button_long_press(uint8_t btn)
 {
-#if CONFIG_DEVICE_WEMOS==1
+#if defined CONFIG_DEVICE_WEMOS || defined CONFIG_DEVICE_M5STICK
     return esp_timer_get_time() >= time_button_long_press;
-#endif
-
-#if CONFIG_DEVICE_M5STACK==1
+#elif defined CONFIG_DEVICE_M5STACK
     switch(btn){
         case 1:
             return esp_timer_get_time() >= time_button_long_press_a;
@@ -320,17 +311,14 @@ void button_release_cb(void* arg)
 
     is_long_press = is_button_long_press(btn);
 
-#if CONFIG_DEVICE_WEMOS==1
-#pragma message "Check1"
+#if defined CONFIG_DEVICE_WEMOS || defined CONFIG_DEVICE_M5STICK
     if(!is_long_press){
         set_next_display_show();
     } else {
         handle_long_button_push(btn);
     }
     handle_set_next_display_show();
-#endif
-#if CONFIG_DEVICE_M5STACK==1
-#pragma message "Check2"
+#elif defined CONFIG_DEVICE_M5STACK
     // handle_m5stack_button(btn, is_long_press);
     handle_set_next_display_show();
 #endif
@@ -350,6 +338,7 @@ static __attribute__((unused)) void send_mqtt_uptime_heap_last_seen(uint8_t num_
     bool wifi_connected, mqtt_connected;
     uint32_t uptime_sec;
     tcpip_adapter_ip_info_t ipinfo;
+    lv_mem_monitor_t mem_mon;
 
     // send uptime and free heap to MQTT
     uxReturn = xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, 0);
@@ -369,8 +358,14 @@ static __attribute__((unused)) void send_mqtt_uptime_heap_last_seen(uint8_t num_
 
         snprintf(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "free_heap");
         snprintf(buffer_payload, 32, "%d", esp_get_free_heap_size());
-        ESP_LOGD(TAG, "MQTT %s -> free_heap %s", buffer_topic, buffer_payload);
+        ESP_LOGI(TAG, "MQTT %s -> free_heap %s", buffer_topic, buffer_payload);
         msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
+
+        // LV Memory Monitor
+        lv_mem_monitor(&mem_mon);
+        ESP_LOGD(TAG, "lv_mem_monitor: Memory %d %%, Total %d bytes, used %d bytes, free %d bytes, frag %d %%",
+            (int) mem_mon.used_pct, (int) mem_mon.total_size,
+            (int) mem_mon.total_size - mem_mon.free_size, mem_mon.free_size, mem_mon.frag_pct);
 
         if(num_act_beacon > 0){
             snprintf(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "last_seen");
@@ -966,7 +961,6 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
                     idx, (&ble_beacons[idx] != NULL),  (ble_beacons[idx].p_buffer_download != NULL) );
                 time_measure = esp_timer_get_time();
             }
-            ESP_LOGD(TAG, "ESP_GATTC_NOTIFY_EVT, following >");
             ble_beacons[idx].p_buffer_download[count].sequence_number  = uint16_decode(&p_data->notify.value[len]); len += 2; // uint16_t
             ble_beacons[idx].p_buffer_download[count].time_stamp       = uint32_decode(&p_data->notify.value[len]); len += 4; // time_t
             ble_beacons[idx].p_buffer_download[count].temperature_f
@@ -977,7 +971,6 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
             len += 2;
             // ESP_LOG_BUFFER_HEX_LEVEL(TAG, &ble_beacons[idx].p_buffer_download[count], p_data->notify.value_len, ESP_LOG_DEBUG);
             ble_beacons[idx].offline_buffer_count++;
-            ESP_LOGD(TAG, "ESP_GATTC_NOTIFY_EVT, following <");
         } else {
             ESP_LOGD(TAG, "ESP_GATTC_NOTIFY_EVT, receive indicate value:");
             ESP_LOGI(TAG, "ESP_GATTC_NOTIFY_EVT done, received %d, time difference %d",
@@ -1230,15 +1223,16 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     break;
                 }
 
-                ESP_LOGI(TAG, "(0x%04x%04x) rssi %3d, found, is_beacon_close %d, display_message_is_shown %d",
-                    maj, min, scan_result->scan_rst.rssi, is_beacon_close, display_status.display_message_is_shown);
+                ESP_LOGI(TAG, "(0x%04x%04x) rssi %3d, found, is_beacon_close %d, display_message_is_shown %d, idx %d",
+                    maj, min, scan_result->scan_rst.rssi, is_beacon_close, display_status.display_message_is_shown, idx);
 
                 if(is_beacon_close && (!display_status.display_message_is_shown)){
                     display_message_content.beac = idx;
                     snprintf(display_message_content.title, 32, "Beacon Identified");
                     snprintf(display_message_content.message, 32, "Name: %s", ble_beacons[idx].beacon_data.name);
                     snprintf(display_message_content.comment, 32, "Activated: %c", (is_beacon_idx_active(idx)? 'y':'n'));
-                    snprintf(display_message_content.action, 32, "%s", "Toggle active w/Button or wait");
+                    snprintf(display_message_content.action, 32, "%s", "Toggle active w/Button");
+                    // snprintf(display_message_content.action, 32, "%s", "Toggle active w/Button or wait");
                     display_message_show();
                 }
 
@@ -1513,12 +1507,12 @@ void adjust_log_level()
     esp_log_level_set("wifi", ESP_LOG_INFO);
     esp_log_level_set("BT_BTM", ESP_LOG_WARN);
     esp_log_level_set("MQTT_CLIENT", ESP_LOG_INFO);
-    esp_log_level_set("timer", ESP_LOG_DEBUG);
+    esp_log_level_set("timer", ESP_LOG_INFO);
     esp_log_level_set("beacon", ESP_LOG_INFO);
-    esp_log_level_set("display", ESP_LOG_DEBUG);
-    esp_log_level_set("event", ESP_LOG_DEBUG);
-    esp_log_level_set("ble_mqtt", ESP_LOG_DEBUG);
-    esp_log_level_set("web_file_server", ESP_LOG_DEBUG);
+    esp_log_level_set("display", ESP_LOG_INFO);
+    esp_log_level_set("event", ESP_LOG_INFO);
+    esp_log_level_set("ble_mqtt", ESP_LOG_INFO);
+    esp_log_level_set("web_file_server", ESP_LOG_INFO);
     esp_log_level_set("BLEMQTTPROXY", ESP_LOG_DEBUG);
 }
 
@@ -1568,22 +1562,23 @@ void initialize_lv()
     lv_init();
     lvgl_driver_init();
     static lv_color_t buf1[DISP_BUF_SIZE];
-    // static lv_color_t buf2[DISP_BUF_SIZE];
+    static lv_color_t buf2[DISP_BUF_SIZE];
     static lv_disp_buf_t disp_buf;
-    lv_disp_buf_init(&disp_buf, buf1, NULL, DISP_BUF_SIZE);
+    lv_disp_buf_init(&disp_buf, buf1, buf2, DISP_BUF_SIZE);
 
-ESP_LOGD(TAG, "initialize_lv() size of static lv_color_t buf2[DISP_BUF_SIZE] %d", sizeof(lv_color_t)*DISP_BUF_SIZE);
     lv_disp_drv_t disp_drv;
     lv_disp_drv_init(&disp_drv);
     disp_drv.flush_cb = disp_driver_flush;
     disp_drv.rounder_cb = disp_driver_rounder;
-#if CONFIG_LVGL_TFT_DISPLAY_CONTROLLER == TFT_CONTROLLER_SSD1306
+#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306
     disp_drv.set_px_cb = ssd1306_set_px_cb;
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+    disp_drv.set_px_cb = sh1107_set_px_cb;
 #endif
     disp_drv.buffer = &disp_buf;
     lv_disp_drv_register(&disp_drv);
 
-#if CONFIG_LVGL_TFT_DISPLAY_CONTROLLER == TFT_CONTROLLER_SSD1306
+#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
     lv_theme_mono_init(0, NULL);
     lv_theme_set_current(lv_theme_get_mono());
 #endif
@@ -1604,11 +1599,11 @@ static void lv_task(void* pvParameters)
 
 void app_main()
 {
-#if CONFIG_DEVICE_M5STACK==1
+#if defined CONFIG_DEVICE_M5STACK
     static uint8_t btn_a = 1;
     static uint8_t btn_b = 2;
     static uint8_t btn_c = 3;
-#elif CONFIG_DEVICE_WEMOS
+#elif defined CONFIG_DEVICE_WEMOS || defined CONFIG_DEVICE_M5STICK
     static uint8_t btn = 0;
 #endif
 
@@ -1627,25 +1622,28 @@ void app_main()
 
     create_timer();
 
-#if CONFIG_DEVICE_M5STACK==1
-    button_handle_t btn_handle_a = iot_button_create(BUTTON_IO_NUM_A, BUTTON_ACTIVE_LEVEL);
-    button_handle_t btn_handle_b = iot_button_create(BUTTON_IO_NUM_B, BUTTON_ACTIVE_LEVEL);
-    button_handle_t btn_handle_c = iot_button_create(BUTTON_IO_NUM_C, BUTTON_ACTIVE_LEVEL);
+#if defined CONFIG_DEVICE_M5STACK
+    button_handle_t btn_handle_a = iot_button_create(CONFIG_BUTTON_1_PIN, BUTTON_ACTIVE_LEVEL);
+    button_handle_t btn_handle_b = iot_button_create(CONFIG_BUTTON_2_PIN, BUTTON_ACTIVE_LEVEL);
+    button_handle_t btn_handle_c = iot_button_create(CONFIG_BUTTON_3_PIN, BUTTON_ACTIVE_LEVEL);
     iot_button_set_evt_cb(btn_handle_a, BUTTON_CB_PUSH, button_push_cb, &btn_a);
     iot_button_set_evt_cb(btn_handle_b, BUTTON_CB_PUSH, button_push_cb, &btn_b);
     iot_button_set_evt_cb(btn_handle_c, BUTTON_CB_PUSH, button_push_cb, &btn_c);
     iot_button_set_evt_cb(btn_handle_a, BUTTON_CB_RELEASE, button_release_cb, &btn_a);
     iot_button_set_evt_cb(btn_handle_b, BUTTON_CB_RELEASE, button_release_cb, &btn_b);
     iot_button_set_evt_cb(btn_handle_c, BUTTON_CB_RELEASE, button_release_cb, &btn_c);
-#endif
-#if CONFIG_DEVICE_WEMOS==1
-    button_handle_t btn_handle = iot_button_create(BUTTON_IO_NUM, BUTTON_ACTIVE_LEVEL);
+#elif defined CONFIG_DEVICE_M5STICK
+    button_handle_t btn_handle = iot_button_create(CONFIG_BUTTON_1_PIN, BUTTON_ACTIVE_LEVEL);
+    iot_button_set_evt_cb(btn_handle, BUTTON_CB_PUSH, button_push_cb, &btn);
+    iot_button_set_evt_cb(btn_handle, BUTTON_CB_RELEASE, button_release_cb, &btn);
+#elif defined CONFIG_DEVICE_WEMOS
+    button_handle_t btn_handle = iot_button_create(CONFIG_BUTTON_1_PIN, BUTTON_ACTIVE_LEVEL);
     iot_button_set_evt_cb(btn_handle, BUTTON_CB_PUSH, button_push_cb, &btn);
     iot_button_set_evt_cb(btn_handle, BUTTON_CB_RELEASE, button_release_cb, &btn);
 #endif
 
     initialize_lv();
-    xTaskCreate(&lv_task, "lv_task", 2*4096, NULL, 5, NULL);
+    xTaskCreate(&lv_task, "lv_task", 2048 * 3, NULL, 5, NULL);
     vTaskDelay(50 / portTICK_PERIOD_MS);
 
     xTaskCreate(&display_task, "display_task", 2048 * 2, NULL, 5, NULL);

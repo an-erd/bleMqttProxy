@@ -1,26 +1,26 @@
 Toolchain path: /opt/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc
 Toolchain version: crosstool-ng-1.22.0-80-g6c4433a5
 Compiler version: 5.2.0
-App "blemqttproxy" version: 0.4-17-gfc1aef2-dirty
+App "blemqttproxy" version: 0.4-18-g73abc09-dirty
 Python requirements from C:/msys32/home/AKAEM/esp/esp-idf/requirements.txt are satisfied.
 Total sizes:
  DRAM .data size:   16328 bytes
- DRAM .bss  size:   98952 bytes
-Used static DRAM:  115280 bytes (   9300 available, 92.5% used)
+ DRAM .bss  size:   74376 bytes
+Used static DRAM:   90704 bytes (  33876 available, 72.8% used)
 Used static IRAM:  110701 bytes (  20371 available, 84.5% used)
-      Flash code:  865636 bytes
-    Flash rodata:  227652 bytes
-Total image size:~1220317 bytes (.bin may be padded larger)
+      Flash code:  865768 bytes
+    Flash rodata:  227668 bytes
+Total image size:~1220465 bytes (.bin may be padded larger)
 Per-archive contributions to ELF file:
             Archive File DRAM .data & .bss   IRAM Flash code & rodata   Total
                  libbt.a        196  24662    366     166985    15526  207735
            libnet80211.a        937   9037  10443      89718    21907  132042
             libmbedtls.a        100    264     30      95072    20291  115757
-               liblvgl.a         98  35305     33      49353    17375  102164
-               liblwip.a         21   4228      0      79250    15431   98930
+               liblwip.a         21   4228      0      79258    15431   98938
            libbtdm_app.a        347   2386  21252      61108     4119   89212
                   libc.a          0      0      0      74836     7963   82799
-               libmain.a       1176  11210     10      24350    42835   79581
+               libmain.a       1176  11210     10      24355    42852   79603
+               liblvgl.a         98  10729     33      49477    17375   77712
                  libpp.a       1317   5411  22904      35582     4248   69462
               libesp32.a       2436   2540   7800      14024    16398   43198
                 libphy.a       1604    930   6487      30547        0   39568
@@ -32,7 +32,7 @@ Per-archive contributions to ELF file:
      libwpa_supplicant.a          0      0      0      12297     2463   14760
           libnvs_flash.a          0     32      0      10518     3604   14154
              libnghttp.a          0      0      0      10034     3873   13907
-            libcoexist.a       2042     28   3874       4358      315   10617
+            libcoexist.a       2042     28   3874       4354      315   10613
     libesp_http_client.a          0      0      0       6541     3478   10019
                 libsoc.a        160      4   4474        637     4084    9359
           libspi_flash.a         24    291   5620       1267      955    8157

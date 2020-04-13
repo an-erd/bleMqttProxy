@@ -1,20 +1,19 @@
 Toolchain path: /opt/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc
 Toolchain version: crosstool-ng-1.22.0-80-g6c4433a5
 Compiler version: 5.2.0
-App "blemqttproxy" version: 0.4-17-gfc1aef2-dirty
+App "blemqttproxy" version: 0.4-18-g73abc09-dirty
 Python requirements from C:/msys32/home/AKAEM/esp/esp-idf/requirements.txt are satisfied.
 Total sizes:
  DRAM .data size:   16328 bytes
- DRAM .bss  size:   98952 bytes
-Used static DRAM:  115280 bytes (   9300 available, 92.5% used)
+ DRAM .bss  size:   74376 bytes
+Used static DRAM:   90704 bytes (  33876 available, 72.8% used)
 Used static IRAM:  110701 bytes (  20371 available, 84.5% used)
-      Flash code:  865636 bytes
-    Flash rodata:  227652 bytes
-Total image size:~1220317 bytes (.bin may be padded larger)
+      Flash code:  865768 bytes
+    Flash rodata:  227668 bytes
+Total image size:~1220465 bytes (.bin may be padded larger)
 Per-file contributions to ELF file:
              Object File DRAM .data & .bss   IRAM Flash code & rodata   Total
-                lv_mem.o          0  32776      0        463      129   33368
-          blemqttproxy.o         68   8259     10      10667    10242   29246
+          blemqttproxy.o         68   8259     10      10672    10259   29268
       ieee80211_output.o          3   2600   3291      11003      880   17777
                 wl_cnx.o          2     55    225      13723     3369   17374
            phy_chip_v7.o        921    829   1029      14283        0   17062
@@ -46,6 +45,7 @@ Per-file contributions to ELF file:
               wpa_auth.o          0     68      0       8218      857    9143
               btm_main.o          0   8912      0        110        0    9022
                    ecp.o          0     64      0       8240      716    9020
+                lv_mem.o          0   8200      0        587      129    8916
                 bignum.o          0      0      0       8196      672    8868
        web_file_server.o         16      1      0       4409     4359    8785
                    nd6.o          8   1027      0       7324      105    8464
@@ -62,7 +62,7 @@ Per-file contributions to ELF file:
                api_msg.o          0      1      0       5964     1272    7237
                display.o        158    836      0       4267     1922    7183
                    tcp.o          6     26      0       5647     1300    6979
-                  dhcp.o          0     65      0       5325     1487    6877
+                  dhcp.o          0     65      0       5329     1487    6881
        ieee80211_debug.o          0    576      0        158     5933    6667
          ieee80211_api.o         16   3169     20       2489      958    6652
               x509_crt.o          0      0      0       4506     1982    6488
@@ -112,7 +112,7 @@ event_default_handlers.o          0    104      0       1980     3551    5635
    oled_12_font_symbol.o         44      0      0          0     4086    4130
                    oid.o          0      0      0        523     3548    4071
                pkparse.o          0      0      0       3466      403    3869
-        coexist_scheme.o       1229     28      0       2579       22    3858
+        coexist_scheme.o       1229     28      0       2583       22    3862
         unwind-dw2-fde.o          4     20      0       3348      404    3776
               vfs_uart.o         48     63      0       3221      420    3752
               lv_label.o          0      4      0       3580      162    3746
@@ -135,8 +135,8 @@ event_default_handlers.o          0    104      0       1980     3551    5635
                 config.o          0      0      0       2796      367    3163
                 sha256.o          0      0      0       2906      256    3162
          lv_draw_basic.o          2    128      0       2859      166    3155
+                etharp.o          0    241      0       2223      636    3100
               btu_hcif.o          0      0      0       3071       28    3099
-                etharp.o          0    241      0       2219      636    3096
           aes-internal.o          0      0      0        764     2314    3078
         lib_a-strerror.o          0      0      0        802     2258    3060
                lld_pdu.o          0      0   2212        739       68    3019
@@ -157,8 +157,8 @@ event_default_handlers.o          0    104      0       1980     3551    5635
                l2c_ble.o          0      0      0       2664       76    2740
               l2c_link.o          0      0      0       2712        0    2712
               lv_table.o          0      8      0       1992      657    2657
-          coexist_core.o        344      0   1329        965       15    2653
    p_256_multprecision.o          0      0      0       2650        0    2650
+          coexist_core.o        344      0   1329        957       15    2645
         lv_img_decoder.o          0      0      0       2147      458    2605
              cpu_start.o          0      1   1339        206     1046    2592
             hciblecmds.o          0      0      0       2590        0    2590

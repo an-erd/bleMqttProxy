@@ -37,7 +37,6 @@
                 "C:/msys32/home/AKAEM/esp/esp-idf/components/wear_levelling/include",
                 "C:/msys32/home/AKAEM/esp/esp-idf/components/vfs/include",
                 "C:/msys32/home/AKAEM/esp/esp-idf/components/newlib/platform_include",
-                "${workspaceFolder}/components/ssd1306/include",
                 "C:/msys32/home/AKAEM/esp/esp-idf/components/esp_ringbuf/include",
                 "C:/msys32/home/AKAEM/esp/esp-idf/components/esp_ringbuf/include",
                 "C:/msys32/home/AKAEM/esp/esp-idf/components/mqtt/esp-mqtt/include",
