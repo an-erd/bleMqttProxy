@@ -5,7 +5,8 @@
 #include "freertos/event_groups.h"
 #include "lvgl/lvgl.h"
 
-#define UPDATE_DISPLAY      (BIT0)
+#define UPDATE_DISPLAY              (BIT0)
+#define UPDATE_DISPLAY_TASK_READY   (BIT1)
 extern EventGroupHandle_t s_values_evg;
 
 extern  esp_timer_handle_t display_message_timer;

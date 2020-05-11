@@ -27,6 +27,7 @@ EventGroupHandle_t s_values_evg;
 extern EventGroupHandle_t wifi_evg;
 extern uint16_t wifi_connections_count_connect;
 extern uint16_t wifi_connections_count_disconnect;
+extern uint16_t wifi_ap_connections;
 #define WIFI_CONNECTED_BIT          (BIT0)
 
 esp_timer_handle_t oneshot_display_message_timer;
@@ -341,7 +342,7 @@ bool display_update_check_display_off()
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306
             ssd1306_sleep_in();
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
-            ESP_LOGI(TAG, "free heap: %d", esp_get_free_heap_size());
+            ESP_LOGD(TAG, "free heap: %d", esp_get_free_heap_size());
             fflush(stdout);
 
             sh1107_sleep_in();
@@ -621,9 +622,8 @@ esp_err_t lv_show_stats_screen()
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     snprintf(buffer, 32, "%s", (wifi_connected ? "y" : "n"));
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
-    snprintf(buffer, 32, "WiFi: %s, WebSrv: %s",
-        (wifi_connected ? "y" : "n"),
-        (web_file_server_running ? "y" : "n"));
+    snprintf(buffer, 32, "WiFi: %s, AP: %d, WebSrv: %s",
+        (wifi_connected ? "y" : "n"), wifi_ap_connections, (web_file_server_running ? "y" : "n"));
 #endif
     lv_table_set_cell_value(table, line++, col, buffer);
 
@@ -1123,6 +1123,9 @@ void display_task(void *pvParameters)
     UNUSED(uxBits);
 
     ESP_ERROR_CHECK(esp_timer_create(&oneshot_display_message_timer_args, &oneshot_display_message_timer));
+
+    uxBits = xEventGroupWaitBits(s_values_evg, UPDATE_DISPLAY_TASK_READY, pdTRUE, pdFALSE, portMAX_DELAY);
+    ESP_LOGI(TAG, "xEventGroupWaitBits xEventGroupWaitBits(UPDATE_DISPLAY_TASK_READY)");
 
     while (1)
     {

@@ -112,7 +112,7 @@ bool send_to_mqtt(uint8_t idx, uint16_t maj, uint16_t min, float temp, float hum
             }
         }
     } else {
-        ESP_LOGI(TAG, "ESP_GAP_SEARCH_INQ_RES_EVT: WIFI %d MQTT %d, not send", wifi_connected, mqtt_connected );
+        ESP_LOGD(TAG, "ESP_GAP_SEARCH_INQ_RES_EVT: WIFI %d MQTT %d, not send", wifi_connected, mqtt_connected );
     }
 
     return mqtt_send_adv;

@@ -1,4 +1,4 @@
-set(COMPONENT_SRCS "blemqttproxy.c")
+set(COMPONENT_SRCS "splash_oled.c" "ble_mqtt.c" "display.c" "blemqttproxy.c")
 set(COMPONENT_ADD_INCLUDEDIRS ".")
 
 set(REQUIRES lvgl_tft lvgl_touch lvgl)

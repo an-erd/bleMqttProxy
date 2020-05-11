@@ -109,6 +109,9 @@ EventGroupHandle_t wifi_evg;
 uint16_t wifi_connections_count_connect = 0;
 uint16_t wifi_connections_count_disconnect = 0;
 
+// WiFi AP
+uint16_t wifi_ap_connections = 0;
+
 // Watchdog timer / WDT
 static esp_timer_handle_t periodic_wdt_timer;
 static void periodic_wdt_timer_callback(void* arg);
@@ -135,6 +138,7 @@ void clear_stats_values()
 {
     wifi_connections_count_connect = 0;
     wifi_connections_count_disconnect = 0;
+    wifi_ap_connections = 0;
     mqtt_packets_send = 0;
     mqtt_packets_fail = 0;
 }
@@ -358,7 +362,7 @@ static __attribute__((unused)) void send_mqtt_uptime_heap_last_seen(uint8_t num_
 
         snprintf(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "free_heap");
         snprintf(buffer_payload, 32, "%d", esp_get_free_heap_size());
-        ESP_LOGI(TAG, "MQTT %s -> free_heap %s", buffer_topic, buffer_payload);
+        ESP_LOGD(TAG, "MQTT %s -> free_heap %s", buffer_topic, buffer_payload);
         msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
 
         // LV Memory Monitor
@@ -456,6 +460,7 @@ void periodic_wdt_timer_callback(void* arg)
 static esp_err_t wifi_event_handler(void *ctx, system_event_t *event)
 {
     httpd_handle_t *server = (httpd_handle_t *) ctx;
+    EventBits_t uxReturn;
 
     switch (event->event_id) {
         case SYSTEM_EVENT_STA_START:
@@ -464,51 +469,78 @@ static esp_err_t wifi_event_handler(void *ctx, system_event_t *event)
         case SYSTEM_EVENT_STA_GOT_IP:
             ESP_LOGI(TAG, "wifi_event_handler: SYSTEM_EVENT_STA_GOT_IP, IP: '%s'", ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
             wifi_connections_count_connect++;
-
-            if (*server == NULL) {
-                *server = start_webserver();
-            }
-
             xEventGroupSetBits(wifi_evg, WIFI_CONNECTED_BIT);
             break;
         case SYSTEM_EVENT_STA_DISCONNECTED:
             ESP_LOGI(TAG, "wifi_event_handler: SYSTEM_EVENT_STA_DISCONNECTED");
             wifi_connections_count_disconnect++;
-
-            if (*server) {
-                stop_webserver(*server);
-                *server = NULL;
-            }
-
             esp_wifi_connect();
             xEventGroupClearBits(wifi_evg, WIFI_CONNECTED_BIT);
+            break;
+        case SYSTEM_EVENT_AP_STACONNECTED:
+            ESP_LOGI(TAG, "wifi_event_handler: SYSTEM_EVENT_AP_STACONNECTED, station:"MACSTR" join, AID=%d", MAC2STR(event->event_info.sta_connected.mac), event->event_info.sta_connected.aid);
+            wifi_ap_connections++;
+            break;
+        case SYSTEM_EVENT_AP_STADISCONNECTED:
+            ESP_LOGI(TAG, "wifi_event_handler: SYSTEM_EVENT_AP_STADISCONNECTED, station:"MACSTR"leave, AID=%d", MAC2STR(event->event_info.sta_disconnected.mac), event->event_info.sta_disconnected.aid);
+            wifi_ap_connections--;
             break;
         default:
             break;
     }
+
+    uxReturn = xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, 0);
+    bool wifi_connected = uxReturn & WIFI_CONNECTED_BIT;
+
+    if(wifi_connected || wifi_ap_connections){
+        if (*server == NULL) {
+            *server = start_webserver();
+        }
+    } else {
+        if (*server) {
+            stop_webserver(*server);
+            *server = NULL;
+        }
+    }
+
     return ESP_OK;
 }
 
 static void wifi_init(void *arg)
 {
+    uint8_t mac[6];
+    char buffer[32];
     tcpip_adapter_init();
     ESP_ERROR_CHECK(esp_event_loop_init(wifi_event_handler, arg));
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
-    wifi_config_t wifi_config = {
-        .sta = {
-            .ssid = CONFIG_WIFI_SSID,
-            .password = CONFIG_WIFI_PASSWORD,
-        },
-    };
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
+
+    wifi_config_t wifi_config_sta, wifi_config_ap;
+    memset(&wifi_config_sta, 0, sizeof(wifi_config_sta));
+    strncpy((char *)wifi_config_sta.ap.ssid, CONFIG_WIFI_SSID, strlen(CONFIG_WIFI_SSID));
+    strncpy((char *)wifi_config_sta.ap.password, CONFIG_WIFI_PASSWORD, strlen(CONFIG_WIFI_PASSWORD));
+
+    memset(&wifi_config_ap, 0, sizeof(wifi_config_ap));
+    wifi_config_ap.ap.authmode = WIFI_AUTH_WPA_WPA2_PSK;
+
+    ESP_ERROR_CHECK(esp_efuse_mac_get_default(mac));
+    snprintf(buffer, 32, "%s-%02X", CONFIG_AP_WIFI_SSID, mac[5]);
+    wifi_config_ap.ap.ssid_len = strlen(buffer);
+    strncpy((char *)wifi_config_ap.ap.ssid, buffer, strlen(buffer));
+    // wifi_config_ap.ap.ssid_len = strlen(CONFIG_AP_WIFI_SSID);
+    // strncpy((char *)wifi_config_ap.ap.ssid, CONFIG_AP_WIFI_SSID, strlen(CONFIG_AP_WIFI_SSID));
+    strncpy((char *)wifi_config_ap.ap.password, CONFIG_AP_WIFI_PASSWORD, strlen(CONFIG_AP_WIFI_PASSWORD));
+    wifi_config_ap.ap.max_connection = CONFIG_AP_MAX_STA_CONN;
+
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
+    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config_sta));
+    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config_ap));
     // WiFi.setSleepMode(WIFI_NONE_SLEEP);
     ESP_LOGI(TAG, "start the WIFI SSID:[%s]", CONFIG_WIFI_SSID);
     ESP_ERROR_CHECK(esp_wifi_start());
     ESP_LOGI(TAG, "Waiting for wifi");
-    xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, portMAX_DELAY);
+    // xEventGroupWaitBits(wifi_evg, WIFI_CONNECTED_BIT, false, true, portMAX_DELAY);
 }
 
 static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
@@ -544,6 +576,10 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
         case MQTT_EVENT_ERROR:
             ESP_LOGD(TAG, "MQTT_EVENT_ERROR");
             break;
+        case MQTT_EVENT_ANY:
+            ESP_LOGI(TAG, "MQTT_EVENT_ANY");
+            break;
+
     }
     return ESP_OK;
 }
@@ -1223,7 +1259,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     break;
                 }
 
-                ESP_LOGI(TAG, "(0x%04x%04x) rssi %3d, found, is_beacon_close %d, display_message_is_shown %d, idx %d",
+                ESP_LOGD(TAG, "(0x%04x%04x) rssi %3d, found, is_beacon_close %d, display_message_is_shown %d, idx %d",
                     maj, min, scan_result->scan_rst.rssi, is_beacon_close, display_status.display_message_is_shown, idx);
 
                 if(is_beacon_close && (!display_status.display_message_is_shown)){
@@ -1513,7 +1549,7 @@ void adjust_log_level()
     esp_log_level_set("event", ESP_LOG_INFO);
     esp_log_level_set("ble_mqtt", ESP_LOG_INFO);
     esp_log_level_set("web_file_server", ESP_LOG_INFO);
-    esp_log_level_set("BLEMQTTPROXY", ESP_LOG_DEBUG);
+    esp_log_level_set("BLEMQTTPROXY", ESP_LOG_INFO);
 }
 
 void initialize_ble()
@@ -1553,6 +1589,11 @@ void initialize_ble_security()
     esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &rsp_key, sizeof(uint8_t));
 }
 
+//Creates a semaphore to handle concurrent call to lvgl stuff
+//If you wish to call *any* lvgl function from other threads/tasks
+//you should lock on the very same semaphore!
+SemaphoreHandle_t xGuiSemaphore;
+
 static void IRAM_ATTR lv_tick_task(void) {
 	lv_tick_inc(portTICK_RATE_MS);
 }
@@ -1582,17 +1623,40 @@ void initialize_lv()
     lv_theme_mono_init(0, NULL);
     lv_theme_set_current(lv_theme_get_mono());
 #endif
+}
 
-    esp_register_freertos_tick_hook(lv_tick_task);
+static void gui_prepare()
+{
+    xGuiSemaphore = xSemaphoreCreateMutex();
+
+    initialize_lv();
+
+    const esp_timer_create_args_t periodic_timer_args = {
+            .callback = &lv_tick_task,
+            /* name is optional, but may help identify the timer when debugging */
+            .name = "periodic_gui"
+    };
+    esp_timer_handle_t periodic_timer;
+    ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
+    //On ESP32 it's better to create a periodic task instead of esp_register_freertos_tick_hook
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, 30*1000)); //10ms (expressed as microseconds)
 
     lv_init_screens();
 }
 
-static void lv_task(void* pvParameters)
+static void gui_task(void* pvParameters)
 {
+    gui_prepare();
+    ESP_LOGD(TAG, "gui_task, lv_init_screens done"); fflush(stdout);
+    xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY_TASK_READY);
+
     while (1) {
         vTaskDelay(1);
-        lv_task_handler();
+        //Try to lock the semaphore, if success, call lvgl stuff
+        if (xSemaphoreTake(xGuiSemaphore, (TickType_t)10) == pdTRUE) {
+            lv_task_handler();
+            xSemaphoreGive(xGuiSemaphore);
+        }
     }
     vTaskDelete(NULL);
 }
@@ -1620,7 +1684,6 @@ void app_main()
     s_wdt_evg    = xEventGroupCreate();
     ota_evg = xEventGroupCreate();
 
-    create_timer();
 
 #if defined CONFIG_DEVICE_M5STACK
     button_handle_t btn_handle_a = iot_button_create(CONFIG_BUTTON_1_PIN, BUTTON_ACTIVE_LEVEL);
@@ -1642,11 +1705,11 @@ void app_main()
     iot_button_set_evt_cb(btn_handle, BUTTON_CB_RELEASE, button_release_cb, &btn);
 #endif
 
-    initialize_lv();
-    xTaskCreate(&lv_task, "lv_task", 2048 * 3, NULL, 5, NULL);
+    xTaskCreatePinnedToCore(gui_task, "gui_task", 4096*2, NULL, 0, NULL, 1);
     vTaskDelay(50 / portTICK_PERIOD_MS);
 
     xTaskCreate(&display_task, "display_task", 2048 * 2, NULL, 5, NULL);
+    create_timer();
     oneshot_timer_usage = TIMER_SPLASH_SCREEN;
     xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
 

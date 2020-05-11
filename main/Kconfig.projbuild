@@ -15,17 +15,39 @@ menu "BLE-MQTT Proxy"
 
     menu "Wifi Configuration"
 
-        config WIFI_SSID
-            string "WiFi SSID"
-            default "myssid"
-            help
-                SSID (network name) for the example to connect to.
+        menu "Station"
+            config WIFI_SSID
+                string "WiFi SSID"
+                default "myssid"
+                help
+                    SSID (network name) to connect to.
 
-        config WIFI_PASSWORD
-            string "WiFi Password"
-            default "mypassword"
-            help
-                WiFi password (WPA or WPA2) for the example to use.
+            config WIFI_PASSWORD
+                string "WiFi Password"
+                default "mypassword"
+                help
+                    WiFi password to use.
+        endmenu
+
+        menu "Access Point"
+            config AP_WIFI_SSID
+                string "Access Point WiFi SSID"
+                default "apssid"
+                help
+                    SSID (network name) for the access point.
+
+            config AP_WIFI_PASSWORD
+                string "Access Point WiFi Password"
+                default "appassword"
+                help
+                    WiFi password (WPA or WPA2) for access point to use.
+
+            config AP_MAX_STA_CONN
+                int "Maximal STA connections"
+                default 4
+                help
+                    Max number of the STA connects to AP.
+        endmenu
     endmenu
 
     menu "Own Watchdog timer (WDT)"

@@ -631,7 +631,8 @@ You can temporarily bump IRAM to 0x40000, call again, and retrieve the informati
   
   Configuration and usage:
   
-  - Image File (e.g. an image generated with MS Paint and stored as .png)
+  - Image File using an image editor of your choice and save as .png. 
+    - When using MS Paint for this task the following configuration works: Unit: Pixel, Color: Color, Width/Height: 128x64 or 64x128 for Landscape and Portrait mode. Even when using a monochrome display, don't save as b&w but stick with color.
   - Name: as of your choice
   - Color format: True color
   - Output format: C array
@@ -641,4 +642,11 @@ You can temporarily bump IRAM to 0x40000, call again, and retrieve the informati
 ### Github commands
 
 * https://stackoverflow.com/questions/7244321/how-do-i-update-a-github-forked-repository
-   
+  
+
+### GDB Stub
+
+```
+$ xtensa-esp32-elf-gdb.exe ./build/bleMqttProxy.elf -b 115200 -ex 'target remote COM5'
+```
+

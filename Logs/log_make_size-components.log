@@ -1,41 +1,41 @@
 Toolchain path: /opt/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc
 Toolchain version: crosstool-ng-1.22.0-80-g6c4433a5
 Compiler version: 5.2.0
-App "blemqttproxy" version: 0.4-18-g73abc09-dirty
+App "blemqttproxy" version: 0.4-19-ga771597-dirty
 Python requirements from C:/msys32/home/AKAEM/esp/esp-idf/requirements.txt are satisfied.
 Total sizes:
- DRAM .data size:   16328 bytes
- DRAM .bss  size:   74376 bytes
-Used static DRAM:   90704 bytes (  33876 available, 72.8% used)
-Used static IRAM:  110701 bytes (  20371 available, 84.5% used)
-      Flash code:  865768 bytes
-    Flash rodata:  227668 bytes
-Total image size:~1220465 bytes (.bin may be padded larger)
+ DRAM .data size:   16288 bytes
+ DRAM .bss  size:   80504 bytes
+Used static DRAM:   96792 bytes (  27788 available, 77.7% used)
+Used static IRAM:  106673 bytes (  24399 available, 81.4% used)
+      Flash code:  863284 bytes
+    Flash rodata:  232964 bytes
+Total image size:~1219209 bytes (.bin may be padded larger)
 Per-archive contributions to ELF file:
             Archive File DRAM .data & .bss   IRAM Flash code & rodata   Total
-                 libbt.a        196  24662    366     166985    15526  207735
-           libnet80211.a        937   9037  10443      89718    21907  132042
-            libmbedtls.a        100    264     30      95072    20291  115757
-               liblwip.a         21   4228      0      79258    15431   98938
-           libbtdm_app.a        347   2386  21252      61108     4119   89212
+                 libbt.a        196  24662    366     166961    15526  207711
+           libnet80211.a        937   9037  10443      89714    21907  132038
+            libmbedtls.a        100    264     30      95076    20291  115761
+               liblwip.a         21   4228      0      79139    15431   98819
+           libbtdm_app.a        347   2386  21252      61096     4119   89200
+               libmain.a       1168  19345     10      24679    43305   88507
                   libc.a          0      0      0      74836     7963   82799
-               libmain.a       1176  11210     10      24355    42852   79603
-               liblvgl.a         98  10729     33      49477    17375   77712
-                 libpp.a       1317   5411  22904      35582     4248   69462
-              libesp32.a       2436   2540   7800      14024    16398   43198
-                libphy.a       1604    930   6487      30547        0   39568
+                 libpp.a       1317   5411  22896      35582     4248   69454
+               liblvgl.a         70   8665     33      42109    17214   68091
+              libesp32.a       2436   2540   7800      14020    16376   43172
+                libphy.a       1604    930   6483      30547        0   39564
+             libdriver.a        123     77    527      15993    16389   33109
                 libwpa.a          0    686      0      21685     2577   24948
-             libdriver.a        128     41   2172      11538    11040   24919
            libfreertos.a       4140    776  12901          0     1768   19585
                libmqtt.a          0      0      0      10867     5820   16687
     libesp_http_server.a          0      8      0       9569     6538   16115
      libwpa_supplicant.a          0      0      0      12297     2463   14760
           libnvs_flash.a          0     32      0      10518     3604   14154
              libnghttp.a          0      0      0      10034     3873   13907
-            libcoexist.a       2042     28   3874       4354      315   10613
+            libcoexist.a       2042     28   3874       4358      315   10617
     libesp_http_client.a          0      0      0       6541     3478   10019
-                libsoc.a        160      4   4474        637     4084    9359
-          libspi_flash.a         24    291   5620       1267      955    8157
+                libsoc.a        160      4   4478        637     4180    9459
+          libspi_flash.a         24    291   5612       1267      955    8149
                 libvfs.a        240    103      0       6163      555    7061
       libtcp_transport.a          0      0      0       5022     1996    7018
                 libgcc.a          4     20    104       5564      888    6580
@@ -45,15 +45,15 @@ Per-archive contributions to ELF file:
             libesp-tls.a          0      4      0       2527     1977    4508
              libstdc++.a          8     20      0       2689     1253    3970
          libapp_update.a          0     12     85       2097     1674    3868
-        libesp_ringbuf.a          0      0   3124          0      539    3663
               libefuse.a         36      4      0        895     2248    3183
              libnewlib.a        152    272    774        982      298    2478
                 librtc.a          0      4   2247          0        0    2251
             libpthread.a         16     12    236        747      683    1694
                 liblog.a          8    268    426        684      114    1500
+           liblvgl_tft.a          0     11     71       1077      237    1396
              libbutton.a          0      0      0       1121      172    1293
     libsmartconfig_ack.a          0      1      0        841      349    1191
-           liblvgl_tft.a          0      0      0        766      302    1068
+        libesp_ringbuf.a          0      0    707          0      207     914
                libcore.a          0     29      0        643      228     900
               libparam.a          0      0      0        480      199     679
                 libhal.a          0      0    519          0       32     551
