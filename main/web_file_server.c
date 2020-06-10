@@ -54,21 +54,21 @@ static esp_err_t print_bond_devices(httpd_req_t *req)
 
     esp_ble_bond_dev_t *dev_list = (esp_ble_bond_dev_t *)malloc(sizeof(esp_ble_bond_dev_t) * dev_num);
     esp_ble_get_bond_device_list(&dev_num, dev_list);
-    snprintf(buffer, 128, "<tr>\n<td valign=top>Bond device num</td><td> %d </td></tr>\n", dev_num);
+    snprintf_nowarn(buffer, 128, "<tr>\n<td valign=top>Bond device num</td><td> %d </td></tr>\n", dev_num);
     httpd_resp_sendstr_chunk(req, buffer);
 
     for (int i = 0; i < dev_num; i++) {
-        snprintf(buffer, 128, "<tr>\n<td valign=top>Bond device %d <a href=\"/csv?cmd=delbond&amp;num=%d\">delete</a>", i, i);
+        snprintf_nowarn(buffer, 128, "<tr>\n<td valign=top>Bond device %d <a href=\"/csv?cmd=delbond&amp;num=%d\">delete</a>", i, i);
         httpd_resp_sendstr_chunk(req, buffer);
-        snprintf(buffer, 128, "</td><td style=\"white-space:nowrap;\">ADDR: ");
+        snprintf_nowarn(buffer, 128, "</td><td style=\"white-space:nowrap;\">ADDR: ");
         httpd_resp_sendstr_chunk(req, buffer);
         for (int v = 0; v < sizeof(esp_bd_addr_t); v++){
-            snprintf(buffer, 128, "%02X ", dev_list[i].bd_addr[v]);
+            snprintf_nowarn(buffer, 128, "%02X ", dev_list[i].bd_addr[v]);
             httpd_resp_sendstr_chunk(req, buffer);
         }
         httpd_resp_sendstr_chunk(req, "<br>IRK: ");
         for (int v = 0; v < sizeof(esp_bt_octet16_t); v++){
-            snprintf(buffer, 128, "%02X ", dev_list[i].bond_key.pid_key.irk[v]);
+            snprintf_nowarn(buffer, 128, "%02X ", dev_list[i].bond_key.pid_key.irk[v]);
             httpd_resp_sendstr_chunk(req, buffer);
         }
 
@@ -97,7 +97,7 @@ static esp_err_t http_resp_csv_download(httpd_req_t *req, uint8_t idx)
         // memcpy(&epoch_time, localtime((time_t*)&ble_beacons[idx].p_buffer_download[i].time_stamp, sizeof (struct tm));
         ts = *localtime((time_t*)&ble_beacons[idx].p_buffer_download[i].time_stamp);
         strftime(buffer2, sizeof(buffer2), "%d.%m.%y %H:%M:%S", &ts);
-        snprintf(buffer, 128, "%6d;%10d;%s;% 2.1f;%3.1f\n",
+        snprintf_nowarn(buffer, 128, "%6d;%10d;%s;% 2.1f;%3.1f\n",
             ble_beacons[idx].p_buffer_download[i].sequence_number,
             ble_beacons[idx].p_buffer_download[i].time_stamp,
             buffer2,
@@ -158,7 +158,7 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
         httpd_resp_sendstr_chunk(req, "<td style=\"white-space:nowrap;\">\n");
         if(ble_beacons[i].beacon_data.bd_addr_set){
             for (int v = 0; v < sizeof(esp_bd_addr_t); v++){
-                snprintf(buffer, 128, "%02X ", ble_beacons[i].beacon_data.bd_addr[v]);
+                snprintf_nowarn(buffer, 128, "%02X ", ble_beacons[i].beacon_data.bd_addr[v]);
                 httpd_resp_sendstr_chunk(req, buffer);
             }
         }
@@ -172,7 +172,7 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
             } else {
                 last_seen_sec_gone = (esp_timer_get_time() - ble_beacons[i].adv_data.last_seen) / 1000000;
                 convert_s_hhmmss(last_seen_sec_gone, &h, &m, &s);
-                snprintf(buffer, 128, "%02d:%02d:%02d", h, m, s);
+                snprintf_nowarn(buffer, 128, "%02d:%02d:%02d", h, m, s);
                 httpd_resp_sendstr_chunk(req, buffer);
             }
             httpd_resp_sendstr_chunk(req, "</td>\n<td>");
@@ -182,7 +182,7 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
             } else {
                 last_send_sec_gone = (esp_timer_get_time() - ble_beacons[i].adv_data.mqtt_last_send) / 1000000;
                 convert_s_hhmmss(last_send_sec_gone, &h, &m, &s);
-                snprintf(buffer, 128, "%02d:%02d:%02d", h, m, s);
+                snprintf_nowarn(buffer, 128, "%02d:%02d:%02d", h, m, s);
                 httpd_resp_sendstr_chunk(req, buffer);
             }
             httpd_resp_sendstr_chunk(req, "</td>\n<td style=\"white-space:nowrap;\">");
@@ -263,7 +263,7 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
     httpd_resp_sendstr_chunk(req, "</tr>\n");
 
     convert_s_ddhhmmss(uptime_sec, &d, &h, &m, &s);
-    snprintf(buffer, 128, "%3dd %02d:%02d:%02d", d, h, m, s);
+    snprintf_nowarn(buffer, 128, "%3dd %02d:%02d:%02d", d, h, m, s);
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>uptime</td><td>");
     httpd_resp_sendstr_chunk(req, buffer);
     httpd_resp_sendstr_chunk(req, "</td></tr>\n");
@@ -289,69 +289,69 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
     httpd_resp_sendstr_chunk(req, "</td></tr>\n");
 
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>gattc_connect_beacon_idx</td><td>");
-    snprintf(buffer, 128, "%d", gattc_connect_beacon_idx);
+    snprintf_nowarn(buffer, 128, "%d", gattc_connect_beacon_idx);
     httpd_resp_sendstr_chunk(req, buffer);
     httpd_resp_sendstr_chunk(req, "</td></tr>\n");
 
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>app_desc->version</td><td>");
-    snprintf(buffer, 128, "%s", app_desc->version);
+    snprintf_nowarn(buffer, 128, "%s", app_desc->version);
     httpd_resp_sendstr_chunk(req, buffer);
     httpd_resp_sendstr_chunk(req, "</td></tr>\n");
 
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>app_desc->project_name</td><td>");
-    snprintf(buffer, 128, "%s", app_desc->project_name);
+    snprintf_nowarn(buffer, 128, "%s", app_desc->project_name);
     httpd_resp_sendstr_chunk(req, buffer);
     httpd_resp_sendstr_chunk(req, "</td></tr>\n");
 
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>app_desc->idf_ver</td><td>");
-    snprintf(buffer, 128, "%s", app_desc->idf_ver);
+    snprintf_nowarn(buffer, 128, "%s", app_desc->idf_ver);
     httpd_resp_sendstr_chunk(req, buffer);
     httpd_resp_sendstr_chunk(req, "</td></tr>\n");
 
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>run_idle_timer</td><td>");
-    snprintf(buffer, 128, "%s", (get_run_idle_timer()== true ? "true":"false"));
+    snprintf_nowarn(buffer, 128, "%s", (get_run_idle_timer()== true ? "true":"false"));
     httpd_resp_sendstr_chunk(req, buffer);
     httpd_resp_sendstr_chunk(req, "</td></tr>\n");
 
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>idle_timer_running</td><td>");
-    snprintf(buffer, 128, "%s", (idle_timer_is_running()== true ? "true":"false"));
+    snprintf_nowarn(buffer, 128, "%s", (idle_timer_is_running()== true ? "true":"false"));
     httpd_resp_sendstr_chunk(req, buffer);
     httpd_resp_sendstr_chunk(req, "</td></tr>\n");
 
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>run_periodic_timer</td><td>");
-    snprintf(buffer, 128, "%s", (get_run_periodic_timer()== true ? "true":"false"));
+    snprintf_nowarn(buffer, 128, "%s", (get_run_periodic_timer()== true ? "true":"false"));
     httpd_resp_sendstr_chunk(req, buffer);
     httpd_resp_sendstr_chunk(req, "</td></tr>\n");
 
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>periodic_timer_running</td><td>");
-    snprintf(buffer, 128, "%s", (periodic_timer_is_running()== true ? "true":"false"));
+    snprintf_nowarn(buffer, 128, "%s", (periodic_timer_is_running()== true ? "true":"false"));
     httpd_resp_sendstr_chunk(req, buffer);
     httpd_resp_sendstr_chunk(req, "</td></tr>\n");
 
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>turn_display_off</td><td>");
-    snprintf(buffer, 128, "%s", (turn_display_off== true ? "true":"false"));
+    snprintf_nowarn(buffer, 128, "%s", (turn_display_off== true ? "true":"false"));
     httpd_resp_sendstr_chunk(req, buffer);
     httpd_resp_sendstr_chunk(req, "</td></tr>\n");
 
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>display_status.display_message</td><td>");
-    snprintf(buffer, 128, "%s", (display_status.display_message== true ? "true":"false"));
+    snprintf_nowarn(buffer, 128, "%s", (display_status.display_message== true ? "true":"false"));
     httpd_resp_sendstr_chunk(req, buffer);
     httpd_resp_sendstr_chunk(req, "</td></tr>\n");
 
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>display_status.display_message_is_shown</td><td>");
-    snprintf(buffer, 128, "%s", (display_status.display_message_is_shown== true ? "true":"false"));
+    snprintf_nowarn(buffer, 128, "%s", (display_status.display_message_is_shown== true ? "true":"false"));
     httpd_resp_sendstr_chunk(req, buffer);
     httpd_resp_sendstr_chunk(req, "</td></tr>\n");
 
     const esp_partition_t *running = esp_ota_get_running_partition();
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>OTA running partition</td><td>");
-    snprintf(buffer, 128, "type %d subtype %d (offset 0x%08x)", running->type, running->subtype, running->address);
+    snprintf_nowarn(buffer, 128, "type %d subtype %d (offset 0x%08x)", running->type, running->subtype, running->address);
     httpd_resp_sendstr_chunk(req, buffer);
     httpd_resp_sendstr_chunk(req, "</td></tr>\n");
 
     const esp_partition_t *configured = esp_ota_get_boot_partition();
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>OTA configured partition</td><td>");
-    snprintf(buffer, 128, "type %d subtype %d (offset 0x%08x)", configured->type, configured->subtype, configured->address);
+    snprintf_nowarn(buffer, 128, "type %d subtype %d (offset 0x%08x)", configured->type, configured->subtype, configured->address);
     httpd_resp_sendstr_chunk(req, buffer);
     httpd_resp_sendstr_chunk(req, "</td></tr>\n");
 
@@ -451,7 +451,7 @@ esp_err_t csv_get_handler(httpd_req_t *req)
             ESP_LOGD(TAG, "csv_get_handler WEBFILESERVER_CMD_STAT");
 
 
-            snprintf(resp_str, 128, "Status requested for device %s, device known %s, available %s, offline_buffer_status = %s",
+            snprintf_nowarn(resp_str, 128, "Status requested for device %s, device known %s, available %s, offline_buffer_status = %s",
                 device_name_set ? device_name : "n/a",
                 idx != UNKNOWN_BEACON ? "y" : "n",
                 is_available ? "y" : "n",
@@ -491,7 +491,7 @@ esp_err_t csv_get_handler(httpd_req_t *req)
         case WEBFILESERVER_CMD_DL:
             ESP_LOGD(TAG, "csv_get_handler WEBFILESERVER_CMD_DL");
             if (!is_available){
-                snprintf(resp_str, 128, "Download requested for device %s, not available",  device_name_set?device_name:"n/a");
+                snprintf_nowarn(resp_str, 128, "Download requested for device %s, not available",  device_name_set?device_name:"n/a");
                 httpd_resp_send(req, resp_str, strlen(resp_str));
             } else {
                 http_resp_csv_download(req, idx);

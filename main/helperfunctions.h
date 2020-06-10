@@ -7,6 +7,7 @@
 #define MSB_16(a) (((a) & 0xFF00) >> 8)
 #define LSB_16(a) ((a) & 0x00FF)
 #define UNUSED(expr) do { (void)(expr); } while (0)
+#define snprintf_nowarn(...) (snprintf(__VA_ARGS__) < 0 ? abort() : (void)0)
 
 #define SHT3_GET_TEMPERATURE_VALUE(temp_msb, temp_lsb) \
     (-45+(((int16_t)temp_msb << 8) | ((int16_t)temp_lsb ))*175/(float)0xFFFF)

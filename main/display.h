@@ -69,6 +69,7 @@ extern display_message_content_t display_message_content;
 void set_next_display_show();
 void display_task(void* pvParameters);
 esp_err_t display_update();
+void update_display_task(lv_task_t * task);
 
 typedef struct {
     // lv_obj_t * btn1;

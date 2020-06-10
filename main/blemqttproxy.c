@@ -15,6 +15,7 @@
 #include "freertos/semphr.h"
 #include "freertos/queue.h"
 #include "freertos/event_groups.h"
+#include "esp_freertos_hooks.h"
 #include "esp_bt.h"
 #include "esp_gap_ble_api.h"
 #include "esp_gattc_api.h"
@@ -32,13 +33,17 @@
 #include <tcpip_adapter.h>
 #include "lwip/dns.h"
 #include "lwip/netdb.h"
-#include "mqtt_client.h"
-#include "iot_button.h"
-#include "iot_param.h"
 #include <inttypes.h>
 #include <esp_http_server.h>
 #include "esp_http_client.h"
 
+/* Littlevgl specific */
+#include "lvgl/lvgl.h"
+#include "lvgl_helpers.h"
+
+#include "mqtt_client.h"
+#include "iot_button.h"
+#include "iot_param.h"
 #include "helperfunctions.h"
 #include "display.h"
 #include "ble.h"
@@ -48,11 +53,6 @@
 #include "web_file_server.h"
 #include "offlinebuffer.h"
 #include "ota.h"
-
-#include "esp_freertos_hooks.h"
-#include "lvgl.h"
-#include "lvgl_driver.h"
-#include "lvgl_tft/disp_driver.h"
 
 static const char* TAG = "BLEMQTTPROXY";
 
@@ -123,7 +123,7 @@ static EventGroupHandle_t s_wdt_evg;
 #define WDT_TIMER_DURATION          (CONFIG_WDT_OWN_INTERVAL * 1000000)
 
 // Button
-#if defined CONFIG_DEVICE_WEMOS || defined CONFIG_DEVICE_M5STICK
+#if defined CONFIG_DEVICE_WEMOS || defined CONFIG_DEVICE_M5STICK || defined CONFIG_DEVICE_M5STICKC
 static int64_t time_button_long_press = 0;  // long button press -> empty display
 #elif defined CONFIG_DEVICE_M5STACK
 static int64_t time_button_long_press_a = 0;
@@ -153,7 +153,7 @@ void button_push_cb(void* arg)
         return;
     }
 
-#if defined CONFIG_DEVICE_WEMOS || defined CONFIG_DEVICE_M5STICK
+#if defined CONFIG_DEVICE_WEMOS || defined CONFIG_DEVICE_M5STICK || defined CONFIG_DEVICE_M5STICKC
     time_button_long_press = esp_timer_get_time() + CONFIG_LONG_PRESS_TIME * 1000;
 #elif defined CONFIG_DEVICE_M5STACK
     switch(btn){
@@ -214,7 +214,7 @@ void handle_button_display_message()
 
 bool is_button_long_press(uint8_t btn)
 {
-#if defined CONFIG_DEVICE_WEMOS || defined CONFIG_DEVICE_M5STICK
+#if defined CONFIG_DEVICE_WEMOS || defined CONFIG_DEVICE_M5STICK || defined CONFIG_DEVICE_M5STICKC
     return esp_timer_get_time() >= time_button_long_press;
 #elif defined CONFIG_DEVICE_M5STACK
     switch(btn){
@@ -315,7 +315,7 @@ void button_release_cb(void* arg)
 
     is_long_press = is_button_long_press(btn);
 
-#if defined CONFIG_DEVICE_WEMOS || defined CONFIG_DEVICE_M5STICK
+#if defined CONFIG_DEVICE_WEMOS || defined CONFIG_DEVICE_M5STICK || defined CONFIG_DEVICE_M5STICKC
     if(!is_long_press){
         set_next_display_show();
     } else {
@@ -354,14 +354,14 @@ static __attribute__((unused)) void send_mqtt_uptime_heap_last_seen(uint8_t num_
     if(wifi_connected && mqtt_connected){
         tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ipinfo);
         sprintf(buffer, IPSTR, IP2STR(&ipinfo.ip));
-        snprintf(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "uptime");
+        snprintf_nowarn(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "uptime");
         uptime_sec = esp_timer_get_time()/1000000;
-        snprintf(buffer_payload, 32, "%d", uptime_sec);
+        snprintf_nowarn(buffer_payload, 32, "%d", uptime_sec);
         ESP_LOGD(TAG, "MQTT %s -> uptime %s", buffer_topic, buffer_payload);
         msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
 
-        snprintf(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "free_heap");
-        snprintf(buffer_payload, 32, "%d", esp_get_free_heap_size());
+        snprintf_nowarn(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "free_heap");
+        snprintf_nowarn(buffer_payload, 32, "%d", esp_get_free_heap_size());
         ESP_LOGD(TAG, "MQTT %s -> free_heap %s", buffer_topic, buffer_payload);
         msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
 
@@ -372,13 +372,13 @@ static __attribute__((unused)) void send_mqtt_uptime_heap_last_seen(uint8_t num_
             (int) mem_mon.total_size - mem_mon.free_size, mem_mon.free_size, mem_mon.frag_pct);
 
         if(num_act_beacon > 0){
-            snprintf(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "last_seen");
-            snprintf(buffer_payload, 32, "%d", lowest_last_seen_sec);
+            snprintf_nowarn(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "last_seen");
+            snprintf_nowarn(buffer_payload, 32, "%d", lowest_last_seen_sec);
             ESP_LOGD(TAG, "MQTT %s -> lowest_last_seen_sec %s", buffer_topic, buffer_payload);
             msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
 
-            snprintf(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "last_send");
-            snprintf(buffer_payload, 32, "%d", lowest_last_send_sec);
+            snprintf_nowarn(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "last_send");
+            snprintf_nowarn(buffer_payload, 32, "%d", lowest_last_send_sec);
             ESP_LOGD(TAG, "MQTT %s -> lowest_last_send_sec %s", buffer_topic, buffer_payload);
             msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
         }
@@ -518,8 +518,8 @@ static void wifi_init(void *arg)
 
     wifi_config_t wifi_config_sta, wifi_config_ap;
     memset(&wifi_config_sta, 0, sizeof(wifi_config_sta));
-    strncpy((char *)wifi_config_sta.ap.ssid, CONFIG_WIFI_SSID, strlen(CONFIG_WIFI_SSID));
-    strncpy((char *)wifi_config_sta.ap.password, CONFIG_WIFI_PASSWORD, strlen(CONFIG_WIFI_PASSWORD));
+    memcpy((char *)wifi_config_sta.ap.ssid, CONFIG_WIFI_SSID, strlen(CONFIG_WIFI_SSID));
+    memcpy((char *)wifi_config_sta.ap.password, CONFIG_WIFI_PASSWORD, strlen(CONFIG_WIFI_PASSWORD));
 
     memset(&wifi_config_ap, 0, sizeof(wifi_config_ap));
     wifi_config_ap.ap.authmode = WIFI_AUTH_WPA_WPA2_PSK;
@@ -527,10 +527,10 @@ static void wifi_init(void *arg)
     ESP_ERROR_CHECK(esp_efuse_mac_get_default(mac));
     snprintf(buffer, 32, "%s-%02X", CONFIG_AP_WIFI_SSID, mac[5]);
     wifi_config_ap.ap.ssid_len = strlen(buffer);
-    strncpy((char *)wifi_config_ap.ap.ssid, buffer, strlen(buffer));
+    memcpy((char *)wifi_config_ap.ap.ssid, buffer, strlen(buffer));
     // wifi_config_ap.ap.ssid_len = strlen(CONFIG_AP_WIFI_SSID);
     // strncpy((char *)wifi_config_ap.ap.ssid, CONFIG_AP_WIFI_SSID, strlen(CONFIG_AP_WIFI_SSID));
-    strncpy((char *)wifi_config_ap.ap.password, CONFIG_AP_WIFI_PASSWORD, strlen(CONFIG_AP_WIFI_PASSWORD));
+    memcpy((char *)wifi_config_ap.ap.password, CONFIG_AP_WIFI_PASSWORD, strlen(CONFIG_AP_WIFI_PASSWORD));
     wifi_config_ap.ap.max_connection = CONFIG_AP_MAX_STA_CONN;
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
@@ -576,7 +576,7 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
         case MQTT_EVENT_ERROR:
             ESP_LOGD(TAG, "MQTT_EVENT_ERROR");
             break;
-        case MQTT_EVENT_ANY:
+        // case MQTT_EVENT_ANY:
             ESP_LOGI(TAG, "MQTT_EVENT_ANY");
             break;
 
@@ -1488,8 +1488,8 @@ static void wdt_task(void* pvParameters)
 
             tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ipinfo);
             sprintf(buffer, IPSTR, IP2STR(&ipinfo.ip));
-            snprintf(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "reboot");
-            snprintf(buffer_payload, 128, "%d", uptime_sec);
+            snprintf_nowarn(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "reboot");
+            snprintf_nowarn(buffer_payload, 128, "%d", uptime_sec);
             ESP_LOGD(TAG, "wdt_task: MQTT message to be send reg. REBOOT: %s %s", buffer_topic, buffer_payload);
             msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
             fflush(stdout);
@@ -1521,6 +1521,8 @@ static void wifi_mqtt_task(void* pvParameters)
 
 void adjust_log_level()
 {
+    esp_log_level_set("wpa", ESP_LOG_WARN);
+    esp_log_level_set("esp_timer", ESP_LOG_WARN);
     esp_log_level_set("httpd", ESP_LOG_WARN);
     esp_log_level_set("httpd_sess", ESP_LOG_WARN);
     esp_log_level_set("httpd_txrx", ESP_LOG_WARN);
@@ -1594,7 +1596,7 @@ void initialize_ble_security()
 //you should lock on the very same semaphore!
 SemaphoreHandle_t xGuiSemaphore;
 
-static void IRAM_ATTR lv_tick_task(void) {
+static void IRAM_ATTR lv_tick_task(void* arg) {
 	lv_tick_inc(portTICK_RATE_MS);
 }
 
@@ -1636,7 +1638,7 @@ static void gui_prepare()
             /* name is optional, but may help identify the timer when debugging */
             .name = "periodic_gui"
     };
-    esp_timer_handle_t periodic_timer;
+    static esp_timer_handle_t periodic_timer;
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
     //On ESP32 it's better to create a periodic task instead of esp_register_freertos_tick_hook
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, 30*1000)); //10ms (expressed as microseconds)
@@ -1647,7 +1649,10 @@ static void gui_prepare()
 static void gui_task(void* pvParameters)
 {
     gui_prepare();
-    ESP_LOGD(TAG, "gui_task, lv_init_screens done"); fflush(stdout);
+    ESP_LOGD(TAG, "gui_task, gui_prepare() done"); fflush(stdout);
+
+    lv_task_create(update_display_task, 150, LV_TASK_PRIO_MID, NULL);
+
     xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY_TASK_READY);
 
     while (1) {
@@ -1667,7 +1672,7 @@ void app_main()
     static uint8_t btn_a = 1;
     static uint8_t btn_b = 2;
     static uint8_t btn_c = 3;
-#elif defined CONFIG_DEVICE_WEMOS || defined CONFIG_DEVICE_M5STICK
+#elif defined CONFIG_DEVICE_WEMOS || defined CONFIG_DEVICE_M5STICK || defined CONFIG_DEVICE_M5STICKC
     static uint8_t btn = 0;
 #endif
 
@@ -1695,20 +1700,15 @@ void app_main()
     iot_button_set_evt_cb(btn_handle_a, BUTTON_CB_RELEASE, button_release_cb, &btn_a);
     iot_button_set_evt_cb(btn_handle_b, BUTTON_CB_RELEASE, button_release_cb, &btn_b);
     iot_button_set_evt_cb(btn_handle_c, BUTTON_CB_RELEASE, button_release_cb, &btn_c);
-#elif defined CONFIG_DEVICE_M5STICK
-    button_handle_t btn_handle = iot_button_create(CONFIG_BUTTON_1_PIN, BUTTON_ACTIVE_LEVEL);
-    iot_button_set_evt_cb(btn_handle, BUTTON_CB_PUSH, button_push_cb, &btn);
-    iot_button_set_evt_cb(btn_handle, BUTTON_CB_RELEASE, button_release_cb, &btn);
-#elif defined CONFIG_DEVICE_WEMOS
+#elif defined CONFIG_DEVICE_M5STICK || defined CONFIG_DEVICE_M5STICKC || defined CONFIG_DEVICE_WEMOS
     button_handle_t btn_handle = iot_button_create(CONFIG_BUTTON_1_PIN, BUTTON_ACTIVE_LEVEL);
     iot_button_set_evt_cb(btn_handle, BUTTON_CB_PUSH, button_push_cb, &btn);
     iot_button_set_evt_cb(btn_handle, BUTTON_CB_RELEASE, button_release_cb, &btn);
 #endif
 
     xTaskCreatePinnedToCore(gui_task, "gui_task", 4096*2, NULL, 0, NULL, 1);
-    vTaskDelay(50 / portTICK_PERIOD_MS);
 
-    xTaskCreate(&display_task, "display_task", 2048 * 2, NULL, 5, NULL);
+    // xTaskCreate(&display_task, "display_task", 2048 * 2, NULL, 5, NULL);
     create_timer();
     oneshot_timer_usage = TIMER_SPLASH_SCREEN;
     xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);

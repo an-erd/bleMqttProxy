@@ -11,7 +11,7 @@
 #include "offlinebuffer.h"
 
 // BLE
-extern const uint8_t const REMOTE_SERVICE_UUID[];
+extern const uint8_t REMOTE_SERVICE_UUID[];
 #define REMOTE_NOTIFY_CHAR_UUID         0x1401
 #define REMOTE_INDICATION_CHAR_UUID     0x2A52
 #define REMOTE_NOTIFY_HANDLE            0x26

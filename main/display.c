@@ -13,14 +13,6 @@
 #include "lvgl/lvgl.h"
 #include "lvgl_tft/disp_driver.h"
 
-#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
-#include "ili9341.h"
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
-#include "sh1107.h"
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306
-#include "ssd1306.h"
-#endif
-
 static const char *TAG = "display";
 
 EventGroupHandle_t s_values_evg;
@@ -68,7 +60,8 @@ volatile bool turn_display_off = false;
 LV_IMG_DECLARE(splash);
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
 LV_IMG_DECLARE(splash_oled);
-
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
+LV_IMG_DECLARE(splash_160x80);
 #endif
 
 // Styles for the screens
@@ -165,43 +158,52 @@ void update_display_message(bool show)
 
     static const char * btns[] ={"Toggle", ""};
 
+    UNUSED(current_scr);
+    UNUSED(btns);
+    UNUSED(text_action);
+    UNUSED(text_comment);
+    UNUSED(mbox1);
+    UNUSED(text_style1);
+    UNUSED(box_style);
+    UNUSED(modal_style);
+
     if(show){
         if(!already_created){
 //             lv_style_copy(&modal_style, &lv_style_plain_color);
 //             lv_style_copy(&text_style1, &style_title);
-            lv_style_copy(&text_style2, &style_text);
+            // lv_style_copy(&text_style2, &style_text);
 
 // #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
 //             modal_style.body.main_color = modal_style.body.grad_color = LV_COLOR_WHITE;
 // 	    	modal_style.body.opa = LV_OPA_50;
-// #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+// #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
 //     		modal_style.body.main_color = modal_style.body.grad_color = LV_COLOR_BLACK;
 //             text_style1.text.color = LV_COLOR_WHITE;
             // text_style2.text.color = LV_COLOR_WHITE;
-            text_style2.text.color = LV_COLOR_BLACK;
+            // text_style2.text.color = LV_COLOR_BLACK;
 // #endif
 
             /* Create a base object for the modal background */
             mbox_obj = lv_obj_create(lv_scr_act(), NULL);
             // lv_obj_set_style(mbox_obj, &modal_style);
-            lv_obj_set_pos(mbox_obj, 0, 0);
-            lv_obj_set_size(mbox_obj, LV_HOR_RES, LV_VER_RES);
-            lv_obj_align(mbox_obj, NULL, LV_ALIGN_CENTER, 0, 0);
+            // lv_obj_set_pos(mbox_obj, 0, 0);
+            // lv_obj_set_size(mbox_obj, LV_HOR_RES, LV_VER_RES);
+            // lv_obj_align(mbox_obj, NULL, LV_ALIGN_CENTER, 0, 0);
             // lv_obj_set_opa_scale_enable(mbox_obj, true); /* Enable opacity scaling for the animation */
             // lv_obj_set_auto_realign(mbox_obj, true);
 
             // text_title = lv_label_create(mbox_obj, NULL);
-            text_message = lv_label_create(mbox_obj, NULL);
+            // text_message = lv_label_create(mbox_obj, NULL);
             // text_comment = lv_label_create(mbox_obj, NULL);
             // text_action = lv_label_create(mbox_obj, NULL);
             // lv_obj_set_style(text_title, &text_style1);
-            lv_obj_set_style(text_message, &text_style2);
+            // lv_obj_set_style(text_message, &text_style2);
             // lv_obj_set_style(text_comment, &text_style2);
             // lv_obj_set_style(text_action, &text_style2);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
             // lv_obj_align(text_title, NULL, LV_ALIGN_IN_TOP_MID, 0, 5);
-            lv_obj_align(text_message, text_title, LV_ALIGN_IN_TOP_MID, 0, 5);
+            // lv_obj_align(text_message, text_title, LV_ALIGN_IN_TOP_MID, 0, 5);
             // lv_obj_align(text_comment, text_message, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
             // lv_obj_align(text_action, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, -5);
 
@@ -342,10 +344,9 @@ bool display_update_check_display_off()
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306
             ssd1306_sleep_in();
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
-            ESP_LOGD(TAG, "free heap: %d", esp_get_free_heap_size());
-            fflush(stdout);
-
             sh1107_sleep_in();
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
+            st7735s_sleep_in();
 #endif
         }
         return true;
@@ -359,6 +360,8 @@ bool display_update_check_display_off()
             ssd1306_sleep_out();
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
             sh1107_sleep_out();
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
+            st7735s_sleep_out();
 #endif
         }
     }
@@ -379,6 +382,9 @@ esp_err_t lv_show_beacon_screen(int idx)
 
     lv_label_set_text_fmt(lv_screens.beacon_details.name, "%s", ble_beacons[idx].beacon_data.name);
     if (is_beacon_idx_active(idx) && (ble_beacons[idx].adv_data.last_seen != 0)){
+        snprintf(buffer, 32, "%4.1f°C  %3.0f%%",
+            ble_beacons[idx].adv_data.temp, ble_beacons[idx].adv_data.humidity);
+        lv_label_set_text(lv_screens.beacon_details.temp_hum, buffer);
         lv_label_set_text_fmt(lv_screens.beacon_details.temp_hum, "%4.1f°C  %3.0f%%",
             ble_beacons[idx].adv_data.temp, ble_beacons[idx].adv_data.humidity);
 
@@ -413,7 +419,7 @@ esp_err_t lv_show_beacon_screen(int idx)
     lv_label_set_text_fmt(lv_screens.beacon_details.buttons.label2, "%s",
         (is_beacon_idx_active(idx) ? LV_SYMBOL_TRASH : ""));
     lv_label_set_text(lv_screens.beacon_details.buttons.label3, LV_SYMBOL_RIGHT);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     lv_label_set_text_fmt(lv_screens.beacon_details.buttons.label3, "(%s) %s",
         (is_beacon_idx_active(idx) ? LV_SYMBOL_EYE_CLOSE : LV_SYMBOL_EYE_OPEN), LV_SYMBOL_RIGHT);
 #endif
@@ -432,7 +438,7 @@ esp_err_t lv_show_last_seen_screen(uint8_t num_act_beac)
 
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     line = 1;
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     line = 0;
 #endif
 
@@ -442,7 +448,7 @@ esp_err_t lv_show_last_seen_screen(uint8_t num_act_beac)
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
         lv_table_set_row_cnt(table, 2);
         lv_table_set_cell_value(table, line, 0, "no active Beacons");
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
         lv_table_set_row_cnt(table, 1);
         lv_table_set_cell_value(table, line, 0, "no active Beacons");
 #endif
@@ -452,7 +458,7 @@ esp_err_t lv_show_last_seen_screen(uint8_t num_act_beac)
         int skip = (display_status.lastseen_page_to_show - 1) * BEAC_PER_PAGE_LASTSEEN;
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
         num_rows = 1 + MIN(num_act_beac - skip, 5);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
         num_rows = 0 + MIN(num_act_beac - skip, 5);
 #endif
         lv_table_set_row_cnt(table, num_rows);
@@ -515,7 +521,7 @@ esp_err_t lv_show_app_version_screen()
     lv_table_set_cell_value(table, 6, 0, "Active");
     line = 1;
     col = 1;
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     line = 0;
     col = 0;
 #endif
@@ -529,18 +535,17 @@ esp_err_t lv_show_app_version_screen()
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     snprintf(buffer, 32, "%02X:%02X:%02X:%02X:%02X:%02X",
         mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     snprintf(buffer, 32, "MAC: %02X:%02X:%02X:%02X:%02X:%02X",
         mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 #endif
     lv_table_set_cell_value(table, line++, col, buffer);
 
     tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ipinfo);
-    sprintf(buffer2, IPSTR, IP2STR(&ipinfo.ip));
+    snprintf_nowarn(buffer2, 32, IPSTR, IP2STR(&ipinfo.ip));
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
-    snprintf(buffer, 32, "%s", buffer2);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
-    snprintf(buffer, 32, "IP: %s", buffer2);
+    snprintf_nowarn(buffer, 32, "%s", buffer2);
+    snprintf_nowarn(buffer, 32, "IP: %s", buffer2);
 #endif
     lv_table_set_cell_value(table, line++, col, buffer);
 
@@ -548,15 +553,15 @@ esp_err_t lv_show_app_version_screen()
     int num_lead_zeros = CONFIG_BLE_DEVICE_COUNT_USE - strlen(buffer2);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     if (!num_lead_zeros) {
-        snprintf(buffer, 32, "%s (%d..1)", buffer2, CONFIG_BLE_DEVICE_COUNT_USE);
+        snprintf_nowarn(buffer, 32, "%s (%d..1)", buffer2, CONFIG_BLE_DEVICE_COUNT_USE);
     } else {
-        snprintf(buffer, 32, "%0*d%s (%d..1)", num_lead_zeros, 0, buffer2, CONFIG_BLE_DEVICE_COUNT_USE);
+        snprintf_nowarn(buffer, 32, "%0*d%s (%d..1)", num_lead_zeros, 0, buffer2, CONFIG_BLE_DEVICE_COUNT_USE);
     }
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     if (!num_lead_zeros) {
-        snprintf(buffer, 32, "Active: %s (%d..1)", buffer2, CONFIG_BLE_DEVICE_COUNT_USE);
+        snprintf_nowarn(buffer, 32, "Active: %s (%d..1)", buffer2, CONFIG_BLE_DEVICE_COUNT_USE);
     } else {
-        snprintf(buffer, 32, "Active: %0*d%s (%d..1)", num_lead_zeros, 0, buffer2, CONFIG_BLE_DEVICE_COUNT_USE);
+        snprintf_nowarn(buffer, 32, "Active: %0*d%s (%d..1)", num_lead_zeros, 0, buffer2, CONFIG_BLE_DEVICE_COUNT_USE);
     }
 #endif
     lv_table_set_cell_value(table, line++, col, buffer);
@@ -585,7 +590,7 @@ esp_err_t lv_show_stats_screen()
     lv_table_set_cell_value(table, 6, 0, "Webserver");
     line = 1;
     col = 1;
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     line = 0;
     col = 0;
 #endif
@@ -594,7 +599,7 @@ esp_err_t lv_show_stats_screen()
     convert_s_ddhhmmss(uptime_sec, &up_d, &up_h, &up_m, &up_s);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     snprintf(buffer, 32, "%dd %2d:%02d:%02d", up_d, up_h, up_m, up_s);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     snprintf(buffer, 32, "Uptime: %dd %2d:%02d:%02d", up_d, up_h, up_m, up_s);
 #endif
     lv_table_set_cell_value(table, line++, col, buffer);
@@ -602,14 +607,14 @@ esp_err_t lv_show_stats_screen()
 
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     snprintf(buffer, 32, "%d / %d", wifi_connections_count_connect, wifi_connections_count_disconnect);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     snprintf(buffer, 32, "WiFi ok/fail: %d / %d", wifi_connections_count_connect, wifi_connections_count_disconnect);
 #endif
     lv_table_set_cell_value(table, line++, col, buffer);
 
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     snprintf(buffer, 32, "%d / %d", mqtt_packets_send, mqtt_packets_fail);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     snprintf(buffer, 32, "MQTT ok/fail: %d / %d", mqtt_packets_send, mqtt_packets_fail);
 #endif
     lv_table_set_cell_value(table, line++, col, buffer);
@@ -621,7 +626,7 @@ esp_err_t lv_show_stats_screen()
 
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     snprintf(buffer, 32, "%s", (wifi_connected ? "y" : "n"));
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     snprintf(buffer, 32, "WiFi: %s, AP: %d, WebSrv: %s",
         (wifi_connected ? "y" : "n"), wifi_ap_connections, (web_file_server_running ? "y" : "n"));
 #endif
@@ -629,7 +634,7 @@ esp_err_t lv_show_stats_screen()
 
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     snprintf(buffer, 32, "%s / %s", (CONFIG_USE_MQTT ? "y" : "n"), (mqtt_connected ? "y" : "n"));
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     snprintf(buffer, 32, "MQTT conf/conn: %s / %s", (CONFIG_USE_MQTT ? "y" : "n"), (mqtt_connected ? "y" : "n"));
 #endif
     lv_table_set_cell_value(table, line++, col, buffer);
@@ -646,57 +651,55 @@ esp_err_t lv_show_stats_screen()
 
 void lv_init_styles()
 {
-    lv_style_copy(&style_screen, &lv_style_plain);
-    style_screen.body.main_color = LV_COLOR_WHITE;
-    style_screen.body.grad_color = LV_COLOR_WHITE;
-#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
-    style_screen.text.color = LV_COLOR_GRAY;
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
-    style_screen.text.color = LV_COLOR_BLACK;
-#endif
+//     lv_style_init(&style_screen);
 
-    lv_style_copy(&style_title,             &style_screen);
-    lv_style_copy(&style_bigvalues,         &style_screen);
-    lv_style_copy(&style_text,              &style_screen);
-    lv_style_copy(&style_symbols_top,       &style_screen);
-    lv_style_copy(&style_symbols_bottom,    &style_screen);
-    lv_style_copy(&style_pagenum,           &style_screen);
-#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
-    style_title.text.font                   = &m5stack_22_font_symbol;
-    style_bigvalues.text.font               = &m5stack_48_font_symbol;
-    style_text.text.font                    = &m5stack_16_font_symbol;
-    style_symbols_top.text.font             = &m5stack_16_font_symbol;
-    style_symbols_bottom.text.font          = &m5stack_16_font_symbol;
-    style_pagenum.text.font                 = &m5stack_16_font_symbol;
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
-    style_title.text.font                   = &oled_12_font_symbol;
-    style_bigvalues.text.font               = &oled_16_font_symbol;
-    style_text.text.font                    = &oled_9_font_symbol;
-    style_symbols_top.text.font             = &oled_9_font_symbol;
-    style_symbols_bottom.text.font          = &oled_9_font_symbol;
-    style_pagenum.text.font                 = &oled_9_font_symbol;
-#endif
+//     style_screen.body.main_color = LV_COLOR_WHITE;
+//     style_screen.body.grad_color = LV_COLOR_WHITE;
+// #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
+//     style_screen.text.color = LV_COLOR_GRAY;
+// //     style_screen.text.color = LV_COLOR_BLACK;
+// #endif
 
-    lv_style_copy(&style_cell1, &lv_style_transp_tight);   // table style normal cell
-    lv_style_copy(&style_cell2, &lv_style_transp_tight);   // table style header cell
-#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
-    style_cell1.body.border.width           = 1;
-    style_cell1.body.border.color           = LV_COLOR_GRAY;
-    style_cell1.body.padding.top            = 2;
-    style_cell1.body.padding.bottom         = 2;
+//     lv_style_copy(&style_title,             &style_screen);
+//     lv_style_copy(&style_bigvalues,         &style_screen);
+//     lv_style_copy(&style_text,              &style_screen);
+//     lv_style_copy(&style_symbols_top,       &style_screen);
+//     lv_style_copy(&style_symbols_bottom,    &style_screen);
+//     lv_style_copy(&style_pagenum,           &style_screen);
+// #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
+//     style_title.text.font                   = &m5stack_22_font_symbol;
+//     style_bigvalues.text.font               = &m5stack_48_font_symbol;
+//     style_text.text.font                    = &m5stack_16_font_symbol;
+//     style_symbols_top.text.font             = &m5stack_16_font_symbol;
+//     style_symbols_bottom.text.font          = &m5stack_16_font_symbol;
+//     style_pagenum.text.font                 = &m5stack_16_font_symbol;
+// //     style_title.text.font                   = &oled_12_font_symbol;
+//     style_bigvalues.text.font               = &oled_16_font_symbol;
+//     style_text.text.font                    = &oled_9_font_symbol;
+//     style_symbols_top.text.font             = &oled_9_font_symbol;
+//     style_symbols_bottom.text.font          = &oled_9_font_symbol;
+//     style_pagenum.text.font                 = &oled_9_font_symbol;
+// #endif
 
-    style_cell2.body.border.width           = 1;
-    style_cell2.body.border.color           = LV_COLOR_BLACK;
-    style_cell2.body.main_color             = LV_COLOR_SILVER;
-    style_cell2.body.grad_color             = LV_COLOR_SILVER;
-    style_cell2.body.padding.top            = 2;
-    style_cell2.body.padding.bottom         = 2;
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
-    style_cell1.body.border.color           = LV_COLOR_BLACK;
-    style_cell1.text.font                   = &oled_9_font_symbol;
-    style_cell2.body.border.color           = LV_COLOR_BLACK;
-    style_cell2.text.font                   = &oled_9_font_symbol;
-#endif
+//     lv_style_copy(&style_cell1, &lv_style_transp_tight);   // table style normal cell
+//     lv_style_copy(&style_cell2, &lv_style_transp_tight);   // table style header cell
+// #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
+//     style_cell1.body.border.width           = 1;
+//     style_cell1.body.border.color           = LV_COLOR_GRAY;
+//     style_cell1.body.padding.top            = 2;
+//     style_cell1.body.padding.bottom         = 2;
+
+//     style_cell2.body.border.width           = 1;
+//     style_cell2.body.border.color           = LV_COLOR_BLACK;
+//     style_cell2.body.main_color             = LV_COLOR_SILVER;
+//     style_cell2.body.grad_color             = LV_COLOR_SILVER;
+//     style_cell2.body.padding.top            = 2;
+//     style_cell2.body.padding.bottom         = 2;
+// //     style_cell1.body.border.color           = LV_COLOR_BLACK;
+//     style_cell1.text.font                   = &oled_9_font_symbol;
+//     style_cell2.body.border.color           = LV_COLOR_BLACK;
+//     style_cell2.text.font                   = &oled_9_font_symbol;
+// #endif
 }
 
 void lv_init_screens()
@@ -715,42 +718,44 @@ void lv_init_screens()
     lv_img_set_src(lv_screens.splash.scr, &splash);
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
     lv_img_set_src(lv_screens.splash.scr, &splash_oled);
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
+    lv_img_set_src(lv_screens.splash.scr, &splash_160x80);
 #endif
 
     lv_img_cache_invalidate_src(NULL);
 
     // Beacon details screen
     lv_screens.beacon_details.scr = lv_obj_create(NULL, NULL);
-    lv_obj_set_style(lv_screens.beacon_details.scr, &style_screen);
+    // lv_obj_set_style(lv_screens.beacon_details.scr, &style_screen);
     scr = lv_screens.beacon_details.scr;
 
     // - content
     lv_screens.beacon_details.name = lv_label_create(scr, NULL);
-    lv_obj_set_style(lv_screens.beacon_details.name, &style_title);
+    // lv_obj_set_style(lv_screens.beacon_details.name, &style_title);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_obj_align(lv_screens.beacon_details.name, NULL, LV_ALIGN_IN_TOP_MID, 0, 5);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     lv_obj_align(lv_screens.beacon_details.name, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
 #endif
     lv_obj_set_auto_realign(lv_screens.beacon_details.name, true);
 
     lv_screens.beacon_details.temp_hum = lv_label_create(scr, NULL);
-    lv_obj_set_style(lv_screens.beacon_details.temp_hum, &style_bigvalues);
+    // lv_obj_set_style(lv_screens.beacon_details.temp_hum, &style_bigvalues);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_obj_align(lv_screens.beacon_details.temp_hum, lv_screens.beacon_details.name, LV_ALIGN_OUT_BOTTOM_MID, 0, 15);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     lv_obj_align(lv_screens.beacon_details.temp_hum, lv_screens.beacon_details.name, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
 #endif
     lv_obj_set_auto_realign(lv_screens.beacon_details.temp_hum, true);
 
     lv_screens.beacon_details.battery = lv_label_create(scr, NULL);
     lv_screens.beacon_details.rssi = lv_label_create(scr, NULL);
-    lv_obj_set_style(lv_screens.beacon_details.battery, &style_text);
-    lv_obj_set_style(lv_screens.beacon_details.rssi, &style_text);
+    // lv_obj_set_style(lv_screens.beacon_details.battery, &style_text);
+    // lv_obj_set_style(lv_screens.beacon_details.rssi, &style_text);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_obj_set_hidden(lv_screens.beacon_details.battery, true);
     lv_obj_set_hidden(lv_screens.beacon_details.rssi, true);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     lv_obj_align(lv_screens.beacon_details.battery, lv_screens.beacon_details.temp_hum, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
     lv_obj_align(lv_screens.beacon_details.rssi, lv_screens.beacon_details.battery, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
 #endif
@@ -759,21 +764,21 @@ void lv_init_screens()
 
     // - buttons
     lv_screens.beacon_details.buttons.label1 = lv_label_create(scr, NULL);
-    lv_obj_set_style(lv_screens.beacon_details.buttons.label1, &style_symbols_bottom);
+    // lv_obj_set_style(lv_screens.beacon_details.buttons.label1, &style_symbols_bottom);
     lv_obj_set_auto_realign(lv_screens.beacon_details.buttons.label1, true);
 
     lv_screens.beacon_details.buttons.label2 = lv_label_create(scr, NULL);
-    lv_obj_set_style(lv_screens.beacon_details.buttons.label2, &style_symbols_bottom);
+    // lv_obj_set_style(lv_screens.beacon_details.buttons.label2, &style_symbols_bottom);
     lv_obj_set_auto_realign(lv_screens.beacon_details.buttons.label2, true);
 
     lv_screens.beacon_details.buttons.label3 = lv_label_create(scr, NULL);
-    lv_obj_set_style(lv_screens.beacon_details.buttons.label3, &style_symbols_bottom);
+    // lv_obj_set_style(lv_screens.beacon_details.buttons.label3, &style_symbols_bottom);
     lv_obj_set_auto_realign(lv_screens.beacon_details.buttons.label3, true);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_obj_align(lv_screens.beacon_details.buttons.label1, NULL, LV_ALIGN_IN_BOTTOM_MID, -95, 0);
     lv_obj_align(lv_screens.beacon_details.buttons.label2, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
     lv_obj_align(lv_screens.beacon_details.buttons.label3, NULL, LV_ALIGN_IN_BOTTOM_MID, +95, 0);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     lv_obj_set_hidden(lv_screens.beacon_details.buttons.label1, true);
     lv_obj_set_hidden(lv_screens.beacon_details.buttons.label2, true);
     lv_obj_align(lv_screens.beacon_details.buttons.label3, NULL, LV_ALIGN_IN_BOTTOM_RIGHT, 0, 0);
@@ -781,41 +786,41 @@ void lv_init_screens()
 
     // - symbols
     lv_screens.beacon_details.symbols.symbol_eye = lv_label_create(scr, NULL);
-    lv_obj_set_style(lv_screens.beacon_details.symbols.symbol_eye, &style_symbols_top);
+    // lv_obj_set_style(lv_screens.beacon_details.symbols.symbol_eye, &style_symbols_top);
     lv_obj_set_auto_realign(lv_screens.beacon_details.symbols.symbol_eye, true);
 
     lv_screens.beacon_details.symbols.symbol_battery = lv_label_create(scr, NULL);
-    lv_obj_set_style(lv_screens.beacon_details.symbols.symbol_battery, &style_symbols_top);
+    // lv_obj_set_style(lv_screens.beacon_details.symbols.symbol_battery, &style_symbols_top);
     lv_obj_set_auto_realign(lv_screens.beacon_details.symbols.symbol_battery, true);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_obj_align(lv_screens.beacon_details.symbols.symbol_eye, NULL, LV_ALIGN_IN_TOP_LEFT, 5, 5);
     lv_obj_align(lv_screens.beacon_details.symbols.symbol_battery, lv_screens.beacon_details.symbols.symbol_eye, LV_ALIGN_OUT_RIGHT_MID, 5, 0);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     lv_obj_align(lv_screens.beacon_details.symbols.symbol_eye, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
     lv_obj_align(lv_screens.beacon_details.symbols.symbol_battery, lv_screens.beacon_details.symbols.symbol_eye, LV_ALIGN_OUT_RIGHT_MID, 1, 0);
 #endif
 
     // - pagenum
     lv_screens.beacon_details.pagenum.pagenum = lv_label_create(scr, NULL);
-    lv_obj_set_style(lv_screens.beacon_details.pagenum.pagenum, &style_pagenum);
+    // lv_obj_set_style(lv_screens.beacon_details.pagenum.pagenum, &style_pagenum);
     lv_obj_set_auto_realign(lv_screens.beacon_details.pagenum.pagenum, true);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_obj_align(lv_screens.beacon_details.pagenum.pagenum, NULL, LV_ALIGN_IN_TOP_RIGHT, -5, 5);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     lv_obj_align(lv_screens.beacon_details.pagenum.pagenum, NULL, LV_ALIGN_IN_TOP_RIGHT, 0, 0);
 #endif
 
     // Last seen screen
     lv_screens.last_seen.scr = lv_obj_create(NULL, NULL);
-    lv_obj_set_style(lv_screens.last_seen.scr, &style_screen);
+    // lv_obj_set_style(lv_screens.last_seen.scr, &style_screen);
     scr = lv_screens.last_seen.scr;
 
     lv_screens.last_seen.title = lv_label_create(scr, NULL);
-    lv_obj_set_style(lv_screens.last_seen.title, &style_title);
+    // lv_obj_set_style(lv_screens.last_seen.title, &style_title);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_label_set_text(lv_screens.last_seen.title, "Last seen/MQTT send");
     lv_obj_align(lv_screens.last_seen.title, NULL, LV_ALIGN_IN_TOP_MID, 0, 5);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     lv_label_set_text(lv_screens.last_seen.title, "Last seen/send");
     lv_obj_align(lv_screens.last_seen.title, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
 #endif
@@ -824,14 +829,14 @@ void lv_init_screens()
     lv_screens.last_seen.table = lv_table_create(scr, NULL);
     lv_obj_t * table = lv_screens.last_seen.table;
 
-    lv_table_set_style(table, LV_TABLE_STYLE_BG, &lv_style_transp_tight);
-    lv_table_set_style(table, LV_TABLE_STYLE_CELL1, &style_cell1);
-    lv_table_set_style(table, LV_TABLE_STYLE_CELL2, &style_cell2);
+    // lv_table_set_style(table, LV_TABLE_STYLE_BG, &lv_style_transp_tight);
+    // lv_table_set_style(table, LV_TABLE_STYLE_CELL1, &style_cell1);
+    // lv_table_set_style(table, LV_TABLE_STYLE_CELL2, &style_cell2);
     lv_table_set_col_cnt(table, 3);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_table_set_row_cnt(table, 6);
     lv_obj_align(table, lv_screens.last_seen.title, LV_ALIGN_OUT_BOTTOM_MID, 0, 15);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     lv_table_set_row_cnt(table, 5);
     lv_table_set_col_width(table, 0, 40);
     lv_table_set_col_width(table, 1, 43);
@@ -849,7 +854,7 @@ void lv_init_screens()
     lv_table_set_cell_value(table, 0, 0, "Name");
     lv_table_set_cell_value(table, 0, 1, "Last Seen");
     lv_table_set_cell_value(table, 0, 2, "Last Send");
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
 #endif
     lv_obj_set_auto_realign(table, true);
 
@@ -859,31 +864,31 @@ void lv_init_screens()
     lv_label_set_text(lv_screens.last_seen.buttons.label3, LV_SYMBOL_RIGHT);
     lv_obj_align(lv_screens.last_seen.buttons.label3, NULL, LV_ALIGN_IN_BOTTOM_MID, +95, 0);
     lv_obj_set_auto_realign(lv_screens.last_seen.buttons.label3, true);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     lv_obj_set_hidden(lv_screens.last_seen.buttons.label3, true);
 #endif
     // - pagenum
     lv_screens.last_seen.pagenum.pagenum = lv_label_create(scr, NULL);
-    lv_obj_set_style(lv_screens.last_seen.pagenum.pagenum, &style_pagenum);
+    // lv_obj_set_style(lv_screens.last_seen.pagenum.pagenum, &style_pagenum);
     lv_obj_align(lv_screens.last_seen.pagenum.pagenum, NULL, LV_ALIGN_IN_TOP_RIGHT, -5, 5);
     lv_obj_set_auto_realign(lv_screens.last_seen.pagenum.pagenum, true);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_obj_align(lv_screens.last_seen.pagenum.pagenum, NULL, LV_ALIGN_IN_TOP_RIGHT, -5, 5);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     lv_obj_align(lv_screens.last_seen.pagenum.pagenum, NULL, LV_ALIGN_IN_TOP_RIGHT, 0, 0);
 #endif
 
     // App version screen
     lv_screens.app_version.scr = lv_obj_create(NULL, NULL);
-    lv_obj_set_style(lv_screens.app_version.scr, &style_screen);
+    // lv_obj_set_style(lv_screens.app_version.scr, &style_screen);
     scr = lv_screens.app_version.scr;
 
     lv_screens.app_version.title = lv_label_create(scr, NULL);
-    lv_obj_set_style(lv_screens.app_version.title, &style_title);
+    // lv_obj_set_style(lv_screens.app_version.title, &style_title);
     lv_label_set_text(lv_screens.app_version.title, "App. version + Status");
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_obj_align(lv_screens.app_version.title, NULL, LV_ALIGN_IN_TOP_MID, 0, 5);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     lv_obj_align(lv_screens.app_version.title, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
 #endif
     lv_obj_set_auto_realign(lv_screens.app_version.title, true);
@@ -891,16 +896,16 @@ void lv_init_screens()
     lv_screens.app_version.table = lv_table_create(scr, NULL);
     table = lv_screens.app_version.table;
 
-    lv_table_set_style(table, LV_TABLE_STYLE_BG, &lv_style_transp_tight);
-    lv_table_set_style(table, LV_TABLE_STYLE_CELL1, &style_cell1);
-    lv_table_set_style(table, LV_TABLE_STYLE_CELL2, &style_cell2);
+    // lv_table_set_style(table, LV_TABLE_STYLE_BG, &lv_style_transp_tight);
+    // lv_table_set_style(table, LV_TABLE_STYLE_CELL1, &style_cell1);
+    // lv_table_set_style(table, LV_TABLE_STYLE_CELL2, &style_cell2);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_table_set_col_cnt(table, 2);
     lv_table_set_row_cnt(table, 7);
     lv_table_set_col_width(table, 0, 100);
     lv_table_set_col_width(table, 1, 200);
     lv_obj_align(table, lv_screens.app_version.title, LV_ALIGN_OUT_BOTTOM_MID, 0, 15);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     lv_table_set_col_cnt(table, 1);
     lv_table_set_row_cnt(table, 5);
     lv_table_set_col_width(table, 0, 120);
@@ -914,7 +919,7 @@ void lv_init_screens()
     lv_table_set_cell_type(table, 0, 1, 2);
     lv_table_set_cell_value(table, 0, 0, "Field");
     lv_table_set_cell_value(table, 0, 1, "Value");
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
 #endif
     lv_obj_set_auto_realign(table, true);
 
@@ -924,21 +929,21 @@ void lv_init_screens()
     lv_obj_align(lv_screens.app_version.buttons.label3, NULL, LV_ALIGN_IN_BOTTOM_MID, +95, 0);
     lv_label_set_text(lv_screens.app_version.buttons.label3, LV_SYMBOL_RIGHT);
     lv_obj_set_auto_realign(lv_screens.app_version.buttons.label3, true);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     lv_obj_set_hidden(lv_screens.app_version.buttons.label3, true);
 #endif
 
     // Stats screen
     lv_screens.stats.scr = lv_obj_create(NULL, NULL);
-    lv_obj_set_style(lv_screens.stats.scr, &style_screen);
+    // lv_obj_set_style(lv_screens.stats.scr, &style_screen);
     scr = lv_screens.stats.scr;
 
     lv_screens.stats.title = lv_label_create(scr, NULL);
-    lv_obj_set_style(lv_screens.stats.title, &style_title);
+    // lv_obj_set_style(lv_screens.stats.title, &style_title);
     lv_label_set_text(lv_screens.stats.title, "Statistics");
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_obj_align(lv_screens.stats.title, NULL, LV_ALIGN_IN_TOP_MID, 0, 5);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     lv_obj_align(lv_screens.stats.title, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
 #endif
     lv_obj_set_auto_realign(lv_screens.stats.title, true);
@@ -946,16 +951,16 @@ void lv_init_screens()
     lv_screens.stats.table = lv_table_create(scr, NULL);
     table = lv_screens.stats.table;
 
-    lv_table_set_style(table, LV_TABLE_STYLE_BG, &lv_style_transp_tight);
-    lv_table_set_style(table, LV_TABLE_STYLE_CELL1, &style_cell1);
-    lv_table_set_style(table, LV_TABLE_STYLE_CELL2, &style_cell2);
+    // lv_table_set_style(table, LV_TABLE_STYLE_BG, &lv_style_transp_tight);
+    // lv_table_set_style(table, LV_TABLE_STYLE_CELL1, &style_cell1);
+    // lv_table_set_style(table, LV_TABLE_STYLE_CELL2, &style_cell2);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_table_set_col_cnt(table, 2);
     lv_table_set_row_cnt(table, 7);
     lv_table_set_col_width(table, 0, 140);
     lv_table_set_col_width(table, 1, 160);
     lv_obj_align(table, lv_screens.stats.title, LV_ALIGN_OUT_BOTTOM_MID, 0, 15);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     lv_table_set_col_cnt(table, 1);
     lv_table_set_row_cnt(table, 5);
     lv_table_set_col_width(table, 0, 120);
@@ -969,7 +974,7 @@ void lv_init_screens()
     lv_table_set_cell_type(table, 0, 1, 2);
     lv_table_set_cell_value(table, 0, 0, "Field");
     lv_table_set_cell_value(table, 0, 1, "Value");
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
 #endif
     lv_obj_set_auto_realign(table, true);
 
@@ -984,7 +989,7 @@ void lv_init_screens()
     lv_obj_align(lv_screens.stats.buttons.label3, NULL, LV_ALIGN_IN_BOTTOM_MID, +95, 0);
     lv_label_set_text(lv_screens.stats.buttons.label3, LV_SYMBOL_RIGHT);
     lv_obj_set_auto_realign(lv_screens.stats.buttons.label3, true);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     lv_obj_set_hidden(lv_screens.stats.buttons.label2, true);
     lv_obj_set_hidden(lv_screens.stats.buttons.label3, true);
 #endif
@@ -1009,16 +1014,16 @@ esp_err_t display_update()
         return ESP_OK;
     }
 
-    ESP_LOGD(TAG, "display_update display_message %d, display_message_is_shown %d", display_status.display_message, display_status.display_message_is_shown);
-    if(display_status.display_message){
-        display_status.display_message_is_shown = true;
-        update_display_message(true);
-        return ESP_OK;
-    } else {
-        update_display_message(false);
-        display_status.display_message_is_shown = false;
-        display_status.current_screen = UNKNOWN_SCREEN;
-    }
+    // ESP_LOGD(TAG, "display_update display_message %d, display_message_is_shown %d", display_status.display_message, display_status.display_message_is_shown);
+    // if(display_status.display_message){
+    //     display_status.display_message_is_shown = true;
+    //     update_display_message(true);
+    //     return ESP_OK;
+    // } else {
+    //     update_display_message(false);
+    //     display_status.display_message_is_shown = false;
+    //     display_status.current_screen = UNKNOWN_SCREEN;
+    // }
     // if(display_status.display_message){
     //     if(display_status.display_message_is_shown && !display_message_content.need_refresh){
     //         // SOLL: anzeigen, IST: wird gezeigt
@@ -1048,8 +1053,6 @@ esp_err_t display_update()
     {
 
     case SPLASH_SCREEN:
-        ESP_LOGD(TAG, "display_update SPLASH_SCREEN current_screen %d, screen_to_show %d", display_status.current_screen, display_status.screen_to_show);
-        ESP_LOGI(TAG, "show SPLASH_SCREEN");
         ret = lv_show_splash_screen();
         display_status.current_screen = display_status.screen_to_show;
 
@@ -1110,6 +1113,13 @@ esp_err_t display_update()
 
     ESP_LOGE(TAG, "display_update: this line should not be reached");
     return ESP_FAIL;
+}
+
+void update_display_task(lv_task_t * task)
+{
+    lv_obj_t * tv = task->user_data;
+
+    display_update();
 }
 
 void display_task(void *pvParameters)

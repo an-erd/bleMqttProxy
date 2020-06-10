@@ -10,6 +10,7 @@
 
 #include "ble_mqtt.h"
 #include "beacon.h"
+#include "helperfunctions.h"
 
 static const char *TAG = "ble_mqtt";
 
@@ -80,8 +81,8 @@ bool send_to_mqtt(uint8_t idx, uint16_t maj, uint16_t min, float temp, float hum
                 ESP_LOGE(TAG, "temperature out of range, not send");
                 dont_send_other_values_too = true;
             } else {
-                snprintf(buffer_topic, 128,  CONFIG_MQTT_FORMAT, "beac", maj, min, "temp");
-                snprintf(buffer_payload, 128, "%.2f", temp);
+                snprintf_nowarn(buffer_topic, 128,  CONFIG_MQTT_FORMAT, "beac", maj, min, "temp");
+                snprintf_nowarn(buffer_payload, 128, "%.2f", temp);
                 msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
                 if(msg_id == -1){
                     mqtt_send_adv = false;
@@ -90,21 +91,21 @@ bool send_to_mqtt(uint8_t idx, uint16_t maj, uint16_t min, float temp, float hum
             if( dont_send_other_values_too || (humidity < CONFIG_HUMIDITY_LOW) || (humidity > CONFIG_HUMIDITY_HIGH) ){
                 ESP_LOGE(TAG, "humidity (or temperature) out of range, not send");
             } else {
-                snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "humidity");
-                snprintf(buffer_payload, 128, "%.2f", humidity);
+                snprintf_nowarn(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "humidity");
+                snprintf_nowarn(buffer_payload, 128, "%.2f", humidity);
                 msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
                 if(msg_id == -1){
                     mqtt_send_adv = false;
                 }
             }
-            snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "rssi");
-            snprintf(buffer_payload, 128, "%d", rssi);
+            snprintf_nowarn(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "rssi");
+            snprintf_nowarn(buffer_payload, 128, "%d", rssi);
             msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
             if( (battery < CONFIG_BATTERY_LOW) || (battery > CONFIG_BATTERY_HIGH )){
                 ESP_LOGE(TAG, "battery out of range, not send");
             } else {
-                snprintf(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "battery");
-                snprintf(buffer_payload, 128, "%d", battery);
+                snprintf_nowarn(buffer_topic, 128, CONFIG_MQTT_FORMAT, "beac", maj, min, "battery");
+                snprintf_nowarn(buffer_payload, 128, "%d", battery);
                 msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
                 if(msg_id == -1){
                     mqtt_send_adv = false;

@@ -11,6 +11,8 @@ menu "BLE-MQTT Proxy"
             bool "M5Stack Fire device with TFT display (ILI9341)"
         config DEVICE_M5STICK
             bool "M5Stick (gray) device with OLED display (SH1107)"
+        config DEVICE_M5STICKC
+            bool "M5StickC (orange) device with OLED display (ST7735S)"
     endchoice #PROXY_DEVICE
 
     menu "Wifi Configuration"
@@ -381,6 +383,7 @@ menu "BLE-MQTT Proxy"
         config BUTTON_COUNT
             int "Number of buttons"
             default 1 if DEVICE_WEMOS || DEVICE_M5STICK
+            default 2 if DEVICE_M5STICKC
             default 3 if DEVICE_M5STACK
             default 1
             help
@@ -390,6 +393,7 @@ menu "BLE-MQTT Proxy"
             int "GPIO for Button 1"
             default 0 if DEVICE_WEMOS
             default 35 if DEVICE_M5STICK
+            default 37 if DEVICE_M5STICKC
             default 39 if DEVICE_M5STACK
             default 0
             help
@@ -397,6 +401,7 @@ menu "BLE-MQTT Proxy"
 
         config BUTTON_2_PIN
             int "GPIO for Button 2"
+            default 39 if DEVICE_M5STICKC
             default 38 if DEVICE_M5STACK
             default -1
             help
