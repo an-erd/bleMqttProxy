@@ -1,6 +1,6 @@
 ## A Little How-To on Daily and Not-so-daily commands and tasks
 
-This How-To is intended to give an overview of the tasks to be done in maintaining the repository, rebasing changes, and all that commands and tasks you need but easily forget 
+This How-To is intended to give an overview of the tasks to be done in maintaining the repository, rebasing changes, and all that commands and tasks you need but easily forget
 
 ## Git
 
@@ -31,8 +31,17 @@ git rebase upstream/master
 git push -f
 ```
 
+### Remove a submodule
 
+To remove a submodule you need to:
 
+Delete the relevant section from the .gitmodules file.
+Stage the .gitmodules changes git add .gitmodules
+Delete the relevant section from .git/config.
+Run git rm --cached path_to_submodule (no trailing slash).
+Run rm -rf .git/modules/path_to_submodule (no trailing slash).
+Commit git commit -m "Removed submodule "
+Delete the now untracked submodule files rm -rf path_to_submodule
 
 
 
@@ -61,7 +70,7 @@ drop database sensordata
 quit
 ```
 
-If you want to use a different database name for the restored database, use the option `-newdb newname` 
+If you want to use a different database name for the restored database, use the option `-newdb newname`
 
 ```bash
 $ sudo influxd restore -portable -db sensordata -newdb newsensordata  /home/pi/influxdb_sensordata_backup_DATE
