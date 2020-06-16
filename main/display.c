@@ -72,18 +72,21 @@ static lv_style_t style_text;           // Normal text
 static lv_style_t style_symbols_top;    // symbols on top of screen (battery, eye symbol)
 static lv_style_t style_symbols_bottom; // symbols on bottom of screen (button actions)
 static lv_style_t style_pagenum;        // pagenum font
+static lv_style_t style_cell_bg;        // Table style, bg
 static lv_style_t style_cell1;          // Table style, content cells
 static lv_style_t style_cell2;          // Table style, header cells
 
 lv_screens_t lv_screens;
 
 LV_FONT_DECLARE(oled_9_font_symbol);
-LV_FONT_DECLARE(oled_12_font_symbol);
-LV_FONT_DECLARE(oled_16_font_symbol);
-LV_FONT_DECLARE(m5stack_16_font_symbol);
-LV_FONT_DECLARE(m5stack_22_font_symbol);
+LV_FONT_DECLARE(lv_font_montserrat_9);
+LV_FONT_DECLARE(lv_font_montserrat_10);
+// LV_FONT_DECLARE(oled_12_font_symbol);
+// LV_FONT_DECLARE(oled_16_font_symbol);
+// LV_FONT_DECLARE(m5stack_16_font_symbol);
+// LV_FONT_DECLARE(m5stack_22_font_symbol);
 // LV_FONT_DECLARE(m5stack_36_font_symbol);
-LV_FONT_DECLARE(m5stack_48_font_symbol);
+// LV_FONT_DECLARE(m5stack_48_font_symbol);
 
 #if CONFIG_DEVICE_M5STACK==1
 #define X_BUTTON_A	    65          // display button x position (for center of button)
@@ -99,6 +102,7 @@ void oneshot_display_message_timer_callback(void* arg)
 
 void oneshot_display_message_timer_start()
 {
+    assert(oneshot_display_message_timer != NULL);
     ESP_ERROR_CHECK(esp_timer_start_once(oneshot_display_message_timer, DISPLAY_MESSAGE_TIME_DURATION));
 }
 
@@ -164,75 +168,71 @@ void update_display_message(bool show)
     UNUSED(text_comment);
     UNUSED(mbox1);
     UNUSED(text_style1);
+    UNUSED(text_style2);
+    UNUSED(text_title);
     UNUSED(box_style);
     UNUSED(modal_style);
 
     if(show){
         if(!already_created){
-//             lv_style_copy(&modal_style, &lv_style_plain_color);
-//             lv_style_copy(&text_style1, &style_title);
-            // lv_style_copy(&text_style2, &style_text);
+            lv_style_copy(&text_style1, &style_title);
+            lv_style_copy(&text_style2, &style_text);
 
-// #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
-//             modal_style.body.main_color = modal_style.body.grad_color = LV_COLOR_WHITE;
-// 	    	modal_style.body.opa = LV_OPA_50;
-// #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
-//     		modal_style.body.main_color = modal_style.body.grad_color = LV_COLOR_BLACK;
-//             text_style1.text.color = LV_COLOR_WHITE;
-            // text_style2.text.color = LV_COLOR_WHITE;
-            // text_style2.text.color = LV_COLOR_BLACK;
-// #endif
+#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
+            // modal_style.body.main_color = modal_style.body.grad_color = LV_COLOR_WHITE;
+	    	// modal_style.body.opa = LV_OPA_50;
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+    		lv_style_set_bg_color(&modal_style, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+    		lv_style_set_bg_grad_color(&modal_style, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+            lv_style_set_text_color(&text_style1, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+            lv_style_set_text_color(&text_style2, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
+    		lv_style_set_bg_color(&modal_style, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+    		lv_style_set_bg_grad_color(&modal_style, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+            lv_style_set_text_color(&text_style1, LV_STATE_DEFAULT, LV_COLOR_RED);
+            lv_style_set_text_color(&text_style2, LV_STATE_DEFAULT, LV_COLOR_GREEN);
+#endif
 
             /* Create a base object for the modal background */
             mbox_obj = lv_obj_create(lv_scr_act(), NULL);
-            // lv_obj_set_style(mbox_obj, &modal_style);
-            // lv_obj_set_pos(mbox_obj, 0, 0);
-            // lv_obj_set_size(mbox_obj, LV_HOR_RES, LV_VER_RES);
-            // lv_obj_align(mbox_obj, NULL, LV_ALIGN_CENTER, 0, 0);
-            // lv_obj_set_opa_scale_enable(mbox_obj, true); /* Enable opacity scaling for the animation */
-            // lv_obj_set_auto_realign(mbox_obj, true);
+            lv_obj_add_style(mbox_obj, LV_OBJ_PART_MAIN, &modal_style);
+            lv_obj_set_pos(mbox_obj, 0, 0);
+            lv_obj_set_size(mbox_obj, LV_HOR_RES, LV_VER_RES);
+            lv_obj_align(mbox_obj, NULL, LV_ALIGN_CENTER, 0, 0);
 
-            // text_title = lv_label_create(mbox_obj, NULL);
-            // text_message = lv_label_create(mbox_obj, NULL);
-            // text_comment = lv_label_create(mbox_obj, NULL);
-            // text_action = lv_label_create(mbox_obj, NULL);
-            // lv_obj_set_style(text_title, &text_style1);
-            // lv_obj_set_style(text_message, &text_style2);
-            // lv_obj_set_style(text_comment, &text_style2);
-            // lv_obj_set_style(text_action, &text_style2);
+            text_title = lv_label_create(mbox_obj, NULL);
+            text_message = lv_label_create(mbox_obj, NULL);
+            text_comment = lv_label_create(mbox_obj, NULL);
+            text_action = lv_label_create(mbox_obj, NULL);
+            lv_obj_add_style(text_title, LV_OBJ_PART_MAIN, &text_style1);
+            lv_obj_add_style(text_message, LV_OBJ_PART_MAIN, &text_style2);
+            lv_obj_add_style(text_comment, LV_OBJ_PART_MAIN, &text_style2);
+            lv_obj_add_style(text_action, LV_OBJ_PART_MAIN, &text_style2);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
-            // lv_obj_align(text_title, NULL, LV_ALIGN_IN_TOP_MID, 0, 5);
-            // lv_obj_align(text_message, text_title, LV_ALIGN_IN_TOP_MID, 0, 5);
-            // lv_obj_align(text_comment, text_message, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
-            // lv_obj_align(text_action, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, -5);
+            lv_obj_align(text_title, NULL, LV_ALIGN_IN_TOP_MID, 0, 5);
+            lv_obj_align(text_message, text_title, LV_ALIGN_IN_TOP_MID, 0, 5);
+            lv_obj_align(text_comment, text_message, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
+            lv_obj_align(text_action, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, -5);
 
-            // lv_obj_set_auto_realign(text_title, true);
-            // lv_obj_set_auto_realign(text_message, true);
-            // lv_obj_set_auto_realign(text_comment, true);
-            // lv_obj_set_auto_realign(text_action, true);
+            lv_obj_set_auto_realign(text_title, true);
+            lv_obj_set_auto_realign(text_message, true);
+            lv_obj_set_auto_realign(text_comment, true);
+            lv_obj_set_auto_realign(text_action, true);
 #endif
 
             already_created = true;
         }
-        // lv_obj_set_hidden(text_title, true);
-        // lv_obj_set_hidden(text_message, true);
-        // lv_obj_set_hidden(text_comment, true);
-        // lv_obj_set_hidden(text_action, true);
 
 ESP_LOGD(TAG, "update_display_message >, set/update text");
-        // lv_label_set_text(text_title, "title");
-        lv_label_set_text(text_message, "message");
-        // lv_label_set_text(text_comment, "comment");
-        // lv_label_set_text(text_action, "action");
-        // lv_label_set_text(text_title, display_message_content.title);
-        // lv_label_set_text(text_message, display_message_content.message);
-        // lv_label_set_text(text_comment, display_message_content.comment);
-        // lv_label_set_text(text_action, display_message_content.action);
-        // lv_obj_set_top(text_title, true);
-        // lv_obj_set_top(text_message, true);
-        // lv_obj_set_top(text_comment, true);
-        // lv_obj_set_top(text_action, true);
+        lv_label_set_text(text_title, display_message_content.title);
+        lv_label_set_text(text_message, display_message_content.message);
+        lv_label_set_text(text_comment, display_message_content.comment);
+        lv_label_set_text(text_action, display_message_content.action);
+        lv_obj_set_top(text_title, true);
+        lv_obj_set_top(text_message, true);
+        lv_obj_set_top(text_comment, true);
+        lv_obj_set_top(text_action, true);
         is_showing = true;
     } else {
 ESP_LOGD(TAG, "update_display_message check 1");
@@ -527,7 +527,7 @@ esp_err_t lv_show_app_version_screen()
 #endif
 
     lv_table_set_cell_value(table, line++, col, app_desc->version);
-#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
+#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     lv_table_set_cell_value(table, line++, col, app_desc->project_name);
 #endif
     lv_table_set_cell_value(table, line++, col, app_desc->idf_ver);
@@ -545,6 +545,7 @@ esp_err_t lv_show_app_version_screen()
     snprintf_nowarn(buffer2, 32, IPSTR, IP2STR(&ipinfo.ip));
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     snprintf_nowarn(buffer, 32, "%s", buffer2);
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     snprintf_nowarn(buffer, 32, "IP: %s", buffer2);
 #endif
     lv_table_set_cell_value(table, line++, col, buffer);
@@ -651,64 +652,86 @@ esp_err_t lv_show_stats_screen()
 
 void lv_init_styles()
 {
-//     lv_style_init(&style_screen);
+    lv_style_init(&style_screen);
+    lv_style_set_bg_color(&style_screen, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+    lv_style_set_bg_grad_color(&style_screen, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
+    lv_style_set_text_color(&style_screen, LV_STATE_DEFAULT, LV_COLOR_GRAY); // LV_COLOR_BLACK;
+#endif
 
-//     style_screen.body.main_color = LV_COLOR_WHITE;
-//     style_screen.body.grad_color = LV_COLOR_WHITE;
-// #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
-//     style_screen.text.color = LV_COLOR_GRAY;
-// //     style_screen.text.color = LV_COLOR_BLACK;
-// #endif
+    lv_style_copy(&style_title,             &style_screen);
+    lv_style_copy(&style_bigvalues,         &style_screen);
+    lv_style_copy(&style_text,              &style_screen);
+    lv_style_copy(&style_symbols_top,       &style_screen);
+    lv_style_copy(&style_symbols_bottom,    &style_screen);
+    lv_style_copy(&style_pagenum,           &style_screen);
 
-//     lv_style_copy(&style_title,             &style_screen);
-//     lv_style_copy(&style_bigvalues,         &style_screen);
-//     lv_style_copy(&style_text,              &style_screen);
-//     lv_style_copy(&style_symbols_top,       &style_screen);
-//     lv_style_copy(&style_symbols_bottom,    &style_screen);
-//     lv_style_copy(&style_pagenum,           &style_screen);
-// #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
-//     style_title.text.font                   = &m5stack_22_font_symbol;
-//     style_bigvalues.text.font               = &m5stack_48_font_symbol;
-//     style_text.text.font                    = &m5stack_16_font_symbol;
-//     style_symbols_top.text.font             = &m5stack_16_font_symbol;
-//     style_symbols_bottom.text.font          = &m5stack_16_font_symbol;
-//     style_pagenum.text.font                 = &m5stack_16_font_symbol;
-// //     style_title.text.font                   = &oled_12_font_symbol;
-//     style_bigvalues.text.font               = &oled_16_font_symbol;
-//     style_text.text.font                    = &oled_9_font_symbol;
-//     style_symbols_top.text.font             = &oled_9_font_symbol;
-//     style_symbols_bottom.text.font          = &oled_9_font_symbol;
-//     style_pagenum.text.font                 = &oled_9_font_symbol;
-// #endif
+#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
+    lv_style_set_text_font(&style_title,            LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_SUBTITLE);
+    lv_style_set_text_font(&style_bigvalues,        LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_TITLE);
+    lv_style_set_text_font(&style_text,             LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_NORMAL);
+    lv_style_set_text_font(&style_symbols_top,      LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_SMALL);
+    lv_style_set_text_font(&style_symbols_bottom,   LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_SMALL);
+    lv_style_set_text_font(&style_pagenum,          LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_SMALL);
+#else
+    lv_style_set_text_font(&style_title,            LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_SUBTITLE);
+    lv_style_set_text_font(&style_bigvalues,        LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_TITLE);
+    lv_style_set_text_font(&style_text,             LV_STATE_DEFAULT, &lv_font_montserrat_10);
+    lv_style_set_text_font(&style_symbols_top,      LV_STATE_DEFAULT, &lv_font_montserrat_10);
+    lv_style_set_text_font(&style_symbols_bottom,   LV_STATE_DEFAULT, &lv_font_montserrat_10);
+    lv_style_set_text_font(&style_pagenum,          LV_STATE_DEFAULT, &lv_font_montserrat_9);
+#endif
 
-//     lv_style_copy(&style_cell1, &lv_style_transp_tight);   // table style normal cell
-//     lv_style_copy(&style_cell2, &lv_style_transp_tight);   // table style header cell
-// #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
-//     style_cell1.body.border.width           = 1;
-//     style_cell1.body.border.color           = LV_COLOR_GRAY;
-//     style_cell1.body.padding.top            = 2;
-//     style_cell1.body.padding.bottom         = 2;
+    lv_style_set_text_color(&style_title,       LV_STATE_DEFAULT, LV_COLOR_RED);
+    lv_style_set_text_color(&style_text,        LV_STATE_DEFAULT, LV_COLOR_BLUE);
+    lv_style_set_text_color(&style_symbols_top, LV_STATE_DEFAULT, LV_COLOR_GREEN);
 
-//     style_cell2.body.border.width           = 1;
-//     style_cell2.body.border.color           = LV_COLOR_BLACK;
-//     style_cell2.body.main_color             = LV_COLOR_SILVER;
-//     style_cell2.body.grad_color             = LV_COLOR_SILVER;
-//     style_cell2.body.padding.top            = 2;
-//     style_cell2.body.padding.bottom         = 2;
-// //     style_cell1.body.border.color           = LV_COLOR_BLACK;
-//     style_cell1.text.font                   = &oled_9_font_symbol;
-//     style_cell2.body.border.color           = LV_COLOR_BLACK;
-//     style_cell2.text.font                   = &oled_9_font_symbol;
-// #endif
+
+    lv_style_init(&style_cell_bg);
+    lv_style_init(&style_cell1);
+    lv_style_init(&style_cell2);
+#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
+    lv_style_set_border_width(&style_cell1, LV_STATE_DEFAULT, 1);
+    lv_style_set_border_color(&style_cell1, LV_STATE_DEFAULT, LV_COLOR_GRAY);
+    lv_style_set_pad_top(&style_cell1, LV_STATE_DEFAULT, 2);
+    lv_style_set_pad_bottom(&style_cell1, LV_STATE_DEFAULT, 2);
+
+    lv_style_set_border_width(&style_cell2, LV_STATE_DEFAULT, 1);
+    lv_style_set_border_color(&style_cell2, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+    lv_style_set_bg_color(&style_cell2, LV_STATE_DEFAULT, LV_COLOR_SILVER);
+    lv_style_set_bg_grad_color(&style_cell2, LV_STATE_DEFAULT, LV_COLOR_SILVER);
+    lv_style_set_pad_top(&style_cell2, LV_STATE_DEFAULT, 2);
+    lv_style_set_pad_bottom(&style_cell2, LV_STATE_DEFAULT, 2);
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
+    lv_style_set_border_width(&style_cell_bg, LV_STATE_DEFAULT, 0);
+    lv_style_set_pad_top(&style_cell_bg, LV_STATE_DEFAULT, 0);
+    lv_style_set_pad_bottom(&style_cell_bg, LV_STATE_DEFAULT, 0);
+    lv_style_set_pad_left(&style_cell_bg, LV_STATE_DEFAULT, 0);
+    lv_style_set_pad_right(&style_cell_bg, LV_STATE_DEFAULT, 0);
+    lv_style_set_pad_inner(&style_cell_bg, LV_STATE_DEFAULT, 0);
+
+    lv_style_set_border_width(&style_cell1, LV_STATE_DEFAULT, 0);
+    lv_style_set_pad_top(&style_cell1, LV_STATE_DEFAULT, 0);
+    lv_style_set_pad_bottom(&style_cell1, LV_STATE_DEFAULT, 0);
+    lv_style_set_pad_left(&style_cell1, LV_STATE_DEFAULT, 0);
+    lv_style_set_pad_right(&style_cell1, LV_STATE_DEFAULT, 0);
+    lv_style_set_pad_inner(&style_cell1, LV_STATE_DEFAULT, 0);
+
+    lv_style_set_border_width(&style_cell2, LV_STATE_DEFAULT, 0);
+    lv_style_set_pad_top(&style_cell2, LV_STATE_DEFAULT, 0);
+    lv_style_set_pad_bottom(&style_cell2, LV_STATE_DEFAULT, 0);
+    lv_style_set_pad_left(&style_cell2, LV_STATE_DEFAULT, 0);
+    lv_style_set_pad_right(&style_cell2, LV_STATE_DEFAULT, 0);
+    lv_style_set_pad_inner(&style_cell2, LV_STATE_DEFAULT, 0);
+
+    lv_style_set_text_font(&style_cell1, LV_STATE_DEFAULT, &lv_font_montserrat_10);
+    lv_style_set_text_font(&style_cell2, LV_STATE_DEFAULT, &lv_font_montserrat_10);
+#endif
 }
 
 void lv_init_screens()
 {
     lv_obj_t * scr;
-
-#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
-#endif
 
     lv_init_styles();
 
@@ -726,12 +749,12 @@ void lv_init_screens()
 
     // Beacon details screen
     lv_screens.beacon_details.scr = lv_obj_create(NULL, NULL);
-    // lv_obj_set_style(lv_screens.beacon_details.scr, &style_screen);
+    lv_obj_add_style(lv_screens.beacon_details.scr, LV_OBJ_PART_MAIN, &style_screen);
     scr = lv_screens.beacon_details.scr;
 
     // - content
     lv_screens.beacon_details.name = lv_label_create(scr, NULL);
-    // lv_obj_set_style(lv_screens.beacon_details.name, &style_title);
+    lv_obj_add_style(lv_screens.beacon_details.name, LV_OBJ_PART_MAIN, &style_title);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_obj_align(lv_screens.beacon_details.name, NULL, LV_ALIGN_IN_TOP_MID, 0, 5);
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
@@ -740,7 +763,7 @@ void lv_init_screens()
     lv_obj_set_auto_realign(lv_screens.beacon_details.name, true);
 
     lv_screens.beacon_details.temp_hum = lv_label_create(scr, NULL);
-    // lv_obj_set_style(lv_screens.beacon_details.temp_hum, &style_bigvalues);
+    lv_obj_add_style(lv_screens.beacon_details.temp_hum, LV_OBJ_PART_MAIN, &style_bigvalues);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_obj_align(lv_screens.beacon_details.temp_hum, lv_screens.beacon_details.name, LV_ALIGN_OUT_BOTTOM_MID, 0, 15);
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
@@ -750,8 +773,8 @@ void lv_init_screens()
 
     lv_screens.beacon_details.battery = lv_label_create(scr, NULL);
     lv_screens.beacon_details.rssi = lv_label_create(scr, NULL);
-    // lv_obj_set_style(lv_screens.beacon_details.battery, &style_text);
-    // lv_obj_set_style(lv_screens.beacon_details.rssi, &style_text);
+    lv_obj_add_style(lv_screens.beacon_details.battery, LV_OBJ_PART_MAIN, &style_text);
+    lv_obj_add_style(lv_screens.beacon_details.rssi, LV_OBJ_PART_MAIN, &style_text);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_obj_set_hidden(lv_screens.beacon_details.battery, true);
     lv_obj_set_hidden(lv_screens.beacon_details.rssi, true);
@@ -764,15 +787,15 @@ void lv_init_screens()
 
     // - buttons
     lv_screens.beacon_details.buttons.label1 = lv_label_create(scr, NULL);
-    // lv_obj_set_style(lv_screens.beacon_details.buttons.label1, &style_symbols_bottom);
+    lv_obj_add_style(lv_screens.beacon_details.buttons.label1, LV_OBJ_PART_MAIN, &style_symbols_bottom);
     lv_obj_set_auto_realign(lv_screens.beacon_details.buttons.label1, true);
 
     lv_screens.beacon_details.buttons.label2 = lv_label_create(scr, NULL);
-    // lv_obj_set_style(lv_screens.beacon_details.buttons.label2, &style_symbols_bottom);
+    lv_obj_add_style(lv_screens.beacon_details.buttons.label2, LV_OBJ_PART_MAIN, &style_symbols_bottom);
     lv_obj_set_auto_realign(lv_screens.beacon_details.buttons.label2, true);
 
     lv_screens.beacon_details.buttons.label3 = lv_label_create(scr, NULL);
-    // lv_obj_set_style(lv_screens.beacon_details.buttons.label3, &style_symbols_bottom);
+    lv_obj_add_style(lv_screens.beacon_details.buttons.label3, LV_OBJ_PART_MAIN, &style_symbols_bottom);
     lv_obj_set_auto_realign(lv_screens.beacon_details.buttons.label3, true);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_obj_align(lv_screens.beacon_details.buttons.label1, NULL, LV_ALIGN_IN_BOTTOM_MID, -95, 0);
@@ -786,11 +809,11 @@ void lv_init_screens()
 
     // - symbols
     lv_screens.beacon_details.symbols.symbol_eye = lv_label_create(scr, NULL);
-    // lv_obj_set_style(lv_screens.beacon_details.symbols.symbol_eye, &style_symbols_top);
+    lv_obj_add_style(lv_screens.beacon_details.symbols.symbol_eye, LV_OBJ_PART_MAIN, &style_symbols_top);
     lv_obj_set_auto_realign(lv_screens.beacon_details.symbols.symbol_eye, true);
 
     lv_screens.beacon_details.symbols.symbol_battery = lv_label_create(scr, NULL);
-    // lv_obj_set_style(lv_screens.beacon_details.symbols.symbol_battery, &style_symbols_top);
+    lv_obj_add_style(lv_screens.beacon_details.symbols.symbol_battery, LV_OBJ_PART_MAIN, &style_symbols_top);
     lv_obj_set_auto_realign(lv_screens.beacon_details.symbols.symbol_battery, true);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_obj_align(lv_screens.beacon_details.symbols.symbol_eye, NULL, LV_ALIGN_IN_TOP_LEFT, 5, 5);
@@ -802,7 +825,7 @@ void lv_init_screens()
 
     // - pagenum
     lv_screens.beacon_details.pagenum.pagenum = lv_label_create(scr, NULL);
-    // lv_obj_set_style(lv_screens.beacon_details.pagenum.pagenum, &style_pagenum);
+    lv_obj_add_style(lv_screens.beacon_details.pagenum.pagenum, LV_OBJ_PART_MAIN, &style_pagenum);
     lv_obj_set_auto_realign(lv_screens.beacon_details.pagenum.pagenum, true);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_obj_align(lv_screens.beacon_details.pagenum.pagenum, NULL, LV_ALIGN_IN_TOP_RIGHT, -5, 5);
@@ -812,11 +835,11 @@ void lv_init_screens()
 
     // Last seen screen
     lv_screens.last_seen.scr = lv_obj_create(NULL, NULL);
-    // lv_obj_set_style(lv_screens.last_seen.scr, &style_screen);
+    lv_obj_add_style(lv_screens.last_seen.scr, LV_OBJ_PART_MAIN, &style_screen);
     scr = lv_screens.last_seen.scr;
 
     lv_screens.last_seen.title = lv_label_create(scr, NULL);
-    // lv_obj_set_style(lv_screens.last_seen.title, &style_title);
+    lv_obj_add_style(lv_screens.last_seen.title, LV_OBJ_PART_MAIN, &style_title);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_label_set_text(lv_screens.last_seen.title, "Last seen/MQTT send");
     lv_obj_align(lv_screens.last_seen.title, NULL, LV_ALIGN_IN_TOP_MID, 0, 5);
@@ -828,19 +851,24 @@ void lv_init_screens()
 
     lv_screens.last_seen.table = lv_table_create(scr, NULL);
     lv_obj_t * table = lv_screens.last_seen.table;
-
-    // lv_table_set_style(table, LV_TABLE_STYLE_BG, &lv_style_transp_tight);
-    // lv_table_set_style(table, LV_TABLE_STYLE_CELL1, &style_cell1);
-    // lv_table_set_style(table, LV_TABLE_STYLE_CELL2, &style_cell2);
+    lv_obj_add_style(table, LV_TABLE_PART_BG, &style_cell_bg);
+    lv_obj_add_style(lv_screens.last_seen.table, LV_TABLE_PART_CELL1, &style_cell1);
+    lv_obj_add_style(lv_screens.last_seen.table, LV_TABLE_PART_CELL2, &style_cell2);
     lv_table_set_col_cnt(table, 3);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_table_set_row_cnt(table, 6);
     lv_obj_align(table, lv_screens.last_seen.title, LV_ALIGN_OUT_BOTTOM_MID, 0, 15);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
     lv_table_set_row_cnt(table, 5);
     lv_table_set_col_width(table, 0, 40);
     lv_table_set_col_width(table, 1, 43);
     lv_table_set_col_width(table, 2, 43);
+    lv_obj_align(table, lv_screens.last_seen.title, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
+    lv_table_set_row_cnt(table, 5);
+    lv_table_set_col_width(table, 0, 50);
+    lv_table_set_col_width(table, 1, 50);
+    lv_table_set_col_width(table, 2, 50);
     lv_obj_align(table, lv_screens.last_seen.title, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
 #endif
 
@@ -880,11 +908,11 @@ void lv_init_screens()
 
     // App version screen
     lv_screens.app_version.scr = lv_obj_create(NULL, NULL);
-    // lv_obj_set_style(lv_screens.app_version.scr, &style_screen);
+    lv_obj_add_style(lv_screens.app_version.scr, LV_OBJ_PART_MAIN, &style_screen);
     scr = lv_screens.app_version.scr;
 
     lv_screens.app_version.title = lv_label_create(scr, NULL);
-    // lv_obj_set_style(lv_screens.app_version.title, &style_title);
+    lv_obj_add_style(lv_screens.app_version.title, LV_OBJ_PART_MAIN, &style_title);
     lv_label_set_text(lv_screens.app_version.title, "App. version + Status");
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_obj_align(lv_screens.app_version.title, NULL, LV_ALIGN_IN_TOP_MID, 0, 5);
@@ -895,10 +923,10 @@ void lv_init_screens()
 
     lv_screens.app_version.table = lv_table_create(scr, NULL);
     table = lv_screens.app_version.table;
-
-    // lv_table_set_style(table, LV_TABLE_STYLE_BG, &lv_style_transp_tight);
-    // lv_table_set_style(table, LV_TABLE_STYLE_CELL1, &style_cell1);
-    // lv_table_set_style(table, LV_TABLE_STYLE_CELL2, &style_cell2);
+    lv_obj_add_style(table, LV_TABLE_PART_BG, &style_cell_bg);
+    lv_obj_add_style(lv_screens.app_version.table, LV_TABLE_PART_CELL1, &style_cell1);
+    lv_obj_add_style(lv_screens.app_version.table, LV_TABLE_PART_CELL2, &style_cell2);
+    lv_table_set_col_cnt(table, 3);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_table_set_col_cnt(table, 2);
     lv_table_set_row_cnt(table, 7);
@@ -908,7 +936,7 @@ void lv_init_screens()
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     lv_table_set_col_cnt(table, 1);
     lv_table_set_row_cnt(table, 5);
-    lv_table_set_col_width(table, 0, 120);
+    lv_table_set_col_width(table, 0, 150);
     lv_obj_align(table, lv_screens.app_version.title, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
 #endif
 
@@ -935,11 +963,11 @@ void lv_init_screens()
 
     // Stats screen
     lv_screens.stats.scr = lv_obj_create(NULL, NULL);
-    // lv_obj_set_style(lv_screens.stats.scr, &style_screen);
+    lv_obj_add_style(lv_screens.stats.scr, LV_OBJ_PART_MAIN, &style_screen);
     scr = lv_screens.stats.scr;
 
     lv_screens.stats.title = lv_label_create(scr, NULL);
-    // lv_obj_set_style(lv_screens.stats.title, &style_title);
+    lv_obj_add_style(lv_screens.stats.title, LV_OBJ_PART_MAIN, &style_title);
     lv_label_set_text(lv_screens.stats.title, "Statistics");
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_obj_align(lv_screens.stats.title, NULL, LV_ALIGN_IN_TOP_MID, 0, 5);
@@ -950,10 +978,9 @@ void lv_init_screens()
 
     lv_screens.stats.table = lv_table_create(scr, NULL);
     table = lv_screens.stats.table;
-
-    // lv_table_set_style(table, LV_TABLE_STYLE_BG, &lv_style_transp_tight);
-    // lv_table_set_style(table, LV_TABLE_STYLE_CELL1, &style_cell1);
-    // lv_table_set_style(table, LV_TABLE_STYLE_CELL2, &style_cell2);
+    lv_obj_add_style(table, LV_TABLE_PART_BG, &style_cell_bg);
+    lv_obj_add_style(lv_screens.stats.table, LV_TABLE_PART_CELL1, &style_cell1);
+    lv_obj_add_style(lv_screens.stats.table, LV_TABLE_PART_CELL2, &style_cell2);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_table_set_col_cnt(table, 2);
     lv_table_set_row_cnt(table, 7);
@@ -963,7 +990,7 @@ void lv_init_screens()
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     lv_table_set_col_cnt(table, 1);
     lv_table_set_row_cnt(table, 5);
-    lv_table_set_col_width(table, 0, 120);
+    lv_table_set_col_width(table, 0, 150);
     lv_obj_align(table, lv_screens.stats.title, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
 #endif
 
@@ -1014,38 +1041,38 @@ esp_err_t display_update()
         return ESP_OK;
     }
 
-    // ESP_LOGD(TAG, "display_update display_message %d, display_message_is_shown %d", display_status.display_message, display_status.display_message_is_shown);
-    // if(display_status.display_message){
-    //     display_status.display_message_is_shown = true;
-    //     update_display_message(true);
-    //     return ESP_OK;
-    // } else {
-    //     update_display_message(false);
-    //     display_status.display_message_is_shown = false;
-    //     display_status.current_screen = UNKNOWN_SCREEN;
-    // }
-    // if(display_status.display_message){
-    //     if(display_status.display_message_is_shown && !display_message_content.need_refresh){
-    //         // SOLL: anzeigen, IST: wird gezeigt
-    //         return ESP_OK;
-    //     } else {
-    //         // SOLL: anzeigen, IST: wird nicht gezeigt
-    //         display_status.display_message_is_shown = true;
-    //         display_message_content.need_refresh = false;
-    //         update_display_message(true);
-    //         return ESP_OK;
-    //     }
-    // } else {
-    //     if(display_status.display_message_is_shown){
-    //         // SOLL: nicht anzeigen, IST: wird gezeigt
-    //         display_status.current_screen = UNKNOWN_SCREEN;
-    //         display_status.display_message_is_shown = false;
-    //         ESP_LOGI(TAG, "display_update, display_message_is_shown = false");
-    //         update_display_message(false);
-    //     } else {
-    //         // SOLL: nicht anzeigen, IST: nicht gezeigt
-    //     }
-    // }
+    ESP_LOGD(TAG, "display_update display_message %d, display_message_is_shown %d", display_status.display_message, display_status.display_message_is_shown);
+    if(display_status.display_message){
+        display_status.display_message_is_shown = true;
+        update_display_message(true);
+        return ESP_OK;
+    } else {
+        update_display_message(false);
+        display_status.display_message_is_shown = false;
+        display_status.current_screen = UNKNOWN_SCREEN;
+    }
+    if(display_status.display_message){
+        if(display_status.display_message_is_shown && !display_message_content.need_refresh){
+            // SOLL: anzeigen, IST: wird gezeigt
+            return ESP_OK;
+        } else {
+            // SOLL: anzeigen, IST: wird nicht gezeigt
+            display_status.display_message_is_shown = true;
+            display_message_content.need_refresh = false;
+            update_display_message(true);
+            return ESP_OK;
+        }
+    } else {
+        if(display_status.display_message_is_shown){
+            // SOLL: nicht anzeigen, IST: wird gezeigt
+            display_status.current_screen = UNKNOWN_SCREEN;
+            display_status.display_message_is_shown = false;
+            ESP_LOGI(TAG, "display_update, display_message_is_shown = false");
+            update_display_message(false);
+        } else {
+            // SOLL: nicht anzeigen, IST: nicht gezeigt
+        }
+    }
 
     ESP_LOGD(TAG, "display_update current_screen %d, screen_to_show %d", display_status.current_screen, display_status.screen_to_show);
 
@@ -1115,32 +1142,17 @@ esp_err_t display_update()
     return ESP_FAIL;
 }
 
-void update_display_task(lv_task_t * task)
-{
-    lv_obj_t * tv = task->user_data;
-
-    display_update();
-}
-
-void display_task(void *pvParameters)
+void display_create_timer()
 {
     const esp_timer_create_args_t oneshot_display_message_timer_args = {
         .callback = &oneshot_display_message_timer_callback,
         .name     = "oneshot_display_message"
     };
 
-    EventBits_t uxBits;
-    UNUSED(uxBits);
-
     ESP_ERROR_CHECK(esp_timer_create(&oneshot_display_message_timer_args, &oneshot_display_message_timer));
+}
 
-    uxBits = xEventGroupWaitBits(s_values_evg, UPDATE_DISPLAY_TASK_READY, pdTRUE, pdFALSE, portMAX_DELAY);
-    ESP_LOGI(TAG, "xEventGroupWaitBits xEventGroupWaitBits(UPDATE_DISPLAY_TASK_READY)");
-
-    while (1)
-    {
-        uxBits = xEventGroupWaitBits(s_values_evg, UPDATE_DISPLAY, pdTRUE, pdFALSE, portMAX_DELAY);
-        display_update();
-    }
-    vTaskDelete(NULL);
+void update_display_task(lv_task_t * task)
+{
+    display_update();
 }

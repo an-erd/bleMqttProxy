@@ -14,8 +14,8 @@
 extern esp_timer_handle_t periodic_timer;
 extern esp_timer_handle_t oneshot_timer;
 
-#define UPDATE_LAST_SEEN_INTERVAL       250000      // 4 Hz
-#define SPLASH_SCREEN_TIMER_DURATION    2500000     // = 2.5 sec
+#define UPDATE_LAST_SEEN_INTERVAL       100000      // 10 Hz
+#define SPLASH_SCREEN_TIMER_DURATION    3500000     // = 3.5 sec
 #define IDLE_TIMER_DURATION             (CONFIG_DISPLAY_IDLE_TIMER * 1000000)
 
 typedef enum {

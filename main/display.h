@@ -16,6 +16,7 @@ void oneshot_display_message_timer_stop();
 void oneshot_display_message_timer_touch();
 void display_message_show();
 void display_message_stop_show();
+void display_create_timer();
 
 #define BEAC_PER_PAGE_LASTSEEN  5
 

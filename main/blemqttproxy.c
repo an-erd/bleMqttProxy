@@ -123,15 +123,11 @@ static EventGroupHandle_t s_wdt_evg;
 #define WDT_TIMER_DURATION          (CONFIG_WDT_OWN_INTERVAL * 1000000)
 
 // Button
-#if defined CONFIG_DEVICE_WEMOS || defined CONFIG_DEVICE_M5STICK || defined CONFIG_DEVICE_M5STICKC
-static int64_t time_button_long_press = 0;  // long button press -> empty display
-#elif defined CONFIG_DEVICE_M5STACK
-static int64_t time_button_long_press_a = 0;
-static int64_t time_button_long_press_b = 0;
-static int64_t time_button_long_press_c = 0;
-#endif
-
-#define BUTTON_ACTIVE_LEVEL     0
+#define MAX_BUTTON_COUNT 3
+#define BUTTON_ACTIVE_LEVEL 0
+static int8_t btn[MAX_BUTTON_COUNT][2] = { {0, CONFIG_BUTTON_1_PIN}, {1, CONFIG_BUTTON_2_PIN}, {2, CONFIG_BUTTON_3_PIN} };
+static button_handle_t btn_handle[MAX_BUTTON_COUNT];
+static int64_t time_button_long_press[MAX_BUTTON_COUNT] = { 0 };
 
 // TODO put to different position
 void clear_stats_values()
@@ -153,21 +149,7 @@ void button_push_cb(void* arg)
         return;
     }
 
-#if defined CONFIG_DEVICE_WEMOS || defined CONFIG_DEVICE_M5STICK || defined CONFIG_DEVICE_M5STICKC
-    time_button_long_press = esp_timer_get_time() + CONFIG_LONG_PRESS_TIME * 1000;
-#elif defined CONFIG_DEVICE_M5STACK
-    switch(btn){
-        case 1:
-            time_button_long_press_a = esp_timer_get_time() + CONFIG_LONG_PRESS_TIME * 1000;
-            break;
-        case 2:
-            time_button_long_press_b = esp_timer_get_time() + CONFIG_LONG_PRESS_TIME * 1000;
-            break;
-        case 3:
-            time_button_long_press_c = esp_timer_get_time() + CONFIG_LONG_PRESS_TIME * 1000;
-            break;
-    }
-#endif
+    time_button_long_press[btn] = esp_timer_get_time() + CONFIG_LONG_PRESS_TIME * 1000;
 
     ESP_LOGD(TAG, "button_push_cb");
 }
@@ -214,22 +196,7 @@ void handle_button_display_message()
 
 bool is_button_long_press(uint8_t btn)
 {
-#if defined CONFIG_DEVICE_WEMOS || defined CONFIG_DEVICE_M5STICK || defined CONFIG_DEVICE_M5STICKC
-    return esp_timer_get_time() >= time_button_long_press;
-#elif defined CONFIG_DEVICE_M5STACK
-    switch(btn){
-        case 1:
-            return esp_timer_get_time() >= time_button_long_press_a;
-            break;
-        case 2:
-            return esp_timer_get_time() >= time_button_long_press_b;
-            break;
-        case 3:
-            return esp_timer_get_time() >= time_button_long_press_c;
-            break;
-    }
-#endif
-    return false;
+    return esp_timer_get_time() >= time_button_long_press[btn];
 }
 
 void handle_set_next_display_show()
@@ -315,11 +282,27 @@ void button_release_cb(void* arg)
 
     is_long_press = is_button_long_press(btn);
 
-#if defined CONFIG_DEVICE_WEMOS || defined CONFIG_DEVICE_M5STICK || defined CONFIG_DEVICE_M5STICKC
+#if defined CONFIG_DEVICE_WEMOS || defined CONFIG_DEVICE_M5STICK
     if(!is_long_press){
         set_next_display_show();
     } else {
         handle_long_button_push(btn);
+    }
+    handle_set_next_display_show();
+#elif defined CONFIG_DEVICE_M5STICKC
+    switch(btn){
+        case 0:
+            if(!is_long_press){
+                set_next_display_show();
+            } else {
+                handle_long_button_push(btn);
+            }
+            break;
+        case 1:
+            handle_long_button_push(btn);   // TODO
+            break;
+        default:
+            ESP_LOGE(TAG, "button_release_cb: unhandled switch case");
     }
     handle_set_next_display_show();
 #elif defined CONFIG_DEVICE_M5STACK
@@ -1605,9 +1588,22 @@ void initialize_lv()
     lv_init();
     lvgl_driver_init();
     static lv_color_t buf1[DISP_BUF_SIZE];
+#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     static lv_color_t buf2[DISP_BUF_SIZE];
+#endif
     static lv_disp_buf_t disp_buf;
+
+#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306
+    disp_drv.set_px_cb = ssd1306_set_px_cb;
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+    disp_drv.set_px_cb = sh1107_set_px_cb;
+#endif
+
+#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_disp_buf_init(&disp_buf, buf1, buf2, DISP_BUF_SIZE);
+#else
+    lv_disp_buf_init(&disp_buf, buf1, NULL, DISP_BUF_SIZE);
+#endif
 
     lv_disp_drv_t disp_drv;
     lv_disp_drv_init(&disp_drv);
@@ -1648,6 +1644,7 @@ static void gui_prepare()
 
 static void gui_task(void* pvParameters)
 {
+    display_create_timer();
     gui_prepare();
     ESP_LOGD(TAG, "gui_task, gui_prepare() done"); fflush(stdout);
 
@@ -1666,16 +1663,17 @@ static void gui_task(void* pvParameters)
     vTaskDelete(NULL);
 }
 
+static void initialize_buttons()
+{
+    for (int i = 0; i < CONFIG_BUTTON_COUNT; i++){
+        btn_handle[i] = iot_button_create(btn[i][1], BUTTON_ACTIVE_LEVEL);
+        iot_button_set_evt_cb(btn_handle[i], BUTTON_CB_PUSH, button_push_cb, &btn[i][0]);
+        iot_button_set_evt_cb(btn_handle[i], BUTTON_CB_RELEASE, button_release_cb, &btn[i][0]);
+    }
+}
+
 void app_main()
 {
-#if defined CONFIG_DEVICE_M5STACK
-    static uint8_t btn_a = 1;
-    static uint8_t btn_b = 2;
-    static uint8_t btn_c = 3;
-#elif defined CONFIG_DEVICE_WEMOS || defined CONFIG_DEVICE_M5STICK || defined CONFIG_DEVICE_M5STICKC
-    static uint8_t btn = 0;
-#endif
-
     adjust_log_level();
 
     // NVS initialization and beacon mask retrieval
@@ -1684,32 +1682,17 @@ void app_main()
 
     ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
     s_values_evg = xEventGroupCreate();
-    wifi_evg   = xEventGroupCreate();
-    mqtt_evg   = xEventGroupCreate();
-    s_wdt_evg    = xEventGroupCreate();
+    wifi_evg = xEventGroupCreate();
+    mqtt_evg = xEventGroupCreate();
+    s_wdt_evg = xEventGroupCreate();
     ota_evg = xEventGroupCreate();
 
-
-#if defined CONFIG_DEVICE_M5STACK
-    button_handle_t btn_handle_a = iot_button_create(CONFIG_BUTTON_1_PIN, BUTTON_ACTIVE_LEVEL);
-    button_handle_t btn_handle_b = iot_button_create(CONFIG_BUTTON_2_PIN, BUTTON_ACTIVE_LEVEL);
-    button_handle_t btn_handle_c = iot_button_create(CONFIG_BUTTON_3_PIN, BUTTON_ACTIVE_LEVEL);
-    iot_button_set_evt_cb(btn_handle_a, BUTTON_CB_PUSH, button_push_cb, &btn_a);
-    iot_button_set_evt_cb(btn_handle_b, BUTTON_CB_PUSH, button_push_cb, &btn_b);
-    iot_button_set_evt_cb(btn_handle_c, BUTTON_CB_PUSH, button_push_cb, &btn_c);
-    iot_button_set_evt_cb(btn_handle_a, BUTTON_CB_RELEASE, button_release_cb, &btn_a);
-    iot_button_set_evt_cb(btn_handle_b, BUTTON_CB_RELEASE, button_release_cb, &btn_b);
-    iot_button_set_evt_cb(btn_handle_c, BUTTON_CB_RELEASE, button_release_cb, &btn_c);
-#elif defined CONFIG_DEVICE_M5STICK || defined CONFIG_DEVICE_M5STICKC || defined CONFIG_DEVICE_WEMOS
-    button_handle_t btn_handle = iot_button_create(CONFIG_BUTTON_1_PIN, BUTTON_ACTIVE_LEVEL);
-    iot_button_set_evt_cb(btn_handle, BUTTON_CB_PUSH, button_push_cb, &btn);
-    iot_button_set_evt_cb(btn_handle, BUTTON_CB_RELEASE, button_release_cb, &btn);
-#endif
+    initialize_buttons();
 
     xTaskCreatePinnedToCore(gui_task, "gui_task", 4096*2, NULL, 0, NULL, 1);
 
-    // xTaskCreate(&display_task, "display_task", 2048 * 2, NULL, 5, NULL);
     create_timer();
+
     oneshot_timer_usage = TIMER_SPLASH_SCREEN;
     xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
 
