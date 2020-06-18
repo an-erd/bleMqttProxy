@@ -15,7 +15,6 @@
 
 static const char *TAG = "display";
 
-EventGroupHandle_t s_values_evg;
 extern EventGroupHandle_t wifi_evg;
 extern uint16_t wifi_connections_count_connect;
 extern uint16_t wifi_connections_count_disconnect;
@@ -54,6 +53,8 @@ volatile bool turn_display_off = false;
 #include "sh1107.h"
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306
 #include "ssd1306.h"
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
+#include "st7735s.h"
 #endif
 
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
@@ -78,6 +79,12 @@ static lv_style_t style_cell2;          // Table style, header cells
 
 lv_screens_t lv_screens;
 
+// Style modal message box
+static lv_style_t modal_style;
+static lv_style_t modal_style_title;
+static lv_style_t modal_style_text;
+
+// Fonts
 LV_FONT_DECLARE(oled_9_font_symbol);
 LV_FONT_DECLARE(lv_font_montserrat_9);
 LV_FONT_DECLARE(lv_font_montserrat_10);
@@ -135,7 +142,6 @@ void display_message_show()
     turn_display_off = false;
     display_status.display_message = true;
     oneshot_display_message_timer_start();
-    xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
 }
 
 void display_message_stop_show()
@@ -146,72 +152,41 @@ void display_message_stop_show()
     turn_display_off = turn_display_off_before_message;
     set_run_idle_timer(idle_timer_running_before_message);
     display_status.display_message = false;
-    xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
 }
 
 void update_display_message(bool show)
 {
     static bool already_created = false;
     static bool is_showing = false;
-    static lv_style_t modal_style, box_style, text_style1, text_style2;
-    static lv_obj_t *mbox_obj, *mbox1;
-    static lv_obj_t *text_title, *text_message, *text_comment, *text_action;
-    static lv_obj_t *current_scr = NULL;
+    static lv_obj_t *mbox_obj;
+    static lv_obj_t *text_title;
+    static lv_obj_t *text_message;
+    static lv_obj_t *text_comment;
+    static lv_obj_t *text_action;
 
     ESP_LOGD(TAG, "update_display_message >, already_created %d, show %d, is_showing %d", already_created, show, is_showing);
 
-    static const char * btns[] ={"Toggle", ""};
-
-    UNUSED(current_scr);
-    UNUSED(btns);
-    UNUSED(text_action);
-    UNUSED(text_comment);
-    UNUSED(mbox1);
-    UNUSED(text_style1);
-    UNUSED(text_style2);
-    UNUSED(text_title);
-    UNUSED(box_style);
-    UNUSED(modal_style);
-
     if(show){
         if(!already_created){
-            lv_style_copy(&text_style1, &style_title);
-            lv_style_copy(&text_style2, &style_text);
-
-#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
-            // modal_style.body.main_color = modal_style.body.grad_color = LV_COLOR_WHITE;
-	    	// modal_style.body.opa = LV_OPA_50;
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
-    		lv_style_set_bg_color(&modal_style, LV_STATE_DEFAULT, LV_COLOR_BLACK);
-    		lv_style_set_bg_grad_color(&modal_style, LV_STATE_DEFAULT, LV_COLOR_BLACK);
-            lv_style_set_text_color(&text_style1, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-            lv_style_set_text_color(&text_style2, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
-    		lv_style_set_bg_color(&modal_style, LV_STATE_DEFAULT, LV_COLOR_BLACK);
-    		lv_style_set_bg_grad_color(&modal_style, LV_STATE_DEFAULT, LV_COLOR_BLACK);
-            lv_style_set_text_color(&text_style1, LV_STATE_DEFAULT, LV_COLOR_RED);
-            lv_style_set_text_color(&text_style2, LV_STATE_DEFAULT, LV_COLOR_GREEN);
-#endif
-
             /* Create a base object for the modal background */
             mbox_obj = lv_obj_create(lv_scr_act(), NULL);
             lv_obj_add_style(mbox_obj, LV_OBJ_PART_MAIN, &modal_style);
             lv_obj_set_pos(mbox_obj, 0, 0);
-            lv_obj_set_size(mbox_obj, LV_HOR_RES, LV_VER_RES);
+            lv_obj_set_size(mbox_obj, LV_HOR_RES-16, LV_VER_RES-8);
             lv_obj_align(mbox_obj, NULL, LV_ALIGN_CENTER, 0, 0);
 
             text_title = lv_label_create(mbox_obj, NULL);
             text_message = lv_label_create(mbox_obj, NULL);
             text_comment = lv_label_create(mbox_obj, NULL);
             text_action = lv_label_create(mbox_obj, NULL);
-            lv_obj_add_style(text_title, LV_OBJ_PART_MAIN, &text_style1);
-            lv_obj_add_style(text_message, LV_OBJ_PART_MAIN, &text_style2);
-            lv_obj_add_style(text_comment, LV_OBJ_PART_MAIN, &text_style2);
-            lv_obj_add_style(text_action, LV_OBJ_PART_MAIN, &text_style2);
+            lv_obj_add_style(text_title, LV_OBJ_PART_MAIN, &modal_style_title);
+            lv_obj_add_style(text_message, LV_OBJ_PART_MAIN, &modal_style_text);
+            lv_obj_add_style(text_comment, LV_OBJ_PART_MAIN, &modal_style_text);
+            lv_obj_add_style(text_action, LV_OBJ_PART_MAIN, &modal_style_text);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
             lv_obj_align(text_title, NULL, LV_ALIGN_IN_TOP_MID, 0, 5);
-            lv_obj_align(text_message, text_title, LV_ALIGN_IN_TOP_MID, 0, 5);
+            lv_obj_align(text_message, text_title, LV_ALIGN_OUT_BOTTOM_MID, 0, 5);
             lv_obj_align(text_comment, text_message, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
             lv_obj_align(text_action, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, -5);
 
@@ -224,26 +199,18 @@ void update_display_message(bool show)
             already_created = true;
         }
 
-ESP_LOGD(TAG, "update_display_message >, set/update text");
         lv_label_set_text(text_title, display_message_content.title);
         lv_label_set_text(text_message, display_message_content.message);
         lv_label_set_text(text_comment, display_message_content.comment);
         lv_label_set_text(text_action, display_message_content.action);
-        lv_obj_set_top(text_title, true);
-        lv_obj_set_top(text_message, true);
-        lv_obj_set_top(text_comment, true);
-        lv_obj_set_top(text_action, true);
         is_showing = true;
     } else {
-ESP_LOGD(TAG, "update_display_message check 1");
         if(is_showing){
-ESP_LOGD(TAG, "update_display_message check 2");
             lv_obj_del(mbox_obj);
             already_created = false;
             is_showing = false;
         }
     }
-ESP_LOGD(TAG, "update_display_message check <");
 }
 
 void set_next_display_show()
@@ -258,7 +225,6 @@ void set_next_display_show()
         display_status.current_beac = UNKNOWN_BEACON;
         display_status.beac_to_show = 0;
         set_run_idle_timer(true);
-        // idle_timer_start();
         break;
 
     case BEACON_SCREEN:
@@ -369,6 +335,24 @@ bool display_update_check_display_off()
     return false;
 }
 
+bool display_update_check_display_message(){
+    ESP_LOGD(TAG, "display_update_check_display_message >  display_message_is_shown %d", display_status.display_message_is_shown);
+    if(display_status.display_message){
+        display_status.display_message_is_shown = true;
+        update_display_message(true);
+        ESP_LOGD(TAG, "display_update_check_display_message <1 display_message_is_shown %d", display_status.display_message_is_shown);
+        return true;
+    } else {
+        if(display_status.display_message_is_shown){
+            update_display_message(false);
+            display_status.display_message_is_shown = false;
+            display_status.current_screen = UNKNOWN_SCREEN;
+            ESP_LOGD(TAG, "display_update_check_display_message <2 display_message_is_shown %d", display_status.display_message_is_shown);
+        }
+    }
+    return false;
+}
+
 esp_err_t lv_show_splash_screen()
 {
     lv_scr_load(lv_screens.splash.scr);
@@ -382,7 +366,7 @@ esp_err_t lv_show_beacon_screen(int idx)
 
     lv_label_set_text_fmt(lv_screens.beacon_details.name, "%s", ble_beacons[idx].beacon_data.name);
     if (is_beacon_idx_active(idx) && (ble_beacons[idx].adv_data.last_seen != 0)){
-        snprintf(buffer, 32, "%4.1f°C  %3.0f%%",
+        snprintf(buffer, 32, "%4.1f°C %3.0f%%",
             ble_beacons[idx].adv_data.temp, ble_beacons[idx].adv_data.humidity);
         lv_label_set_text(lv_screens.beacon_details.temp_hum, buffer);
         lv_label_set_text_fmt(lv_screens.beacon_details.temp_hum, "%4.1f°C  %3.0f%%",
@@ -673,19 +657,23 @@ void lv_init_styles()
     lv_style_set_text_font(&style_symbols_top,      LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_SMALL);
     lv_style_set_text_font(&style_symbols_bottom,   LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_SMALL);
     lv_style_set_text_font(&style_pagenum,          LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_SMALL);
-#else
-    lv_style_set_text_font(&style_title,            LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_SUBTITLE);
-    lv_style_set_text_font(&style_bigvalues,        LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_TITLE);
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
+    lv_style_set_text_font(&style_title,            LV_STATE_DEFAULT, &lv_font_montserrat_12);
+    lv_style_set_text_font(&style_bigvalues,        LV_STATE_DEFAULT, &lv_font_montserrat_24);
     lv_style_set_text_font(&style_text,             LV_STATE_DEFAULT, &lv_font_montserrat_10);
     lv_style_set_text_font(&style_symbols_top,      LV_STATE_DEFAULT, &lv_font_montserrat_10);
     lv_style_set_text_font(&style_symbols_bottom,   LV_STATE_DEFAULT, &lv_font_montserrat_10);
     lv_style_set_text_font(&style_pagenum,          LV_STATE_DEFAULT, &lv_font_montserrat_9);
+#else
+    lv_style_set_text_font(&style_title,            LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_SUBTITLE);
+    lv_style_set_text_font(&style_bigvalues,        LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_TITLE);
+    lv_style_set_text_font(&style_text,             LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_NORMAL);
+    lv_style_set_text_font(&style_symbols_top,      LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_SMALL);
+    lv_style_set_text_font(&style_symbols_bottom,   LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_SMALL);
+    lv_style_set_text_font(&style_pagenum,          LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_SMALL);
 #endif
 
-    lv_style_set_text_color(&style_title,       LV_STATE_DEFAULT, LV_COLOR_RED);
-    lv_style_set_text_color(&style_text,        LV_STATE_DEFAULT, LV_COLOR_BLUE);
-    lv_style_set_text_color(&style_symbols_top, LV_STATE_DEFAULT, LV_COLOR_GREEN);
-
+    lv_style_set_text_color(&style_title,       LV_STATE_DEFAULT, LV_COLOR_BLUE);
 
     lv_style_init(&style_cell_bg);
     lv_style_init(&style_cell1);
@@ -726,6 +714,26 @@ void lv_init_styles()
 
     lv_style_set_text_font(&style_cell1, LV_STATE_DEFAULT, &lv_font_montserrat_10);
     lv_style_set_text_font(&style_cell2, LV_STATE_DEFAULT, &lv_font_montserrat_10);
+#endif
+
+    // modal message box
+    lv_style_copy(&modal_style_title, &style_title);
+    lv_style_copy(&modal_style_text, &style_text);
+
+#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
+    // modal_style.body.main_color = modal_style.body.grad_color = LV_COLOR_WHITE;
+    // modal_style.body.opa = LV_OPA_50;
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+    lv_style_set_bg_color(&modal_style, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+    lv_style_set_bg_grad_color(&modal_style, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+    lv_style_set_text_color(&modal_style_title, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+    lv_style_set_text_color(&modal_style_text, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
+    lv_style_set_bg_color(&modal_style, LV_STATE_DEFAULT, LV_COLOR_LIME);
+    lv_style_set_bg_grad_color(&modal_style, LV_STATE_DEFAULT, LV_COLOR_LIME);
+    lv_style_set_bg_opa(&modal_style, LV_STATE_DEFAULT, LV_OPA_90);
+    lv_style_set_text_color(&modal_style_title, LV_STATE_DEFAULT, LV_COLOR_BLUE);
+    lv_style_set_text_color(&modal_style_text, LV_STATE_DEFAULT, LV_COLOR_GRAY);
 #endif
 }
 
@@ -1028,53 +1036,22 @@ void lv_init_screens()
 esp_err_t display_update()
 {
     esp_err_t ret;
-    // char buffer[128], buffer2[32];
+    bool ret_val;
     EventBits_t uxReturn;
     UNUSED(uxReturn);
 
-    // ESP_LOGD(TAG, "display_update >, run_periodic_timer %d, run_idle_timer_touch %d, periodic_timer_is_running %d, display_update current_screen %d, screen_to_show %d",
-    //     run_periodic_timer, run_idle_timer_touch, periodic_timer_running, display_status.current_screen, display_status.screen_to_show);
-
     display_update_check_timer();
+    ESP_LOGD(TAG, "display_update display_message %d, display_message_is_shown %d, display_status.display_on %d, turn_display_off %d",
+        display_status.display_message, display_status.display_message_is_shown, display_status.display_on, turn_display_off);
+
+    ret_val = display_update_check_display_message();
+
     if (display_update_check_display_off()){
         // display switched off, leave function
+        ESP_LOGD(TAG, "display_update display_message > %d, display_message_is_shown %d, display_on %d, turn_display_off %d",
+            display_status.display_message, display_status.display_message_is_shown, display_status.display_on, turn_display_off);
         return ESP_OK;
     }
-
-    ESP_LOGD(TAG, "display_update display_message %d, display_message_is_shown %d", display_status.display_message, display_status.display_message_is_shown);
-    if(display_status.display_message){
-        display_status.display_message_is_shown = true;
-        update_display_message(true);
-        return ESP_OK;
-    } else {
-        update_display_message(false);
-        display_status.display_message_is_shown = false;
-        display_status.current_screen = UNKNOWN_SCREEN;
-    }
-    if(display_status.display_message){
-        if(display_status.display_message_is_shown && !display_message_content.need_refresh){
-            // SOLL: anzeigen, IST: wird gezeigt
-            return ESP_OK;
-        } else {
-            // SOLL: anzeigen, IST: wird nicht gezeigt
-            display_status.display_message_is_shown = true;
-            display_message_content.need_refresh = false;
-            update_display_message(true);
-            return ESP_OK;
-        }
-    } else {
-        if(display_status.display_message_is_shown){
-            // SOLL: nicht anzeigen, IST: wird gezeigt
-            display_status.current_screen = UNKNOWN_SCREEN;
-            display_status.display_message_is_shown = false;
-            ESP_LOGI(TAG, "display_update, display_message_is_shown = false");
-            update_display_message(false);
-        } else {
-            // SOLL: nicht anzeigen, IST: nicht gezeigt
-        }
-    }
-
-    ESP_LOGD(TAG, "display_update current_screen %d, screen_to_show %d", display_status.current_screen, display_status.screen_to_show);
 
     switch (display_status.screen_to_show)
     {
@@ -1154,5 +1131,10 @@ void display_create_timer()
 
 void update_display_task(lv_task_t * task)
 {
+    lv_mem_monitor_t mem_mon;
+    lv_mem_monitor(&mem_mon);
+    ESP_LOGD(TAG, "memory: total %d, free %d, free_biggest %d, used_cnd %d, used_pct %d, frag_pct %d",
+        mem_mon.total_size, mem_mon.free_size, mem_mon.free_biggest_size, mem_mon.used_cnt, mem_mon.used_pct, mem_mon.frag_pct);
+
     display_update();
 }

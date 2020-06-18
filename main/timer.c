@@ -45,7 +45,6 @@ bool periodic_timer_is_running()
 
 void periodic_timer_callback(void* arg)
 {
-    xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
 }
 
 void set_run_idle_timer(bool stat) { run_idle_timer = stat;}
@@ -127,14 +126,12 @@ void oneshot_timer_callback(void* arg)
 
         case TIMER_SPLASH_SCREEN:
             set_next_display_show();
-            xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
 
         case TIMER_IDLE_TIMER:
             run_idle_timer = false;
             run_periodic_timer = false;
             turn_display_off = true;
-            xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
 
         default:

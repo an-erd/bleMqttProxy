@@ -182,7 +182,6 @@ void turn_display_on()
         set_run_periodic_timer(true);
     }
     turn_display_off = false;
-    xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
 }
 
 void handle_button_display_message()
@@ -191,7 +190,6 @@ void handle_button_display_message()
     toggle_beacon_idx_active(display_message_content.beac);
     snprintf(display_message_content.comment, 128, "Activated: %c", (is_beacon_idx_active(display_message_content.beac)? 'y':'n'));
     display_message_content.need_refresh = true;
-    xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
 }
 
 bool is_button_long_press(uint8_t btn)
@@ -204,19 +202,15 @@ void handle_set_next_display_show()
     switch(display_status.screen_to_show){
         case BEACON_SCREEN:
             set_run_periodic_timer(false);
-            xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
         case LASTSEEN_SCREEN:
             set_run_periodic_timer(true);
-            xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
         case APPVERSION_SCREEN:
             set_run_periodic_timer(true);
-            xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
         case STATS_SCREEN:
             set_run_periodic_timer(true);
-            xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
             break;
         default:
             ESP_LOGE(TAG, "handle_long_button_push: unhandled switch-case");
@@ -618,7 +612,6 @@ void update_adv_data(uint16_t maj, uint16_t min, int8_t measured_power,
     }
 
     display_status.current_beac = UNKNOWN_BEACON;
-    xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
 }
 
 void check_update_display(uint16_t maj, uint16_t min)
@@ -627,10 +620,8 @@ void check_update_display(uint16_t maj, uint16_t min)
 
     if( (display_status.current_screen == BEACON_SCREEN) && (display_status.current_beac == idx) ){
         display_status.current_beac = UNKNOWN_BEACON; // invalidate beacon to force update
-        xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
         return;
     } else if ( (display_status.current_screen == LASTSEEN_SCREEN) ){
-        xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
         return;
     }
 }
@@ -1245,14 +1236,19 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 ESP_LOGD(TAG, "(0x%04x%04x) rssi %3d, found, is_beacon_close %d, display_message_is_shown %d, idx %d",
                     maj, min, scan_result->scan_rst.rssi, is_beacon_close, display_status.display_message_is_shown, idx);
 
-                if(is_beacon_close && (!display_status.display_message_is_shown)){
-                    display_message_content.beac = idx;
-                    snprintf(display_message_content.title, 32, "Beacon Identified");
-                    snprintf(display_message_content.message, 32, "Name: %s", ble_beacons[idx].beacon_data.name);
-                    snprintf(display_message_content.comment, 32, "Activated: %c", (is_beacon_idx_active(idx)? 'y':'n'));
-                    snprintf(display_message_content.action, 32, "%s", "Toggle active w/Button");
-                    // snprintf(display_message_content.action, 32, "%s", "Toggle active w/Button or wait");
-                    display_message_show();
+                if(is_beacon_close){
+                    if(display_status.display_message_is_shown){
+                        ESP_LOGI(TAG, "is_beacon_close: oneshot_display_message_timer_touch");
+                        oneshot_display_message_timer_touch();
+                    } else {
+                        ESP_LOGI(TAG, "is_beacon_close: display_message_show");
+                        display_message_content.beac = idx;
+                        snprintf(display_message_content.title, 32, "Beacon Identified");
+                        snprintf(display_message_content.message, 32, "Name: %s", ble_beacons[idx].beacon_data.name);
+                        snprintf(display_message_content.comment, 32, "Activated: %c", (is_beacon_idx_active(idx)? 'y':'n'));
+                        snprintf(display_message_content.action, 32, "%s", "Toggle active w/Button");
+                        display_message_show();
+                    }
                 }
 
                 if(!is_beacon_active){
@@ -1637,7 +1633,7 @@ static void gui_prepare()
     static esp_timer_handle_t periodic_timer;
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
     //On ESP32 it's better to create a periodic task instead of esp_register_freertos_tick_hook
-    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, 30*1000)); //10ms (expressed as microseconds)
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, 10*1000)); //10ms (expressed as microseconds)
 
     lv_init_screens();
 }
@@ -1648,9 +1644,7 @@ static void gui_task(void* pvParameters)
     gui_prepare();
     ESP_LOGD(TAG, "gui_task, gui_prepare() done"); fflush(stdout);
 
-    lv_task_create(update_display_task, 150, LV_TASK_PRIO_MID, NULL);
-
-    xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY_TASK_READY);
+    lv_task_create(update_display_task, 100, LV_TASK_PRIO_MID, NULL);
 
     while (1) {
         vTaskDelay(1);
@@ -1681,7 +1675,6 @@ void app_main()
     ESP_ERROR_CHECK(read_blemqttproxy_param());
 
     ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
-    s_values_evg = xEventGroupCreate();
     wifi_evg = xEventGroupCreate();
     mqtt_evg = xEventGroupCreate();
     s_wdt_evg = xEventGroupCreate();
@@ -1694,7 +1687,6 @@ void app_main()
     create_timer();
 
     oneshot_timer_usage = TIMER_SPLASH_SCREEN;
-    xEventGroupSetBits(s_values_evg, UPDATE_DISPLAY);
 
     ESP_LOGI(TAG, "app_main, start oneshot timer, %d", SPLASH_SCREEN_TIMER_DURATION);
     ESP_ERROR_CHECK(esp_timer_start_once(oneshot_timer, SPLASH_SCREEN_TIMER_DURATION));
