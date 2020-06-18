@@ -1238,10 +1238,8 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
 
                 if(is_beacon_close){
                     if(display_status.display_message_is_shown){
-                        ESP_LOGI(TAG, "is_beacon_close: oneshot_display_message_timer_touch");
                         oneshot_display_message_timer_touch();
                     } else {
-                        ESP_LOGI(TAG, "is_beacon_close: display_message_show");
                         display_message_content.beac = idx;
                         snprintf(display_message_content.title, 32, "Beacon Identified");
                         snprintf(display_message_content.message, 32, "Name: %s", ble_beacons[idx].beacon_data.name);
