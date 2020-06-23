@@ -2,59 +2,59 @@ ninja: no work to do.
 [1/1] cmd.exe /C "cd /D C:\Users\AKAEM\esp\bleMqttProxy\build && C:\Users\AKAEM\.espressif\python_env\idf4.1_py3.7_env\Scripts\python.exe C:/Users/AKAEM/esp/esp-idf/tools/idf_size.py --archives C:/Users/AKAEM/esp/bleMqttProxy/build/blemqttproxy.map"
 Total sizes:
  DRAM .data size:   17552 bytes
- DRAM .bss  size:   78704 bytes
-Used static DRAM:   96256 bytes (  28324 available, 77.3% used)
+ DRAM .bss  size:   76456 bytes
+Used static DRAM:   94008 bytes (  30572 available, 75.5% used)
 Used static IRAM:  126156 bytes (   4916 available, 96.2% used)
-      Flash code: 1192371 bytes
-    Flash rodata:  440960 bytes
-Total image size:~1777039 bytes (.bin may be padded larger)
+      Flash code: 1147807 bytes
+    Flash rodata:  422872 bytes
+Total image size:~1714387 bytes (.bin may be padded larger)
 Per-archive contributions to ELF file:
             Archive File DRAM .data & .bss   IRAM Flash code & rodata   Total
-                 libbt.a        159  25895    442     306157   129375  462028
-               liblvgl.a        248  11390      0     108726    70228  190592
-           libnet80211.a        975   9186  11351      96764    23499  141775
-               liblwip.a         21   4369      0     105321    21252  130963
-               libmain.a       1094  15264     18      28503    58821  103700
-           libbtdm_app.a        349   2396  21573      61612     4263   90193
-         libmbedcrypto.a         64     81     30      77290    11614   89079
-                  libc.a        364      0      0      81496     6628   88488
-     libwpa_supplicant.a          8    800      0      53043    22649   76500
-                 libpp.a       1317   5415  22910      36090     4280   70012
-            libmbedtls.a         60    320      0      35521     7432   43333
-                libphy.a       1604    930   6483      30515        0   39532
-             libdriver.a        187     74   4453      17799    10508   33021
+                 libbt.a        159  23643    442     262228   111308  397780
+               liblvgl.a        248  11390      0     108518    70228  190384
+           libnet80211.a        975   9186  11351      96752    23499  141763
+               liblwip.a         21   4369      0     105249    21252  130891
+               libmain.a       1094  15264     18      28095    58821  103292
+           libbtdm_app.a        349   2396  21573      61620     4263   90201
+         libmbedcrypto.a         64     81     30      77306    11614   89095
+                  libc.a        364      0      0      81500     6628   88492
+     libwpa_supplicant.a          8    800      0      53072    22649   76529
+                 libpp.a       1317   5415  22910      36058     4280   69980
+            libmbedtls.a         60    320      0      35629     7432   43441
+                libphy.a       1604    930   6483      30551        0   39568
+             libdriver.a        187     74   4453      17995    10508   33217
            libfreertos.a       4140    776  14807          0     2044   21767
-             libnghttp.a          0      0      0      14635     4174   18809
-              libesp32.a       2126    114   7211       5437     3814   18702
-                libsoc.a        184      4   9667       4410     4354   18619
-               libmqtt.a          4      0      0      12626     5079   17709
-    libesp_http_server.a          0      8      0      10993     6512   17513
-          libnvs_flash.a          0     24      0      14195     3283   17502
-          libesp_netif.a         12     25      0       6899     4204   11140
-          libspi_flash.a        876    294   6485       1823     1559   11037
+             libnghttp.a          0      0      0      14615     4174   18789
+              libesp32.a       2126    114   7211       5445     3814   18710
+                libsoc.a        184      4   9667       4438     4354   18647
+               libmqtt.a          4      0      0      12630     5079   17713
+          libnvs_flash.a          0     24      0      14235     3283   17542
+    libesp_http_server.a          0      8      0      10969     6512   17489
+          libesp_netif.a         12     25      0       6903     4204   11144
+          libspi_flash.a        876    294   6485       1835     1559   11049
             libcoexist.a       2050     28   3915       4366      325   10684
-    libesp_http_client.a          0      0      0       7621     2793   10414
            libesp_wifi.a        496     72    722       5641     3438   10369
-         libesp_common.a         16    214   1268       2023     6185    9706
-      libtcp_transport.a          0      0      0       6455     2689    9144
+    libesp_http_client.a          0      0      0       7529     2793   10322
+         libesp_common.a         16    214   1268       2031     6185    9714
+      libtcp_transport.a          0      0      0       6419     2689    9108
                 libvfs.a        308     48      0       7613     1050    9019
-           libmbedx509.a          0      0      0       7090     1406    8496
- libbootloader_support.a          0      4   1016       4025     2414    7459
-            libesp-tls.a          0      4      0       4206     2667    6877
+           libmbedx509.a          0      0      0       7110     1406    8516
+ libbootloader_support.a          0      4   1016       4045     2414    7479
+            libesp-tls.a          0      4      0       4182     2667    6853
                 libgcc.a          4     12    193       5387      872    6468
                libheap.a        309      4   3481       1394      766    5954
           libesp_event.a          0      4      0       3556     1486    5046
         libesp_ringbuf.a          0      0   4221          0      508    4729
-         libapp_update.a          1     20    190       2479     1305    3995
+         libapp_update.a          1     20    190       2483     1305    3999
              libstdc++.a          8     20      0       2618     1082    3728
-           liblvgl_tft.a          0     58     46       1776      706    2586
+           liblvgl_tft.a          0     58     46       1780      706    2590
              libnewlib.a        152    272    828       1088      239    2579
                 librtc.a          0      4   2247          0        0    2251
               libefuse.a         36      4      0       1211      843    2094
-                liblog.a          8    272    270       1126      241    1917
+                liblog.a          8    272    270       1114      241    1905
             libpthread.a         16     12    243        783      505    1559
              libbutton.a          0      0      0       1162      153    1315
- liblvgl_esp32_drivers.a          0      0      0        388      857    1245
+ liblvgl_esp32_drivers.a          0      0      0        392      857    1249
                libcore.a          0     29      0        607      228     864
               libparam.a          0      0      0        604      130     734
                 libhal.a          0      0    447          0       32     479
