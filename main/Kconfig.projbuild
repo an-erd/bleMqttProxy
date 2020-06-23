@@ -458,41 +458,6 @@ menu "BLE-MQTT Proxy"
             bool "Add extra display screen with tests (currently not in use!)"
             default n
 
-        choice PREDEFINED
-            prompt "Select predefined configuration"
-            default PREDEF_NONE
-
-            config PREDEF_NONE
-                bool "None"
-            config PREDEF_OPT_A
-                bool "Option A"
-                select BOARD_A
-                select FEATURE_A
-            config PREDEF_OPT_B
-                bool "Option B"
-                select BOARD_B
-                select FEATURE_B
-        endchoice
-
-        menu "Submenu"
-            visible if PREDEF_NONE
-
-            choice
-                prompt "Select Board"
-                config BOARD_A
-                    bool "Board A"
-                config BOARD_B
-                    bool "Board B"
-            endchoice
-
-            choice
-                prompt "Select Feature"
-                config FEATURE_A
-                    bool "Feature A"
-                config FEATURE_B
-                    bool "Feature B"
-            endchoice
-        endmenu
     endmenu
 
 endmenu

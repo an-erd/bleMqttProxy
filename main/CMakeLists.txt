@@ -1,4 +1,4 @@
-set(SOURCES "blemqttproxy.c" "beacon.c" "ble.c" "ble_mqtt.c" "display.c" "helperfunctions.c" "offlinebuffer.c" "ota.c" "timer.c" "web_file_server.c" "splash.c" "splash_oled.c" "splash_160x80.c" "oled_9_font_symbol.c" "lv_font_montserrat_10.c" "lv_font_montserrat_9.c")
+set(SOURCES "blemqttproxy.c" "beacon.c" "ble.c" "ble_mqtt.c" "display.c" "helperfunctions.c" "offlinebuffer.c" "ota.c" "timer.c" "web_file_server.c" "splash.c" "splash_oled.c" "splash_160x80.c" "oled_9_font_symbol.c" "lv_font_montserrat_10.c" "lv_font_montserrat_9.c" "lv_font_montserrat_10.c" )
 
 idf_component_register(SRCS ${SOURCES}
     INCLUDE_DIRS .
