@@ -765,6 +765,12 @@ void remove_bonded_devices_num(uint8_t num_bond_device)
     free(dev_list);
 }
 
+void print_heap()
+{
+        ESP_LOGD(TAG, "heap: %d", esp_get_free_heap_size());
+
+}
+
 static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param)
 {
     esp_ble_gattc_cb_param_t *p_data = (esp_ble_gattc_cb_param_t *)param;
@@ -772,10 +778,12 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
     switch (event) {
     case ESP_GATTC_REG_EVT:
         ESP_LOGD(TAG, "ESP_GATTC_REG_EVT");
+        print_heap();
         esp_ble_gap_config_local_privacy(true);
         break;
     case ESP_GATTC_CONNECT_EVT: {
         ESP_LOGD(TAG, "ESP_GATTC_CONNECT_EVT conn_id %d, if %d", p_data->connect.conn_id, gattc_if);
+        print_heap();
         gl_profile_tab[PROFILE_A_APP_ID].conn_id = p_data->connect.conn_id;
         memcpy(gl_profile_tab[PROFILE_A_APP_ID].remote_bda, p_data->connect.remote_bda, sizeof(esp_bd_addr_t));
         ESP_LOGD(TAG, "REMOTE BDA:");
@@ -789,6 +797,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
     }
     case ESP_GATTC_OPEN_EVT:
         ESP_LOGD(TAG, "ESP_GATTC_OPEN_EVT");
+        print_heap();
         if (param->open.status != ESP_GATT_OK){
             ESP_LOGE(TAG, "open failed, status %d", p_data->open.status);
             break;
@@ -797,6 +806,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         break;
     case ESP_GATTC_CFG_MTU_EVT:
         ESP_LOGD(TAG, "ESP_GATTC_CFG_MTU_EVT");
+        print_heap();
         if (param->cfg_mtu.status != ESP_GATT_OK){
             ESP_LOGE(TAG,"config mtu failed, error status = %x", param->cfg_mtu.status);
         }
@@ -805,6 +815,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         break;
     case ESP_GATTC_SEARCH_RES_EVT: {
         ESP_LOGD(TAG, "ESP_GATTC_SEARCH_RES_EVT");
+        print_heap();
         ESP_LOGD(TAG, "SEARCH RES: conn_id = %x is primary service %d", p_data->search_res.conn_id, p_data->search_res.is_primary);
         ESP_LOGD(TAG, "start handle %d end handle %d current handle value %d", p_data->search_res.start_handle, p_data->search_res.end_handle, p_data->search_res.srvc_id.inst_id);
         if (p_data->search_res.srvc_id.uuid.len == ESP_UUID_LEN_16){
@@ -828,6 +839,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
     }
     case ESP_GATTC_SEARCH_CMPL_EVT:
         ESP_LOGD(TAG, "ESP_GATTC_SEARCH_CMPL_EVT");
+        print_heap();
         if (p_data->search_cmpl.status != ESP_GATT_OK){
             ESP_LOGE(TAG, "search service failed, error status = %x", p_data->search_cmpl.status);
             break;
@@ -907,6 +919,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         break;
     case ESP_GATTC_REG_FOR_NOTIFY_EVT: {
         ESP_LOGD(TAG, "ESP_GATTC_REG_FOR_NOTIFY_EVT");
+        print_heap();
         if (p_data->reg_for_notify.status != ESP_GATT_OK){
             ESP_LOGE(TAG, "REG FOR NOTIFY failed: error status = %d", p_data->reg_for_notify.status);
         }else{
@@ -979,7 +992,8 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         break;
     }
     case ESP_GATTC_NOTIFY_EVT: {
-        // ESP_LOGD(TAG, "ESP_GATTC_NOTIFY_EVT");
+        // ESP_LOGD(TAG, "ESP_GATTC_NOTIFY_EVT, heap: %d", esp_get_free_heap_size());
+        print_heap();
 
         static int64_t time_measure = 0;
         uint8_t len = 0;
@@ -1024,6 +1038,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
     }
     case ESP_GATTC_WRITE_DESCR_EVT:
         ESP_LOGD(TAG, "ESP_GATTC_WRITE_DESCR_EVT");
+        print_heap();
         if (p_data->write.status != ESP_GATT_OK){
             ESP_LOGE(TAG, "write descr failed, error status = %x", p_data->write.status);
             break;
@@ -1053,6 +1068,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         break;
     case ESP_GATTC_SRVC_CHG_EVT: {
         ESP_LOGD(TAG, "ESP_GATTC_SRVC_CHG_EVT");
+        print_heap();
         esp_bd_addr_t bda;
         memcpy(bda, p_data->srvc_chg.remote_bda, sizeof(esp_bd_addr_t));
         ESP_LOGD(TAG, "ESP_GATTC_SRVC_CHG_EVT, bd_addr:");
@@ -1061,6 +1077,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
     }
     case ESP_GATTC_WRITE_CHAR_EVT:
         ESP_LOGD(TAG, "ESP_GATTC_WRITE_CHAR_EVT");
+        print_heap();
         if (p_data->write.status != ESP_GATT_OK){
             ESP_LOGE(TAG, "write char failed, error status = %x, error = %s", p_data->write.status, esp_err_to_name(p_data->write.status) );
             break;
@@ -1069,6 +1086,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         break;
     case ESP_GATTC_DISCONNECT_EVT:
         ESP_LOGD(TAG, "ESP_GATTC_DISCONNECT_EVT");
+        print_heap();
         if(gattc_offline_buffer_downloading) {
             if(gattc_give_up_now == true){
                 free_offline_buffer(gattc_connect_beacon_idx, OFFLINE_BUFFER_STATUS_NONE);
@@ -1127,6 +1145,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
     }
     case ESP_GAP_BLE_SCAN_START_COMPLETE_EVT:
         ESP_LOGD(TAG, "ESP_GAP_BLE_SCAN_START_COMPLETE_EVT");
+        print_heap();
         //scan start complete event to indicate scan start successfully or failed
         if ((err = param->scan_start_cmpl.status) != ESP_BT_STATUS_SUCCESS) {
             ESP_LOGE(TAG, "Scan start failed: %s", esp_err_to_name(err));
@@ -1202,7 +1221,8 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         }
         break;
     case ESP_GAP_BLE_SCAN_RESULT_EVT: {
-        // ESP_LOGD(TAG, "ESP_GAP_BLE_SCAN_RESULT_EVT");
+        ESP_LOGD(TAG, "ESP_GAP_BLE_SCAN_RESULT_EVT");
+        print_heap();
         esp_ble_gap_cb_param_t *scan_result = (esp_ble_gap_cb_param_t *)param;
 
         beacon_type_t beacon_type = UNKNOWN_BEACON;
@@ -1283,7 +1303,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
 
                 ESP_LOGI(TAG, "(0x%04x%04x) rssi %3d | temp %5.1f | hum %5.1f | x %+6d | y %+6d | z %+6d | batt %4d | mqtt send %c",
                     maj, min, scan_result->scan_rst.rssi, temp, humidity, x, y, z, battery, (mqtt_send_adv ? 'y':'n') );
-
+                print_heap();
                 if(!is_beacon_bd_addr_set(maj, min)){
                     set_beaconaddress(maj, min, &scan_result->scan_rst.bda);
                 }
@@ -1312,9 +1332,11 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
             break;
         case ESP_GAP_SEARCH_INQ_CMPL_EVT:
             ESP_LOGD(TAG, "ESP_GAP_SEARCH_INQ_CMPL_EVT");
+            print_heap();
             break;
         default:
             ESP_LOGE(TAG, "ESP_GAP_BLE_SCAN_RESULT_EVT - default");
+            print_heap();
             break;
         }
         break;
@@ -1322,6 +1344,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
 
     case ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT:
         ESP_LOGD(TAG, "ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT");
+        print_heap();
         if ((err = param->scan_stop_cmpl.status) != ESP_BT_STATUS_SUCCESS){
             ESP_LOGE(TAG, "Scan stop failed: %s", esp_err_to_name(err));
         }
@@ -1332,6 +1355,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         break;
     case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT:
         ESP_LOGD(TAG, "ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT");
+        print_heap();
         if ((err = param->adv_stop_cmpl.status) != ESP_BT_STATUS_SUCCESS){
             ESP_LOGE(TAG, "Adv stop failed: %s", esp_err_to_name(err));
         }
@@ -1341,6 +1365,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         break;
     case ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT:
         ESP_LOGD(TAG, "ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT");
+        print_heap();
         ESP_LOGI(TAG, "update connection params status = %d, min_int = %d, max_int = %d,conn_int = %d,latency = %d, timeout = %d",
                   param->update_conn_params.status,
                   param->update_conn_params.min_int,
@@ -1360,6 +1385,7 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp
     /* If event is register event, store the gattc_if for each profile */
     if (event == ESP_GATTC_REG_EVT) {
         ESP_LOGD(TAG, "esp_gattc_cb ESP_GATTC_REG_EVT");
+        print_heap();
         if (param->reg.status == ESP_GATT_OK) {
             gl_profile_tab[param->reg.app_id].gattc_if = gattc_if;
         } else {
@@ -1704,7 +1730,7 @@ void app_main()
 
     initialize_buttons();
 
-    xTaskCreatePinnedToCore(gui_task, "gui_task", 4096*2, NULL, 0, NULL, 1);
+    xTaskCreatePinnedToCore(gui_task, "gui_task", 2048*2, NULL, 0, NULL, 1);
 
     create_timer();
 

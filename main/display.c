@@ -816,22 +816,22 @@ void lv_init_styles()
 #  define BIGVALUE_GAP_Y                    0
 #  define BUTTON1_GAP_X                     5
 #  define BUTTON2_GAP_X                     0
-#  define BUTTON3_GAP_X                     -5
+#  define BUTTON3_GAP_X                     -3
 #  define BUTTON1_ALIGN                     LV_ALIGN_IN_BOTTOM_LEFT
 #  define BUTTON2_ALIGN                     LV_ALIGN_IN_BOTTOM_MID
 #  define BUTTON3_ALIGN                     LV_ALIGN_IN_BOTTOM_RIGHT
 #  define BUTTON1_HIDE                      1
 #  define BUTTON2_HIDE                      1
 #  define BUTTON3_HIDE                      0
-#  define SYMBOL1_GAP_X                     0
-#  define SYMBOL1_GAP_Y                     0
-#  define SYMBOL2_GAP_X                     1
+#  define SYMBOL1_GAP_X                     3
+#  define SYMBOL1_GAP_Y                     1
+#  define SYMBOL2_GAP_X                     0
 #  define SYMBOL2_GAP_Y                     0
 #  define SYMBOL1_ALIGN                     LV_ALIGN_IN_TOP_LEFT
 #  define SYMBOL2_ALIGN                     LV_ALIGN_OUT_RIGHT_MID
-#  define PAGENUM_GAP_X                     0
-#  define PAGENUM_GAP_Y                     0
-#  define PAGENUM_ALINGN                    LV_ALIGN_IN_TOP_RIGHT
+#  define PAGENUM_GAP_X                     -3
+#  define PAGENUM_GAP_Y                     1
+#  define PAGENUM_ALIGN                     LV_ALIGN_IN_TOP_RIGHT
 #  define LAST_SEEN_TABLE_ROWS              5
 #  define LAST_SEEN_TABLE_GAP_Y             0
 #  define LAST_SEEN_TABLE_WIDTH_0           50
@@ -921,7 +921,7 @@ void lv_init_screens()
     lv_screens.beacon_details.pagenum.pagenum = lv_label_create(scr, NULL);
     lv_obj_add_style(lv_screens.beacon_details.pagenum.pagenum, LV_OBJ_PART_MAIN, &style_pagenum);
     lv_obj_set_auto_realign(lv_screens.beacon_details.pagenum.pagenum, true);
-    lv_obj_align(lv_screens.beacon_details.pagenum.pagenum, NULL, PAGENUM_ALINGN, PAGENUM_GAP_X, PAGENUM_GAP_Y);
+    lv_obj_align(lv_screens.beacon_details.pagenum.pagenum, NULL, PAGENUM_ALIGN, PAGENUM_GAP_X, PAGENUM_GAP_Y);
 
     // Last seen screen ---------------------------------------------
     lv_screens.last_seen.scr = lv_obj_create(NULL, lv_screens.beacon_details.scr);
@@ -1054,8 +1054,7 @@ esp_err_t display_update()
 {
     esp_err_t ret;
     bool ret_val;
-    EventBits_t uxReturn;
-    UNUSED(uxReturn);
+    UNUSED(ret_val);
 
     display_update_check_timer();
     ESP_LOGD(TAG, "display_update display_message %d, display_message_is_shown %d, display_status.display_on %d, turn_display_off %d",
