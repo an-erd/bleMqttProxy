@@ -49,3 +49,4 @@ server_certs/ca_key.pem
 server_certs/blemqttproxy.bin
 sdkconfig_current_test_version_M5Stack
 .vscode/BROWSE*
+log.blemqttproxy.*.txt

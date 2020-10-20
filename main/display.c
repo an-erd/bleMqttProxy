@@ -1054,6 +1054,7 @@ esp_err_t display_update()
 {
     esp_err_t ret;
     bool ret_val;
+    UNUSED(ret_val);
     EventBits_t uxReturn;
     UNUSED(uxReturn);
 

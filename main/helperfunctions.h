@@ -15,6 +15,7 @@
 #define SHT3_GET_HUMIDITY_VALUE(humidity_msb, humidity_lsb) \
     ((((int16_t)humidity_msb << 8) | ((int16_t)humidity_lsb))*100/(float)0xFFFF)
 
+#define IPSTR_UL "%d_%d_%d_%d"
 
 uint16_t uint16_decode(const uint8_t * p_encoded_data);
 uint16_t uint16_decode_r(const uint8_t * p_encoded_data);

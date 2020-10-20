@@ -142,6 +142,7 @@ void clear_stats_values()
 void button_push_cb(void* arg)
 {
     uint8_t btn = *((uint8_t*) arg);
+    UNUSED(btn);
 
     if(!display_status.button_enabled){
         ESP_LOGD(TAG, "button_push_cb: button not enabled");
@@ -329,7 +330,7 @@ static __attribute__((unused)) void send_mqtt_uptime_heap_last_seen(uint8_t num_
 
     if(wifi_connected && mqtt_connected){
         tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ipinfo);
-        sprintf(buffer, IPSTR, IP2STR(&ipinfo.ip));
+        sprintf(buffer, IPSTR_UL, IP2STR(&ipinfo.ip));
         snprintf_nowarn(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "uptime");
         uptime_sec = esp_timer_get_time()/1000000;
         snprintf_nowarn(buffer_payload, 32, "%d", uptime_sec);
@@ -433,7 +434,7 @@ void periodic_wdt_timer_callback(void* arg)
     }
 }
 
-static void event_handler(void* ctx, esp_event_base_t event_base,  int32_t event_id, void* event_data)
+static esp_err_t event_handler(void* ctx, esp_event_base_t event_base,  int32_t event_id, void* event_data)
 {
     httpd_handle_t *server = (httpd_handle_t *) ctx;
     EventBits_t uxReturn;
@@ -497,6 +498,8 @@ static void event_handler(void* ctx, esp_event_base_t event_base,  int32_t event
             *server = NULL;
         }
     }
+
+    return ESP_OK;
 }
 
 static void wifi_init(void *arg)
@@ -574,11 +577,12 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
         case MQTT_EVENT_ERROR:
             ESP_LOGD(TAG, "MQTT_EVENT_ERROR");
             break;
-        // case MQTT_EVENT_ANY:
-        default:
+        case MQTT_EVENT_ANY:
             ESP_LOGI(TAG, "MQTT_EVENT_ANY");
             break;
-
+        default:
+            ESP_LOGI(TAG, "MQTT_EVENT default");
+            break;
     }
     return ESP_OK;
 }
@@ -1488,7 +1492,7 @@ static void wdt_task(void* pvParameters)
             uptime_sec = esp_timer_get_time()/1000000;
 
             tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ipinfo);
-            sprintf(buffer, IPSTR, IP2STR(&ipinfo.ip));
+            sprintf(buffer, IPSTR_UL, IP2STR(&ipinfo.ip));
             snprintf_nowarn(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "reboot");
             snprintf_nowarn(buffer_payload, 128, "%d", uptime_sec);
             ESP_LOGD(TAG, "wdt_task: MQTT message to be send reg. REBOOT: %s %s", buffer_topic, buffer_payload);
@@ -1551,8 +1555,8 @@ void adjust_log_level()
     esp_log_level_set("display", ESP_LOG_INFO);
     esp_log_level_set("event", ESP_LOG_INFO);
     esp_log_level_set("ble_mqtt", ESP_LOG_INFO);
-    esp_log_level_set("web_file_server", ESP_LOG_DEBUG);
-    esp_log_level_set("BLEMQTTPROXY", ESP_LOG_DEBUG);
+    esp_log_level_set("web_file_server", ESP_LOG_INFO);
+    esp_log_level_set("BLEMQTTPROXY", ESP_LOG_INFO);
 }
 
 void initialize_ble()
