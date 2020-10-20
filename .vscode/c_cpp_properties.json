@@ -3,14 +3,12 @@
         {
             "name": "ESP32-Win",
             "includePath": [
-                "${workspaceRoot}",
-                "${workspaceFolder}/build/include"
+                "${workspaceRoot}"
             ],
             "intelliSenseMode": "msvc-x64",
             "browse": {
                 "path": [
-                    "${workspaceRoot}",
-                    "${workspaceFolder}/build/include"
+                    "${workspaceRoot}"
                 ],
                 "limitSymbolsToIncludedHeaders": true,
                 "databaseFilename": "${workspaceRoot}/.vscode/browse.vc.db"

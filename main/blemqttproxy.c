@@ -434,7 +434,7 @@ void periodic_wdt_timer_callback(void* arg)
     }
 }
 
-static esp_err_t event_handler(void* ctx, esp_event_base_t event_base,  int32_t event_id, void* event_data)
+static void event_handler(void* ctx, esp_event_base_t event_base,  int32_t event_id, void* event_data)
 {
     httpd_handle_t *server = (httpd_handle_t *) ctx;
     EventBits_t uxReturn;
@@ -498,8 +498,6 @@ static esp_err_t event_handler(void* ctx, esp_event_base_t event_base,  int32_t 
             *server = NULL;
         }
     }
-
-    return ESP_OK;
 }
 
 static void wifi_init(void *arg)
