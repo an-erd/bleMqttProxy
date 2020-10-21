@@ -382,10 +382,13 @@ esp_err_t lv_show_beacon_screen(int idx)
             sprintf(buffer_col, "%s", "#ffa500");   // orange
         } else if(battery_level < 60){
             sprintf(buffer, "%s", LV_SYMBOL_BATTERY_2);
+            sprintf(buffer_col, "%s", "#808080");   // gray
         } else if(battery_level < 80){
             sprintf(buffer, "%s", LV_SYMBOL_BATTERY_3);
+            sprintf(buffer_col, "%s", "#808080");   // gray
         } else {
             sprintf(buffer, "%s", LV_SYMBOL_BATTERY_FULL);
+            sprintf(buffer_col, "%s", "#808080");   // gray
         }
         lv_label_set_text_fmt(lv_screens.beacon_details.symbols.symbol_battery, "%s %s #", buffer_col, buffer);
         lv_label_set_text_fmt(lv_screens.beacon_details.battery, "Batt %4d mV", ble_beacons[idx].adv_data.battery);
