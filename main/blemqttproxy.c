@@ -992,7 +992,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         break;
     }
     case ESP_GATTC_NOTIFY_EVT: {
-        // ESP_LOGD(TAG, "ESP_GATTC_NOTIFY_EVT, heap: %d", esp_get_free_heap_size());
+ //       ESP_LOGD(TAG, "ESP_GATTC_NOTIFY_EVT > heap: %d", esp_get_free_heap_size());
         print_heap();
 
         static int64_t time_measure = 0;
@@ -1034,6 +1034,8 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
             ble_beacons[idx].offline_buffer_status = OFFLINE_BUFFER_STATUS_DOWNLOAD_AVAILABLE;
             gattc_offline_buffer_downloading = false;
         }
+// ESP_LOGD(TAG, "ESP_GATTC_NOTIFY_EVT < heap: %d", esp_get_free_heap_size());
+        print_heap();
         break;
     }
     case ESP_GATTC_WRITE_DESCR_EVT:
@@ -1221,8 +1223,8 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         }
         break;
     case ESP_GAP_BLE_SCAN_RESULT_EVT: {
-        ESP_LOGD(TAG, "ESP_GAP_BLE_SCAN_RESULT_EVT");
-        print_heap();
+//        ESP_LOGD(TAG, "ESP_GAP_BLE_SCAN_RESULT_EVT");
+//        print_heap();
         esp_ble_gap_cb_param_t *scan_result = (esp_ble_gap_cb_param_t *)param;
 
         beacon_type_t beacon_type = UNKNOWN_BEACON;
@@ -1277,8 +1279,8 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     break;
                 }
 
-                ESP_LOGD(TAG, "(0x%04x%04x) rssi %3d, found, is_beacon_close %d, display_message_is_shown %d, idx %d",
-                    maj, min, scan_result->scan_rst.rssi, is_beacon_close, display_status.display_message_is_shown, idx);
+//                ESP_LOGD(TAG, "(0x%04x%04x) rssi %3d, found, is_beacon_close %d, display_message_is_shown %d, idx %d",
+//                    maj, min, scan_result->scan_rst.rssi, is_beacon_close, display_status.display_message_is_shown, idx);
 
                 if(is_beacon_close){
                     if(display_status.display_message_is_shown){
@@ -1560,6 +1562,7 @@ void adjust_log_level()
     esp_log_level_set("phy_init", ESP_LOG_WARN);
     esp_log_level_set("esp_image", ESP_LOG_WARN);
     esp_log_level_set("tcpip_adapter", ESP_LOG_WARN);
+    esp_log_level_set("esp_netif_lwip", ESP_LOG_WARN);
     esp_log_level_set("efuse", ESP_LOG_WARN);
     esp_log_level_set("nvs", ESP_LOG_WARN);
     esp_log_level_set("BTDM_INIT", ESP_LOG_INFO);
@@ -1594,7 +1597,7 @@ void initialize_ble()
     ESP_ERROR_CHECK(esp_ble_gap_register_callback(esp_gap_cb));
     ESP_ERROR_CHECK(esp_ble_gattc_register_callback(esp_gattc_cb));
     ESP_ERROR_CHECK(esp_ble_gattc_app_register(PROFILE_A_APP_ID));
-    ESP_ERROR_CHECK(esp_ble_gatt_set_local_mtu(500));
+    ESP_ERROR_CHECK(esp_ble_gatt_set_local_mtu(517));
 }
 
 void initialize_ble_security()

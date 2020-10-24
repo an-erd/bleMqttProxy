@@ -1,0 +1,1035 @@
+I (31) boot: compile time 17:33:03
+I (31) boot: chip revision: 1
+I (31) boot_comm: chip revision: 1, min. bootloader chip revision: 0
+I (37) boot.esp32: SPI Speed      : 40MHz
+I (41) boot.esp32: SPI Mode       : DIO
+I (44) boot.esp32: SPI Flash Size : 4MB
+I (48) boot: Enabling RNG early entropy source...
+I (52) boot: Partition Table:
+I (55) boot: ## Label            Usage          Type ST Offset   Length
+I (61) boot:  0 nvs              WiFi data        01 02 00009000 00004000
+I (68) boot:  1 otadata          OTA data         01 00 0000d000 00002000
+I (74) boot:  2 phy_init         RF data          01 01 0000f000 00001000
+I (81) boot:  3 ota_0            OTA app          00 10 00010000 001c2000
+I (87) boot:  4 ota_1            OTA app          00 11 001e0000 001c2000
+I (94) boot: End of partition table
+I (97) boot_comm: chip revision: 1, min. application chip revision: 0
+I (103) esp_image: segment 0: paddr=0x00010020 vaddr=0x3f400020 size=0x627b4 (403380) map
+I (265) esp_image: segment 1: paddr=0x000727dc vaddr=0x3ffbdb60 size=0x04588 ( 17800) load
+I (272) esp_image: segment 2: paddr=0x00076d6c vaddr=0x40080000 size=0x00404 (  1028) load
+0x40080000: _WindowOverflow4 at C:/Users/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:1778
+I (273) esp_image: segment 3: paddr=0x00077178 vaddr=0x40080404 size=0x08ea0 ( 36512) load
+I (294) esp_image: segment 4: paddr=0x00080020 vaddr=0x400d0020 size=0x11912c (1151276) map
+0x400d0020: _stext at ??:?
+I (732) esp_image: segment 5: paddr=0x00199154 vaddr=0x400892a4 size=0x160ac ( 90284) load
+0x400892a4: spi_flash_mmap_pages at C:/Users/AKAEM/esp/esp-idf/components/spi_flash/flash_mmap.c:172
+I (788) boot: Loaded app from partition at offset 0x10000
+I (788) boot: Disabling RNG early entropy source...
+I (789) cpu_start: Pro cpu up.
+I (789) cpu_start: Application information:
+I (793) cpu_start: Project name:     blemqttproxy
+I (798) cpu_start: App version:      0.41-4-g1dbe00a-dirty
+I (803) cpu_start: Compile time:     Oct 23 2020 15:24:04
+I (808) cpu_start: ELF file SHA256:  ffead2dbc987b4c1...
+I (813) cpu_start: ESP-IDF:          v4.1-dirty
+I (817) cpu_start: Starting app cpu, entry point is 0x400814d4
+0x400814d4: call_start_cpu1 at C:/Users/AKAEM/esp/esp-idf/components/esp32/cpu_start.c:271
+I (0) cpu_start: App cpu up.
+D (826) memory_layout: Checking 11 reserved memory ranges:
+D (831) memory_layout: Reserved memory range 0x3ffae000 - 0x3ffae6e0
+D (837) memory_layout: Reserved memory range 0x3ffae6e0 - 0x3ffaff10
+D (843) memory_layout: Reserved memory range 0x3ffb0000 - 0x3ffb6388
+D (849) memory_layout: Reserved memory range 0x3ffb8000 - 0x3ffb9a20
+D (855) memory_layout: Reserved memory range 0x3ffbdb28 - 0x3ffbdb5c
+D (861) memory_layout: Reserved memory range 0x3ffbdb60 - 0x3ffcf800
+D (867) memory_layout: Reserved memory range 0x3ffe0000 - 0x3ffe0440
+D (873) memory_layout: Reserved memory range 0x3ffe3f20 - 0x3ffe4350
+D (879) memory_layout: Reserved memory range 0x40070000 - 0x40078000
+D (885) memory_layout: Reserved memory range 0x40078000 - 0x40080000
+0x40080000: _WindowOverflow4 at C:/Users/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:1778
+D (891) memory_layout: Reserved memory range 0x40080000 - 0x4009f350
+0x40080000: _WindowOverflow4 at C:/Users/AKAEM/esp/esp-idf/components/freertos/xtensa_vectors.S:1778
+D (897) memory_layout: Building list of available memory regions:
+D (903) memory_layout: Available memory region 0x3ffaff10 - 0x3ffb0000
+D (910) memory_layout: Available memory region 0x3ffb6388 - 0x3ffb8000
+D (916) memory_layout: Available memory region 0x3ffb9a20 - 0x3ffbdb28
+D (922) memory_layout: Available memory region 0x3ffbdb5c - 0x3ffbdb60
+D (928) memory_layout: Available memory region 0x3ffcf800 - 0x3ffd0000
+D (935) memory_layout: Available memory region 0x3ffd0000 - 0x3ffd2000
+D (941) memory_layout: Available memory region 0x3ffd2000 - 0x3ffd4000
+D (947) memory_layout: Available memory region 0x3ffd4000 - 0x3ffd6000
+D (953) memory_layout: Available memory region 0x3ffd6000 - 0x3ffd8000
+D (960) memory_layout: Available memory region 0x3ffd8000 - 0x3ffda000
+D (966) memory_layout: Available memory region 0x3ffda000 - 0x3ffdc000
+D (972) memory_layout: Available memory region 0x3ffdc000 - 0x3ffde000
+D (978) memory_layout: Available memory region 0x3ffde000 - 0x3ffe0000
+D (985) memory_layout: Available memory region 0x3ffe0440 - 0x3ffe3f20
+D (991) memory_layout: Available memory region 0x3ffe4350 - 0x3ffe8000
+D (997) memory_layout: Available memory region 0x3ffe8000 - 0x3fff0000
+D (1003) memory_layout: Available memory region 0x3fff0000 - 0x3fff8000
+D (1010) memory_layout: Available memory region 0x3fff8000 - 0x3fffc000
+D (1016) memory_layout: Available memory region 0x3fffc000 - 0x40000000
+D (1022) memory_layout: Available memory region 0x4009f350 - 0x400a0000
+I (1029) heap_init: Initializing. RAM available for dynamic allocation:
+D (1035) heap_init: New heap initialised at 0x3ffaff10
+I (1040) heap_init: At 3FFAFF10 len 000000F0 (0 KiB): DRAM
+D (1045) heap_init: New heap initialised at 0x3ffb6388
+I (1050) heap_init: At 3FFB6388 len 00001C78 (7 KiB): DRAM
+D (1055) heap_init: New heap initialised at 0x3ffb9a20
+I (1060) heap_init: At 3FFB9A20 len 00004108 (16 KiB): DRAM
+I (1065) heap_init: At 3FFBDB5C len 00000004 (0 KiB): DRAM
+D (1070) heap_init: New heap initialised at 0x3ffcf800
+I (1075) heap_init: At 3FFCF800 len 00010800 (66 KiB): DRAM
+I (1081) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM
+I (1086) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM
+D (1092) heap_init: New heap initialised at 0x4009f350
+I (1097) heap_init: At 4009F350 len 00000CB0 (3 KiB): IRAM
+I (1102) cpu_start: Pro cpu start user code
+D (1113) clk: RTC_SLOW_CLK calibration value: 3052966
+D (1122) intr_alloc: Connected src 46 to int 2 (cpu 0)
+D (1123) intr_alloc: Connected src 57 to int 3 (cpu 0)
+D (1124) intr_alloc: Connected src 24 to int 9 (cpu 0)
+D (1127) FLASH_HAL: extra_dummy: 1
+D (1130) spi_flash: trying chip: issi
+D (1134) spi_flash: trying chip: gd
+I (1137) spi_flash: detected chip: gd
+I (1140) spi_flash: flash io: dio
+D (1143) chip_generic: set_io_mode: status before 0x0
+I (1148) cpu_start: Starting scheduler on PRO CPU.
+D (0) intr_alloc: Connected src 25 to int 2 (cpu 1)
+I (0) cpu_start: Starting scheduler on APP CPU.
+D (1161) heap_init: New heap initialised at 0x3ffe0440
+D (1171) heap_init: New heap initialised at 0x3ffe4350
+D (1171) intr_alloc: Connected src 16 to int 12 (cpu 0)
+D (1181) partition: Loading the partition table
+I (1221) BLEMQTTPROXY: read_blemqttproxy_param: read param ok, beacon mask 131
+I (1221) BLEMQTTPROXY: read_blemqttproxy_param: blemqttproxy_param.active_beacon_mask = 131
+D (1221) intr_alloc: Connected src 22 to int 13 (cpu 0)
+I (1231) gpio: GPIO[37]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:3 
+E (1241) gpio: gpio_install_isr_service(438): GPIO isr service already installed
+I (1241) gpio: GPIO[39]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:3 
+I (1251) BLEMQTTPROXY: app_main, start oneshot timer, 3500000
+I (1261) BTDM_INIT: BT controller compile version [219866f]
+D (1261) esp_netif_objects: esp_netif_add_to_list 0x3ffb62d4
+D (1271) esp_netif_objects: esp_netif_add_to_list netif added successfully (total netifs: 1)
+D (1281) esp_netif_objects: esp_netif_add_to_list 0x3ffd0970
+D (1281) esp_netif_objects: esp_netif_add_to_list netif added successfully (total netifs: 2)
+I (1261) lvgl_helpers: Display hor size: 160, ver size: 80
+I (1291) system_api: Base MAC address is not set, read default base MAC address from BLK0 of EFUSE
+D (1301) efuse: coding scheme 0
+D (1311) efuse: coding scheme 0
+D (1311) efuse: coding scheme 0
+D (1311) efuse: coding scheme 0
+D (1311) efuse: coding scheme 0
+D (1321) efuse: coding scheme 0
+D (1321) efuse: coding scheme 0
+I (1301) wifi:wifi driver task: 3ffd2d60, prio:23, stack:6656, core=0
+I (1331) system_api: Base MAC address is not set, read default base MAC address from BLK0 of EFUSE
+D (1341) efuse: coding scheme 0
+D (1341) efuse: coding scheme 0
+D (1341) efuse: coding scheme 0
+D (1351) efuse: coding scheme 0
+D (1351) efuse: coding scheme 0
+D (1351) efuse: coding scheme 0
+D (1361) efuse: coding scheme 0
+I (1291) lvglD (1361) efuse: coding scheme 0
+D (1361) efuse: coding scheme 0
+D (1371) efuse: coding scheme 0
+D (1371) efuse: coding scheme 0
+D (1371) efuse: coding scheme 0
+D (1371) efuse: coding scheme 0
+D (1381) efuse: coding scheme 0
+_helpers: Display buffer size: 6400
+I (1361) system_api: Base MAC address is not set, read default base MAC address from BLK0 of EFUSE
+D (1391) efuse: coding scheme 0
+D (1391) efuse: coding scheme 0
+D (1401) efuse: coding scheme 0
+D (1401) efuse: coding scheme 0
+D (1401) efuse: coding scheme 0
+D (1411) efuse: coding scheme 0
+D (1411) efuse: coding scheme 0
+I (1381) lvgl_helpers: Initializing SPI master for display
+I (1421) lvgl_helpers: Configuring SPI host HSPI_HOST (1)
+I (1421) lvgl_helpers: MISO pin: -1, MOSI pin: 15, SCLK pin: 13
+I (1431) lvgl_helpers: Max transfer size: 12800 (bytes)
+I (1431) lvgl_helpers: InitializiD (1441) efuse: coding scheme 0
+D (1441) efuse: coding scheme 0
+D (1441) efuse: coding scheme 0
+D (1441) efng SPI buse: coding scheme 0
+D (1451) efuse: coding scheme 0
+D (1451) efuse: coding scheme 0
+D (1451) efuse: coding scheme 0
+us...
+D (1461) spi: SPI2 use gpio matrix.
+D (1461) intr_alloc: Connected src 30 to int 3 (cpu 1)
+I (1461) disp_spi: Adding SPI device
+I (1471) disp_spi: Clock speed: 40000000Hz, mode: 0, CS pin: 5
+D (1471) spi_hal: eff: 40000, limit: 26666k(/2), 1 dummy, 1 delay
+D (1481) spi_master: SPI2: New device added to CS0, effective clock: 40000kHz
+D (1491) intr_alloc: Connected src 49 to int 4 (cpu 1)
+I (1491) ST7735S: AXP192 initialized, power enabled for LDO2 and LDO3
+I (1451) wifi:wifi firmware version: 3ea4c76
+I (1511) wifi:config NVS flash: enabled
+I (1511) wifi:config nano formating: disabled
+I (1511) wifi:Init dynamic tx buffer num: 32
+I (1511) wifi:Init data frame dynamic rx buffer num: 32
+I (1531) wifi:Init management frame dynamic rx buffer num: 32
+I (1531) wifi:Init management short buffer num: 32
+I (1531) wifi:Init static rx buffer size: 1600
+I (1531) wifi:Init static rx buffer num: 10
+I (1551) wifi:Init dynamic rx buffer num: 32
+D (1551) efuse: coding scheme 0
+D (1551) efuse: coding scheme 0
+D (1551) efuse: coding scheme 0
+D (1551) efuse: coding scheme 0
+D (1551) efuse: coding scheme 0
+D (1551) efuse: coding scheme 0
+D (1561) efuse: coding scheme 0
+I (1571) phy: phy_version: 4180, cb3948e, Sep 12 2019, 16:39:13, 0, 0
+I (1701) ST7735S: ST7735S initialization.
+D (1701) spi_master: SPI device changed from 3 to 0
+D (2101) ST7735S: Display orientation: LANDSCAPE
+D (2101) ST7735S: 0x36 command value: 0xA8
+I (2131) display: lv_init_screens done
+D (2131) BLEMQTTPROXY: gui_task, gui_prepare() done
+D (2581) esp_timer: timer queue overflow
+D (2581) esp_timer: timer queue overflow
+D (2581) esp_tIi m(2e5r81:)  BtLiEMmQeTTrP ROqueue overflow
+D (2581) esp_timer: timer queue overflow
+D (2591) esp_timer: timer queue overflow
+D (2591) esp_timer: timer queue overflow
+D (2591) esp_timer: timer queue overflow
+D (2601) esp_timer: timer queue overflow
+D (2601) esp_timer: timer queue overflow
+D (2601) esp_timer: timer queue overflow
+D (2611) esp_timer: timer queue overflow
+D (2611) esp_timer: timer queue overflow
+D (2611) esp_timer: timer queue overflow
+D (2621) esp_timer: timer queue overflow
+D (2621) esp_timer: timer queue overflow
+D (2631) esp_timer: timer queue overflow
+D (2631) esp_timer: timer queue overflow
+D (2631) esp_timer: timer queue overflow
+D (2641) esp_timer: timer queue overflow
+D (2641) esp_timer: timer queue overflow
+D (2641) esp_timer: timer queue overflow
+D (2651) esp_timer: timer queue overflow
+D (2651) esp_timer: timer queue overflow
+D (2651) esp_timer: timer queue overflow
+D (2661) esp_timer: timer queue overflow
+D (2661) esp_timer: timer queue overflow
+D (2671) esp_timer: timer queue overflow
+D (2671) esp_timer: timer queue overflow
+D (2671) esp_timer: timer queue overflow
+D (2681) esp_timer: timer queue overflow
+D (2681) esp_timer: timer queue overflow
+D (2681) esp_timer: timer queue overflow
+D (2691) esp_timer: timer queue overflow
+D (2691) esp_timer: timer queue overflow
+D (2691) esp_timer: timer queue overflow
+D (2701) esp_timer: timer queue overflow
+D (2701) esp_timer: timer queue overflow
+D (2711) esp_timer: timer queue overflow
+D (2711) esp_timer: timer queue overflow
+D (2711) esp_timer: timer queue overflow
+D (2721) esp_timer: timer queue overflow
+D (2721) esp_timer: timer queue overflow
+D (2721) esp_timer: timer queue overflow
+D (2731) esp_timer: timer queue overflow
+D (2731) esp_timer: timer queue overflow
+XY: start the WIFI SSID:[W12I]
+D (2741) btc_transfer_context: heap: 143816
+D (2741) efuse: coding scheme 0
+D (2741) efuse: coding scheme 0
+D (2751) efuse: coding scheme 0
+D (2751) efuse: coding scheme 0
+D (2751) efuse: coding scheme 0
+D (2761) efuse: coding scheme 0
+D (2761) efuse: coding scheme 0
+D (2771) efuse: coding scheme 0
+D (2771) efuse: coding scheme 0
+D (2771) efuse: coding scheme 0
+D (2771) efuse: coding scheme 0
+D (2771) efuse: coding scheme 0
+D (2781) efuse: coding scheme 0
+D (2781) efuse: coding scheme 0
+I (2791) wifi:mode : sta (d8:a0:1d:56:0c:f0) + softAP (d8:a0:1d:56:0c:f1)
+I (2791) wifi:Total power save buffer number: 16
+I (2791) wifi:Init max length of beacon: 752/752
+I (2801) wifi:Init max length of beacon: 752/752
+I (2801) BLEMQTTPROXY: Waiting for wifi
+D (2801) wifi_init_default: wifi_start esp-netif:0x3ffb62d4 event-id2
+D (2811) btc_transfer_context: heap: 92224
+I (2811) system_api: Base MAC address is not set, read default base MAC address from BLK0 of EFUSE
+D (2821) wifi_iD (28nit_default: WIFI mac address: d8 a0 1d 56 c f0
+D (2831) esp_netif_handlers: esp_netif action31) efuse: coding scheme 0
+ D (2841) efuse: coding scheme 0
+D (2841) efuse: coding scheme 0
+D (2841) efuse: coding scheme 0
+D (2841) efuse: coding scheme 0
+D (2851) efuse: coding scheme 0
+D (2851) efuse: coding scheme 0
+has started with netif0x3ffb62d4 from event_id=2
+D (2851) BLEMQTTPROXY: MQTT_EVENT_BEFORE_CONNECT
+I (2861) BLEMQTTPROXY: event_handler: WIFI_EVENT_STA_START
+D (2861) TRANS_TCP: [sock=54],connecting to server IP:192.168.2.137,Port:1883...
+E (2881) MQTT_CLIENT: Error transport connect
+D (2881) BLEMQTTPROXY: MQTT_EVENT_ERROR
+D (2881) BLEMQTTPROXY: MQTT_EVENT_DISCONNECTED
+D (2881) wifi_init_default: wifi_start esp-netif:0x3ffd0970 event-id12
+D (2891) wifi_init_default: WIFI mac address: d8 a0 1d 56 c f1
+D (2901) esp_netif_handlers: esp_netif action has started with netif0x3ffd0970 from event_id=12
+D (2991) btc_transfer_context: heap: 85280
+I (3001) wifi:new:<1,1>, old:<1,1>, ap:<1,1>, sta:<1,0>, prof:1
+I (3781) wifi:state: init -> auth (b0)
+D (3791) esp_timer: timer queue overflow
+D (3791) esp_timer: timer queue overflow
+D (3791) esp_timer: timer queue overflow
+D (3791) esp_timer: timer queue overflow
+I (3791) wifi:state: auth -> assoc (0)
+D (3801) esp_timer: timer queue overflow
+D (3801) esp_timer: timer queue overflow
+D (3801) esp_timer: timer queue overflow
+I (3811) wifi:state: assoc -> run (10)
+D (3811) esp_timer: timer queue overflow
+D (3811) esp_timer: timer queue overflow
+D (3821) esp_timer: timer queue overflow
+D (3821) esp_timer: timer queue overflow
+D (3821) esp_timer: timer queue overflow
+D (3831) esp_timer: timer queue overflow
+D (3831) esp_timer: timer queue overflow
+D (3831) esp_timer: timer queue overflow
+D (3841) esp_timer: timer queue overflow
+D (3851) esp_timer: timer queue overflow
+D (3851) esp_timer: timer queue overflow
+I (3851) wifi:connected with W12I, aid = 4, channel 1, BW20, bssid = 34:81:c4:13:dd:7c
+I (3861) wifi:security: WPA2-PSK, phy: bgn, rssi: -66
+I (3861) wifi:pm start, type: 1
+
+D (3871) esp_timer: timer queue overflow
+D (3871) esp_timer: timer queue overflow
+D (3871) esp_timer: timer queue overflow
+D (3881) esp_timer: timer queue overflow
+D (3881) esp_timer: timer queue overflow
+D (3881) esp_timer: timer queue overflow
+D (3891) esp_timer: timer queue overflow
+D (3891) esp_timer: timer queue overflow
+D (3891) esp_timer: timer queue overflow
+D (3901) esp_timer: timer queue overflow
+D (3901) esp_timer: timer queue overflow
+D (3901) esp_timer: timer queue overflow
+D (3911) esp_timer: timer queue overflow
+D (3911) esp_timer: timer queue overflow
+D (3921) esp_timer: timer queue overflow
+I (3921) wifi:AP's beacon interval = 102400 us, DTIM period = 1
+D (3931) esp_timer: timer queue overflow
+D (3931) esp_timer: timer queue overflow
+D (3931) esp_timer: timer queue overflow
+D (3941) esp_timer: timer queue overflow
+D (3941) esp_timer: timer queue overflow
+D (3941) esp_timer: timer queue overflow
+D (3951) esp_timer: timer queue overflow
+D (3951) esp_timer: timer queue overflow
+D (3951) esp_timer: timer queue overflow
+D (3961) esp_timer: timer queue overflow
+D (3961) esp_timer: timer queue overflow
+D (3971) esp_timer: timer queue overflow
+D (3971) esp_timer: timer queue overflow
+D (3971) esp_timer: timer queue overflow
+D (3981) esp_timer: timer queue overflow
+D (3981) esp_timer: timer queue overflow
+D (3981) esp_timer: timer queue overflow
+D (3991) esp_timer: timer queue overflow
+D (3991) esp_timer: timer queue overflow
+D (3991) esp_timer: timer queue overflow
+D (4001) esp_timer: timer queue overflow
+D (4001) esp_timer: timer queue overflow
+D (4011) esp_timer: timer queue overflow
+D (4011) esp_timer: timer queue overflow
+D (4011) esp_timer: timer queue overflow
+D (4021) esp_timer: timer queue overflow
+D (4021) esp_timer: timer queue overflow
+D (4021) esp_timer: timer queue overflow
+D (4031) esp_timer: timer queue overflow
+D (4031) esp_timer: timer queue overflow
+D (4031) esp_timer: timer queue overflow
+D (4041) esp_timer: timer queue overflow
+D (4041) esp_timer: timer queue overflow
+D (4051) esp_timer: timer queue overflow
+D (4051) esp_timer: timer queue overflow
+D (4051) esp_timer: timer queue overflow
+D (4061) esp_timer: timer queue overflow
+D (4061) esp_timer: timer queue overflow
+D (4061) esp_timer: timer queue overflow
+D (4071) esp_timer: timer queue overflow
+D (4071) esp_timer: timer queue overflow
+D (4071) esp_timer: timer queue overflow
+D (4081) esp_timer: timer queue overflow
+D (4081) esp_timer: timer queue overflow
+D (4091) esp_timer: timer queue overflow
+D (4091) esp_timer: timer queue overflow
+D (4091) esp_timer: timer queue overflow
+D (4101) esp_timer: timer queue overflow
+D (4101) esp_netif_handlers: esp_netif action connected with netif0x3ffb62d4 from event_id=4
+I (4111) BLEMQTTPROXY: event_handler: WIFI_EVENT_STA_CONNECTED
+D (4131) btc_transfer_context: heap: 84668
+D (4131) btc_transfer_context: heap: 84600
+D (4131) btc_transfer_context: heap: 84560
+D (4131) btc_transfer_context: heap: 84472
+D (4141) btc_transfer_context: heap: 84564
+D (4141) btc_transfer_context: heap: 84472
+D (4141) btc_transfer_context: heap: 84380
+D (4151) btc_transfer_context: heap: 84288
+I (4151) native_ota: SHA-256 for the partition table: : f56bbcacd1cd252473bc884e0f65fa36c6ef5a779cb86792717d9811a8b8fe41
+D (4151) btc_transfer_context: heap: 71412
+D (4171) BLEMQTTPROXY: esp_gattc_cb ESP_GATTC_REG_EVT
+D (4171) BLEMQTTPROXY: heap: 75804
+D (4171) BLEMQTTPROXY: ESP_GATTC_REG_EVT
+I (4181) native_ota: SHA-256 for bootloader: : 6ab1c5529624590c14133873ec1e870916ab505b17933235d33b77352563643c
+D (4181) BLEMQTTPROXY: heap: 75944
+D (4191) btc_transfer_context: heap: 75808
+D (4201) btc_transfer_context: heap: 76316
+D (4201) BLEMQTTPROXY: ESP_GAP_BLE_SET_LOCAL_PRIVACY_COMPLETE_EVT
+D (4201) btc_transfer_context: heap: 76220
+D (4211) btc_transfer_context: heap: 76248
+D (4211) BLEMQTTPROXY: ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT
+D (4221) btc_transfer_context: heap: 76216
+D (4221) btc_transfer_context: heap: 76244
+D (4231) BLEMQTTPROXY: ESP_GAP_BLE_SCAN_START_COMPLETE_EVT
+D (4231) BLEMQTTPROXY: heap: 76232
+D (4231) BLEMQTTPROXY: scan start success
+D (4491) btc_transfer_context: heap: 76320
+D (4761) wifi_init_default: Got IP wifi default handler entered
+D (4761) esp_netif_handlers: esp_netif action got_ip with netif0x3ffb62d4 from event_id=0
+I (4761) esp_netif_handlers: sta ip: 192.168.2.158, mask: 255.255.255.0, gw: 192.168.2.1
+I (4771) BLEMQTTPROXY: event_handler: IP_EVENT: 0
+I (4781) BLEMQTTPROXY: event_handler: IP_EVENT_STA_GOT_IP, IP: 192.168.2.158
+D (4781) boot: Calculated hash: be9384202a72c4c1ec4d01ba6cfb55810d0e31c818584c69e202240ba3611469
+I (4781) web_file_server: Starting server on port: '80'
+I (4791) native_ota: SHA-256 for current firmware: : be9384202a72c4c1ec4d01ba6cfb55810d0e31c818584c69e202240ba3611469
+I (4801) web_file_server: Registering URI handlers
+D (5591) btc_transfer_context: heap: 67060
+D (5681) btc_transfer_context: heap: 67036
+I (5681) BLEMQTTPROXY: (0x00070002) rssi -64 | temp  23.0 | hum  52.2 | x +15622 | y   -162 | z  +2350 | batt 3018 | mqtt send n
+D (5691) BLEMQTTPROXY: heap: 66748
+D (6151) btc_transfer_context: heap: 66836
+D (6691) btc_transfer_context: heap: 66812
+I (6691) BLEMQTTPROXY: (0x00070002) rssi -76 | temp  23.0 | hum  52.2 | x +15622 | y   -162 | z  +2350 | batt 3018 | mqtt send n
+D (6701) BLEMQTTPROXY: heap: 66744
+D (6991) btc_transfer_context: heap: 66832
+D (7541) btc_transfer_context: heap: 66836
+D (7691) btc_transfer_context: heap: 66816
+I (7701) BLEMQTTPROXY: (0x00070002) rssi -65 | temp  23.0 | hum  52.2 | x +15622 | y   -162 | z  +2350 | batt 3018 | mqtt send n
+D (7701) BLEMQTTPROXY: heap: 66748
+D (7881) btc_transfer_context: heap: 66816
+I (7881) BLEMQTTPROXY: (0x00070001) rssi -73 | temp  15.7 | hum  77.9 | x +16550 | y   -386 | z  +1974 | batt 2976 | mqtt send n
+D (7891) BLEMQTTPROXY: heap: 66748
+D (8091) btc_transfer_context: heap: 66624
+D (8641) btc_transfer_context: heap: 66624
+D (8701) btc_transfer_context: heap: 66596
+I (8701) BLEMQTTPROXY: (0x00070002) rssi -65 | temp  23.0 | hum  52.2 | x +15622 | y   -162 | z  +2350 | batt 3018 | mqtt send n
+D (8711) BLEMQTTPROXY: heap: 66528
+D (8881) btc_transfer_context: heap: 66596
+I (8881) BLEMQTTPROXY: (0x00070001) rssi -74 | temp  15.7 | hum  77.9 | x +16550 | y   -386 | z  +1974 | batt 2976 | mqtt send n
+D (8891) BLEMQTTPROXY: heap: 66528
+D (9191) btc_transfer_context: heap: 66624
+D (9711) btc_transfer_context: heap: 66488
+I (9711) BLEMQTTPROXY: (0x00070002) rssi -64 | temp  23.0 | hum  52.2 | x +15622 | y   -162 | z  +2350 | batt 3018 | mqtt send n
+D (9711) BLEMQTTPROXY: heap: 66536
+D (9741) btc_transfer_context: heap: 66624
+D (9881) web_file_server: csv_get_handler >
+D (9881) web_file_server:     URL query=cmd=list
+D (9881) web_file_server:     beac=not set
+D (9881) web_file_server:     num=not set
+D (9891) web_file_server:     cmd=list
+D (9891) web_file_server: csv_get_handler WEBFILESERVER_CMD_LIST
+W (10181) httpd_uri: httpd_uri: URI '/favicon.ico' not found
+W (10181) httpd_txrx: httpd_resp_send_err: 404 Not Found - This URI does not exist
+D (10561) btc_transfer_context: heap: 66068
+D (10841) btc_transfer_context: heap: 66176
+D (11111) btc_transfer_context: heap: 65788
+D (11661) btc_transfer_context: heap: 65684
+D (11931) btc_transfer_context: heap: 65788
+D (12501) btc_transfer_context: heap: 65788
+D (12891) BLEMQTTPROXY: MQTT_EVENT_BEFORE_CONNECT
+D (12891) TRANS_TCP: [sock=58],connecting to server IP:192.168.2.137,Port:1883...
+D (12911) btc_transfer_context: heap: 64804
+I (12911) BLEMQTTPROXY: (0x00070001) rssi -78 | temp  15.7 | hum  77.9 | x +16550 | y   -386 | z  +1974 | batt 2976 | mqtt send n
+D (12911) BLEMQTTPROXY: heap: 64896
+D (12961) BLEMQTTPROXY: MQTT_EVENT_CONNECTED
+D (13881) btc_transfer_context: heap: 65244
+D (14071) web_file_server: csv_get_handler >
+D (14071) web_file_server:     URL query=beac=Bx0702&cmd=req
+D (14071) web_file_server:     beac=Bx0702
+D (14071) web_file_server:     num=not set
+D (14071) web_file_server:     cmd=req
+D (14081) web_file_server: csv_get_handler WEBFILESERVER_CMD_REQ
+D (14081) web_file_server: Data requested for device Bx0702, idx 1
+D (14091) web_file_server: OFFLINE_BUFFER_STATUS_NONE, call alloc next
+D (14091) ble: alloc_offline_buffer > free heap() 64964, need 17500
+D (14101) ble: alloc_offline_buffer < free heap() 47460
+D (14101) ble: alloc_offline_buffer p_buffer_download 1 
+D (14151) BLEMQTTPROXY: MQTT /192.168.2.158/uptime -> uptime 13
+D (14161) BLEMQTTPROXY: MQTT /192.168.2.158/free_heap -> free_heap 42412
+D (14161) BLEMQTTPROXY: lv_mem_monitor: Memory 58 %, Total 12288 bytes, used 7096 bytes, free 5192 bytes, frag 2 %
+D (14171) BLEMQTTPROXY: MQTT /192.168.2.158/last_seen -> lowest_last_seen_sec 1
+D (14181) BLEMQTTPROXY: MQTT /192.168.2.158/last_send -> lowest_last_send_sec 13
+D (14181) BLEMQTTPROXY: check 1: lowest_last_seen_sec 1, lowest_last_send_sec 13, beacon_to_take_seen 0, beacon_to_take_send 0
+D (14281) web_file_server: csv_get_handler >
+D (14281) web_file_server:     URL query=cmd=list
+D (14281) web_file_server:     beac=not set
+D (14281) web_file_server:     num=not set
+D (14281) web_file_server:     cmd=list
+D (14291) web_file_server: csv_get_handler WEBFILESERVER_CMD_LIST
+D (14441) btc_transfer_context: heap: 43496
+D (14731) btc_transfer_context: heap: 47124
+I (14741) BLEMQTTPROXY: (0x00070002) rssi -64 | temp  23.0 | hum  52.2 | x +15720 | y   -216 | z  +2332 | batt 3018 | mqtt send y
+D (14751) BLEMQTTPROXY: heap: 43232
+D (14751) BLEMQTTPROXY: update_adv_data, update mqtt_last_send
+D (14751) BLEMQTTPROXY: connect to the remote device.
+D (14761) btc_transfer_context: heap: 43232
+D (14761) btc_transfer_context: heap: 43204
+D (14771) btc_transfer_context: heap: 43376
+D (14781) BLEMQTTPROXY: ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT
+D (14781) BLEMQTTPROXY: heap: 43760
+D (14781) BLEMQTTPROXY: Stop scan successfully
+D (18861) btc_transfer_context: heap: 45496
+D (18861) btc_transfer_context: heap: 45228
+D (18861) btc_transfer_context: heap: 44960
+D (18861) btc_transfer_context: heap: 43064
+D (18861) BLEMQTTPROXY: ESP_GATTC_CONNECT_EVT conn_id 0, if 1
+D (18871) BLEMQTTPROXY: heap: 43176
+D (18871) BLEMQTTPROXY: REMOTE BDA:
+D (18871) BLEMQTTPROXY: eb 30 72 ab 35 37 
+D (18881) btc_transfer_context: heap: 43176
+D (18881) BLEMQTTPROXY: ESP_GATTC_OPEN_EVT
+D (18881) BLEMQTTPROXY: heap: 43844
+D (18891) BLEMQTTPROXY: open success
+D (19601) web_file_server: csv_get_handler >
+D (19601) web_file_server:     URL query=cmd=list
+D (19601) web_file_server:     beac=not set
+D (19601) web_file_server:     num=not set
+D (19601) web_file_server:     cmd=list
+D (19611) web_file_server: csv_get_handler WEBFILESERVER_CMD_LIST
+D (20081) btc_transfer_context: heap: 42408
+D (20181) btc_transfer_context: heap: 42192
+D (20181) BLEMQTTPROXY: ESP_GATTC_CFG_MTU_EVT
+D (20181) BLEMQTTPROXY: heap: 42244
+D (20181) BLEMQTTPROXY: ESP_GATTC_CFG_MTU_EVT, Status 0, MTU 23, conn_id 0
+D (20181) BLEMQTTPROXY: wait now until ESP_GAP_BLE_AUTH_CMPL_EVT
+D (20971) btc_transfer_context: heap: 43520
+D (20971) BLEMQTTPROXY: ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT
+D (20971) BLEMQTTPROXY: heap: 43420
+I (20981) BLEMQTTPROXY: update connection params status = 0, min_int = 160, max_int = 160,conn_int = 160,latency = 0, timeout = 400
+D (24151) BLEMQTTPROXY: MQTT /192.168.2.158/uptime -> uptime 23
+D (24161) BLEMQTTPROXY: MQTT /192.168.2.158/free_heap -> free_heap 41228
+D (24161) BLEMQTTPROXY: lv_mem_monitor: Memory 58 %, Total 12288 bytes, used 7096 bytes, free 5192 bytes, frag 2 %
+D (24161) BLEMQTTPROXY: MQTT /192.168.2.158/last_seen -> lowest_last_seen_sec 9
+D (24171) BLEMQTTPROXY: MQTT /192.168.2.158/last_send -> lowest_last_send_sec 9
+D (24181) BLEMQTTPROXY: check 1: lowest_last_seen_sec 9, lowest_last_send_sec 9, beacon_to_take_seen 1, beacon_to_take_send 1
+D (24191) btc_transfer_context: heap: 39512
+D (24201) btc_transfer_context: heap: 39364
+D (24211) btc_transfer_context: heap: 40524
+D (24211) BLEMQTTPROXY: ESP_GAP_BLE_AUTH_CMPL_EVT
+I (24211) BLEMQTTPROXY: remote BD_ADDR: eb3072ab3537
+I (24211) BLEMQTTPROXY: address type = 1
+I (24211) BLEMQTTPROXY: pair status = success
+I (24221) BLEMQTTPROXY: auth mode = ESP_LE_AUTH_BOND
+D (24221) BLEMQTTPROXY: esp_ble_gattc_search_service
+D (24231) btc_transfer_context: heap: 43120
+D (24231) btc_transfer_context: heap: 43148
+D (24231) btc_transfer_context: heap: 42496
+D (24241) BLEMQTTPROXY: ESP_GATTC_SEARCH_RES_EVT
+D (24241) BLEMQTTPROXY: heap: 41948
+D (24251) BLEMQTTPROXY: SEARCH RES: conn_id = 0 is primary service 1
+D (24251) BLEMQTTPROXY: start handle 35 end handle 65535 current handle value 35
+D (24261) BLEMQTTPROXY: UUID128: 3c,b7,a2,4b,c,32,f2,9f,4f,4c,f5,37,0,14,2f,61
+D (24271) BLEMQTTPROXY: service found, start_handle 0x23 end_handle 0xFFFF
+D (24271) BLEMQTTPROXY: ESP_GATTC_SEARCH_CMPL_EVT
+D (24281) BLEMQTTPROXY: heap: 42600
+D (24281) BLEMQTTPROXY: Get service information from remote device
+D (24291) BLEMQTTPROXY: ESP_GATTC_SEARCH_CMPL_EVT
+D (24291) BLEMQTTPROXY: get_server 1
+D (24291) BLEMQTTPROXY: count 5
+D (24301) BLEMQTTPROXY: esp_ble_gattc_register_for_notify 0x25, found with notify
+D (24301) btc_transfer_context: heap: 42484
+D (24311) BLEMQTTPROXY: esp_ble_gattc_register_for_notify 0x2A, found with indicate
+D (24321) btc_transfer_context: heap: 42424
+D (24321) BLEMQTTPROXY: ESP_GATTC_REG_FOR_NOTIFY_EVT
+D (24321) BLEMQTTPROXY: heap: 43128
+D (24331) BLEMQTTPROXY: ESP_GATTC_REG_FOR_NOTIFY_EVT count = 1
+D (24331) BLEMQTTPROXY: esp_ble_gattc_write_char_descr (notify) 0x26
+D (24341) btc_transfer_context: heap: 43104
+D (24341) BLEMQTTPROXY: ESP_GATTC_REG_FOR_NOTIFY_EVT
+D (24351) BLEMQTTPROXY: heap: 43116
+D (24351) BLEMQTTPROXY: ESP_GATTC_REG_FOR_NOTIFY_EVT count = 1
+D (24361) BLEMQTTPROXY: esp_ble_gattc_write_char_descr (notify) 0x2B
+D (24361) btc_transfer_context: heap: 43092
+D (24781) btc_transfer_context: heap: 41992
+D (24781) BLEMQTTPROXY: ESP_GATTC_WRITE_DESCR_EVT
+D (24781) BLEMQTTPROXY: heap: 42048
+D (24781) BLEMQTTPROXY: write descr success handle 0x26
+D (25021) web_file_server: csv_get_handler >
+D (25021) web_file_server:     URL query=cmd=list
+D (25021) web_file_server:     beac=not set
+D (25021) web_file_server:     num=not set
+D (25031) web_file_server:     cmd=list
+D (25031) web_file_server: csv_get_handler WEBFILESERVER_CMD_LIST
+D (25181) btc_transfer_context: heap: 39412
+D (25181) BLEMQTTPROXY: ESP_GATTC_WRITE_DESCR_EVT
+D (25181) BLEMQTTPROXY: heap: 39404
+D (25181) BLEMQTTPROXY: write descr success handle 0x2B
+D (25181) BLEMQTTPROXY: esp_ble_gattc_write_char 0x2A
+D (25191) btc_transfer_context: heap: 39404
+D (25581) btc_transfer_context: heap: 42612
+D (25581) btc_transfer_context: heap: 42644
+D (25581) BLEMQTTPROXY: ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT
+D (25581) BLEMQTTPROXY: heap: 42640
+D (25701) btc_transfer_context: heap: 33492
+D (25701) btc_transfer_context: heap: 32804
+D (25701) btc_transfer_context: heap: 32108
+D (25721) btc_transfer_context: heap: 31704
+D (25721) btc_transfer_context: heap: 30960
+D (25721) btc_transfer_context: heap: 30272
+D (25721) btc_transfer_context: heap: 29580
+D (25731) btc_transfer_context: heap: 28884
+D (25731) btc_transfer_context: heap: 28188
+D (25731) btc_transfer_context: heap: 27492
+D (25731) btc_transfer_context: heap: 26796
+D (25741) btc_transfer_context: heap: 26100
+D (25741) btc_transfer_context: heap: 25404
+D (25751) btc_transfer_context: heap: 24708
+D (25751) btc_transfer_context: heap: 24012
+D (25751) btc_transfer_context: heap: 23316
+D (25761) btc_transfer_context: heap: 22620
+D (25761) btc_transfer_context: heap: 21924
+D (25771) btc_transfer_context: heap: 21228
+D (25771) btc_transfer_context: heap: 20532
+D (25771) btc_transfer_context: heap: 19836
+D (25781) btc_transfer_context: heap: 19140
+D (25781) btc_transfer_context: heap: 18444
+D (25801) btc_transfer_context: heap: 18116
+D (25801) btc_transfer_context: heap: 17268
+D (25801) btc_transfer_context: heap: 16592
+D (25811) btc_transfer_context: heap: 15908
+D (25811) btc_transfer_context: heap: 15216
+D (25811) btc_transfer_context: heap: 14520
+D (25821) btc_transfer_context: heap: 13840
+D (25821) btc_transfer_context: heap: 13144
+D (25821) btc_transfer_context: heap: 12448
+D (25831) btc_transfer_context: heap: 11756
+D (25831) btc_transfer_context: heap: 11060
+D (25831) btc_transfer_context: heap: 10364
+D (25841) btc_transfer_context: heap: 9676
+D (25841) btc_transfer_context: heap: 8980
+D (25851) btc_transfer_context: heap: 8284
+D (25851) btc_transfer_context: heap: 7592
+D (25851) btc_transfer_context: heap: 6904
+D (25861) btc_transfer_context: heap: 6208
+D (25861) btc_transfer_context: heap: 5512
+D (25871) btc_transfer_context: heap: 4820
+D (25891) btc_transfer_context: heap: 4624
+D (25891) btc_transfer_context: heap: 3964
+D (25891) btc_transfer_context: heap: 3296
+D (25891) btc_transfer_context: heap: 2628
+D (25891) btc_transfer_context: heap: 1940
+D (25891) btc_transfer_context: heap: 1256
+E (25901) BT_BTC: btc_gattc_cback transfer failed
+
+D (25901) btc_transfer_context: heap: 1220
+E (25911) BT_BTC: btc_gattc_cback transfer failed
+
+D (25911) btc_transfer_context: heap: 1184
+E (25911) BT_BTC: btc_gattc_cback transfer failed
+
+D (25921) btc_transfer_context: heap: 1148
+E (25921) BT_BTC: btc_gattc_cback transfer failed
+
+D (25931) btc_transfer_context: heap: 1120
+E (25931) BT_BTC: btc_gattc_cback transfer failed
+
+D (25941) btc_transfer_context: heap: 1080
+E (25941) BT_BTC: btc_gattc_cback transfer failed
+
+D (25951) btc_transfer_context: heap: 1044
+E (25951) BT_BTC: btc_gattc_cback transfer failed
+
+D (25951) btc_transfer_context: heap: 1008
+E (25961) BT_BTC: btc_gattc_cback transfer failed
+
+D (25961) btc_transfer_context: heap: 976
+E (25961) BT_BTC: btc_gattc_cback transfer failed
+
+D (25971) btc_transfer_context: heap: 936
+E (25971) BT_BTC: btc_gattc_cback transfer failed
+
+D (25981) btc_transfer_context: heap: 900
+E (25981) BT_BTC: btc_gattc_cback transfer failed
+
+D (25991) btc_transfer_context: heap: 860
+E (25991) BT_BTC: btc_gattc_cback transfer failed
+
+D (26001) btc_transfer_context: heap: 824
+E (26001) BT_BTC: btc_gattc_cback transfer failed
+
+D (26001) btc_transfer_context: heap: 784
+E (26011) BT_BTC: btc_gattc_cback transfer failed
+
+D (26011) btc_transfer_context: heap: 752
+E (26011) BT_BTC: btc_gattc_cback transfer failed
+
+D (26041) btc_transfer_context: heap: 1568
+E (26041) BT_BTC: btc_gattc_cback transfer failed
+
+D (26041) btc_transfer_context: heap: 1552
+E (26041) BT_BTC: btc_gattc_cback transfer failed
+
+D (26041) btc_transfer_context: heap: 1532
+E (26051) BT_BTC: btc_gattc_cback transfer failed
+
+D (26051) btc_transfer_context: heap: 1508
+E (26051) BT_BTC: btc_gattc_cback transfer failed
+
+D (26061) btc_transfer_context: heap: 1484
+E (26061) BT_BTC: btc_gattc_cback transfer failed
+
+D (26071) btc_transfer_context: heap: 1460
+E (26071) BT_BTC: btc_gattc_cback transfer failed
+
+D (26081) btc_transfer_context: heap: 1440
+E (26081) BT_BTC: btc_gattc_cback transfer failed
+
+D (26081) btc_transfer_context: heap: 1408
+E (26091) BT_BTC: btc_gattc_cback transfer failed
+
+D (26091) btc_transfer_context: heap: 1100
+E (26101) BT_BTC: btc_gattc_cback transfer failed
+
+D (26101) btc_transfer_context: heap: 1072
+E (26101) BT_BTC: btc_gattc_cback transfer failed
+
+D (26111) btc_transfer_context: heap: 1036
+E (26111) BT_BTC: btc_gattc_cback transfer failed
+
+D (26121) btc_transfer_context: heap: 1000
+E (26121) BT_BTC: btc_gattc_cback transfer failed
+
+D (26131) btc_transfer_context: heap: 964
+E (26131) BT_BTC: btc_gattc_cback transfer failed
+
+D (26141) btc_transfer_context: heap: 932
+E (26141) BT_BTC: btc_gattc_cback transfer failed
+
+D (26141) btc_transfer_context: heap: 892
+E (26151) BT_BTC: btc_gattc_cback transfer failed
+
+D (26151) btc_transfer_context: heap: 856
+E (26151) BT_BTC: btc_gattc_cback transfer failed
+
+D (26161) btc_transfer_context: heap: 824
+E (26161) BT_BTC: btc_gattc_cback transfer failed
+
+D (26171) btc_transfer_context: heap: 784
+E (26171) BT_BTC: btc_gattc_cback transfer failed
+
+D (26181) btc_transfer_context: heap: 748
+E (26181) BT_BTC: btc_gattc_cback transfer failed
+
+D (26191) btc_transfer_context: heap: 712
+E (26191) BT_BTC: btc_gattc_cback transfer failed
+
+D (26211) btc_transfer_context: heap: 1232
+E (26211) BT_BTC: btc_gattc_cback transfer failed
+
+D (26211) btc_transfer_context: heap: 1212
+E (26211) BT_BTC: btc_gattc_cback transfer failed
+
+D (26221) btc_transfer_context: heap: 1204
+E (26221) BT_BTC: btc_gattc_cback transfer failed
+
+D (26221) btc_transfer_context: heap: 1184
+E (26231) BT_BTC: btc_gattc_cback transfer failed
+
+D (26231) btc_transfer_context: heap: 1168
+E (26241) BT_BTC: btc_gattc_cback transfer failed
+
+D (26241) btc_transfer_context: heap: 1148
+E (26241) BT_BTC: btc_gattc_cback transfer failed
+
+D (26251) btc_transfer_context: heap: 1128
+E (26251) BT_BTC: btc_gattc_cback transfer failed
+
+D (26261) btc_transfer_context: heap: 1104
+E (26261) BT_BTC: btc_gattc_cback transfer failed
+
+D (26271) btc_transfer_context: heap: 1080
+E (26271) BT_BTC: btc_gattc_cback transfer failed
+
+D (26271) btc_transfer_context: heap: 1048
+E (26281) BT_BTC: btc_gattc_cback transfer failed
+
+D (26281) btc_transfer_context: heap: 1012
+E (26291) BT_BTC: btc_gattc_cback transfer failed
+
+D (26291) btc_transfer_context: heap: 984
+E (26291) BT_BTC: btc_gattc_cback transfer failed
+
+D (26301) btc_transfer_context: heap: 952
+E (26301) BT_BTC: btc_gattc_cback transfer failed
+
+D (26311) btc_transfer_context: heap: 928
+E (26311) BT_BTC: btc_gattc_cback transfer failed
+
+D (26321) btc_transfer_context: heap: 892
+E (26321) BT_BTC: btc_gattc_cback transfer failed
+
+D (26321) btc_transfer_context: heap: 856
+E (26331) BT_BTC: btc_gattc_cback transfer failed
+
+D (26331) btc_transfer_context: heap: 816
+E (26341) BT_BTC: btc_gattc_cback transfer failed
+
+D (26341) btc_transfer_context: heap: 780
+E (26341) BT_BTC: btc_gattc_cback transfer failed
+
+D (26351) btc_transfer_context: heap: 740
+E (26351) BT_BTC: btc_gattc_cback transfer failed
+
+D (26361) btc_transfer_context: heap: 708
+E (26361) BT_BTC: btc_gattc_cback transfer failed
+
+D (26381) btc_transfer_context: heap: 1756
+E (26381) BT_BTC: btc_gattc_cback transfer failed
+
+D (26381) btc_transfer_context: heap: 1732
+E (26381) BT_BTC: btc_gattc_cback transfer failed
+
+D (26391) btc_transfer_context: heap: 1712
+E (26391) BT_BTC: btc_gattc_cback transfer failed
+
+D (26401) btc_transfer_context: heap: 1392
+E (26401) BT_BTC: btc_gattc_cback transfer failed
+
+D (26401) btc_transfer_context: heap: 1160
+E (26411) BT_BTC: btc_gattc_cback transfer failed
+
+D (26411) btc_transfer_context: heap: 1136
+E (26411) BT_BTC: btc_gattc_cback transfer failed
+
+D (26421) btc_transfer_context: heap: 1112
+E (26421) BT_BTC: btc_gattc_cback transfer failed
+
+D (26431) btc_transfer_context: heap: 1092
+E (26431) BT_BTC: btc_gattc_cback transfer failed
+
+D (26441) btc_transfer_context: heap: 1060
+E (26441) BT_BTC: btc_gattc_cback transfer failed
+
+D (26441) btc_transfer_context: heap: 1024
+E (26451) BT_BTC: btc_gattc_cback transfer failed
+
+D (26451) btc_transfer_context: heap: 992
+E (26461) BT_BTC: btc_gattc_cback transfer failed
+
+D (26461) btc_transfer_context: heap: 960
+E (26461) BT_BTC: btc_gattc_cback transfer failed
+
+D (26471) btc_transfer_context: heap: 928
+E (26471) BT_BTC: btc_gattc_cback transfer failed
+
+D (26481) btc_transfer_context: heap: 892
+E (26481) BT_BTC: btc_gattc_cback transfer failed
+
+D (26491) btc_transfer_context: heap: 856
+E (26491) BT_BTC: btc_gattc_cback transfer failed
+
+D (26501) btc_transfer_context: heap: 820
+E (26501) BT_BTC: btc_gattc_cback transfer failed
+
+D (26501) btc_transfer_context: heap: 792
+E (26511) BT_BTC: btc_gattc_cback transfer failed
+
+D (26511) btc_transfer_context: heap: 756
+E (26511) BT_BTC: btc_gattc_cback transfer failed
+
+D (26521) btc_transfer_context: heap: 720
+E (26521) BT_BTC: btc_gattc_cback transfer failed
+
+D (26531) btc_transfer_context: heap: 680
+E (26531) BT_BTC: btc_gattc_cback transfer failed
+
+D (26551) btc_transfer_context: heap: 1436
+E (26551) BT_BTC: btc_gattc_cback transfer failed
+
+D (26551) btc_transfer_context: heap: 1420
+E (26551) BT_BTC: btc_gattc_cback transfer failed
+
+D (26561) btc_transfer_context: heap: 1400
+E (26561) BT_BTC: btc_gattc_cback transfer failed
+
+D (26571) btc_transfer_context: heap: 1376
+E (26571) BT_BTC: btc_gattc_cback transfer failed
+
+D (26581) btc_transfer_context: heap: 1360
+E (26581) BT_BTC: btc_gattc_cback transfer failed
+
+D (26581) btc_transfer_context: heap: 1336
+E (26591) BT_BTC: btc_gattc_cback transfer failed
+
+D (26591) btc_transfer_context: heap: 1324
+E (26601) BT_BTC: btc_gattc_cback transfer failed
+
+D (26601) btc_transfer_context: heap: 1132
+E (26601) BT_BTC: btc_gattc_cback transfer failed
+
+D (26611) btc_transfer_context: heap: 1064
+E (26611) BT_BTC: btc_gattc_cback transfer failed
+
+D (26621) btc_transfer_context: heap: 1036
+E (26621) BT_BTC: btc_gattc_cback transfer failed
+
+D (26631) btc_transfer_context: heap: 1004
+E (26631) BT_BTC: btc_gattc_cback transfer failed
+
+D (26631) btc_transfer_context: heap: 968
+E (26641) BT_BTC: btc_gattc_cback transfer failed
+
+D (26641) btc_transfer_context: heap: 936
+E (26651) BT_BTC: btc_gattc_cback transfer failed
+
+D (26651) btc_transfer_context: heap: 904
+E (26651) BT_BTC: btc_gattc_cback transfer failed
+
+D (26661) btc_transfer_context: heap: 876
+E (26661) BT_BTC: btc_gattc_cback transfer failed
+
+D (26671) btc_transfer_context: heap: 836
+E (26671) BT_BTC: btc_gattc_cback transfer failed
+
+D (26681) btc_transfer_context: heap: 800
+E (26681) BT_BTC: btc_gattc_cback transfer failed
+
+D (26681) btc_transfer_context: heap: 760
+E (26691) BT_BTC: btc_gattc_cback transfer failed
+
+D (26691) btc_transfer_context: heap: 720
+E (26701) BT_BTC: btc_gattc_cback transfer failed
+
+D (26701) btc_transfer_context: heap: 684
+E (26701) BT_BTC: btc_gattc_cback transfer failed
+
+D (26721) btc_transfer_context: heap: 1204
+E (26721) BT_BTC: btc_gattc_cback transfer failed
+
+D (26731) btc_transfer_context: heap: 1180
+E (26731) BT_BTC: btc_gattc_cback transfer failed
+
+D (26731) btc_transfer_context: heap: 1156
+E (26731) BT_BTC: btc_gattc_cback transfer failed
+
+D (26741) btc_transfer_context: heap: 1136
+E (26741) BT_BTC: btc_gattc_cback transfer failed
+
+D (26751) btc_transfer_context: heap: 1116
+E (26751) BT_BTC: btc_gattc_cback transfer failed
+
+D (26761) btc_transfer_context: heap: 1100
+E (26761) BT_BTC: btc_gattc_cback transfer failed
+
+D (26771) btc_transfer_context: heap: 1080
+E (26771) BT_BTC: btc_gattc_cback transfer failed
+
+D (26771) btc_transfer_context: heap: 1068
+E (26781) BT_BTC: btc_gattc_cback transfer failed
+
+D (26781) btc_transfer_context: heap: 1056
+E (26781) BT_BTC: btc_gattc_cback transfer failed
+
+D (26791) btc_transfer_context: heap: 1048
+E (26791) BT_BTC: btc_gattc_cback transfer failed
+
+D (26801) btc_transfer_context: heap: 1028
+E (26801) BT_BTC: btc_gattc_cback transfer failed
+
+D (26811) btc_transfer_context: heap: 1004
+E (26811) BT_BTC: btc_gattc_cback transfer failed
+
+D (26821) btc_transfer_context: heap: 972
+E (26821) BT_BTC: btc_gattc_cback transfer failed
+
+D (26821) btc_transfer_context: heap: 936
+E (26831) BT_BTC: btc_gattc_cback transfer failed
+
+D (26831) btc_transfer_context: heap: 900
+E (26831) BT_BTC: btc_gattc_cback transfer failed
+
+D (26841) btc_transfer_context: heap: 864
+E (26841) BT_BTC: btc_gattc_cback transfer failed
+
+D (26851) btc_transfer_context: heap: 828
+E (26851) BT_BTC: btc_gattc_cback transfer failed
+
+D (26861) btc_transfer_context: heap: 796
+E (26861) BT_BTC: btc_gattc_cback transfer failed
+
+D (26871) btc_transfer_context: heap: 768
+E (26871) BT_BTC: btc_gattc_cback transfer failed
+
+D (26871) btc_transfer_context: heap: 732
+E (26881) BT_BTC: btc_gattc_cback transfer failed
+
+D (26891) btc_transfer_context: heap: 1744
+E (26891) BT_BTC: btc_gattc_cback transfer failed
+
+D (26901) btc_transfer_context: heap: 1720
+E (26901) BT_BTC: btc_gattc_cback transfer failed
+
+D (26901) btc_transfer_context: heap: 1704
+E (26901) BT_BTC: btc_gattc_cback transfer failed
+
+D (26911) btc_transfer_context: heap: 1384
+E (26911) BT_BTC: btc_gattc_cback transfer failed
+
+D (26921) btc_transfer_context: heap: 1144
+E (26921) BT_BTC: btc_gattc_cback transfer failed
+
+D (26931) btc_transfer_context: heap: 1120
+E (26931) BT_BTC: btc_gattc_cback transfer failed
+
+D (26931) btc_transfer_context: heap: 1104
+E (26941) BT_BTC: btc_gattc_cback transfer failed
+
+D (26941) btc_transfer_context: heap: 1084
+E (26951) BT_BTC: btc_gattc_cback transfer failed
+
+D (26951) btc_transfer_context: heap: 1060
+E (26951) BT_BTC: btc_gattc_cback transfer failed
+
+D (26961) btc_transfer_context: heap: 1040
+E (26961) BT_BTC: btc_gattc_cback transfer failed
+
+D (26971) btc_transfer_context: heap: 1016
+E (26971) BT_BTC: btc_gattc_cback transfer failed
+
+D (26981) btc_transfer_context: heap: 988
+E (26981) BT_BTC: btc_gattc_cback transfer failed
+
+D (26981) btc_transfer_context: heap: 952
+E (26991) BT_BTC: btc_gattc_cback transfer failed
+
+D (26991) btc_transfer_context: heap: 912
+E (27001) BT_BTC: btc_gattc_cback transfer failed
+
+D (27001) btc_transfer_context: heap: 876
+E (27001) BT_BTC: btc_gattc_cback transfer failed
+
+D (27011) btc_transfer_context: heap: 840
+E (27011) BT_BTC: btc_gattc_cback transfer failed
+
+D (27021) btc_transfer_context: heap: 800
+E (27021) BT_BTC: btc_gattc_cback transfer failed
+
+D (27031) btc_transfer_context: heap: 764
+E (27031) BT_BTC: btc_gattc_cback transfer failed
+
+D (27041) btc_transfer_context: heap: 724

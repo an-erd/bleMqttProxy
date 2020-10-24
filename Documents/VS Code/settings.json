@@ -1,0 +1,37 @@
+{
+    "terminal.integrated.shell.windows": "C:\\WINDOWS\\System32\\cmd.exe",
+    "terminal.integrated.shellArgs.windows": [
+        "--login",
+    ],
+    "terminal.integrated.env.windows": {
+        "CHERE_INVOKING": "1",
+	},
+	"workbench.statusBar.feedback.visible": false,
+    "terminal.integrated.rendererType": "dom",
+    "window.zoomLevel": -1,
+    "workbench.startupEditor": "newUntitledFile",
+    "editor.renderWhitespace": "none",
+    "editor.renderControlCharacters": false,
+    "breadcrumbs.enabled": false,
+    "git.confirmSync": false,
+    "diffEditor.ignoreTrimWhitespace": false,
+    "git.autofetch": true,
+    "C_Cpp.updateChannel": "Insiders",
+    "extensions.ignoreRecommendations": true,
+    "task.slowProviderWarning": [
+        "typescript"
+    ],
+    "idf.pythonSystemBinPathWin": "C:\\Users\\AKAEM\\AppData\\Local\\Programs\\Python\\Python37\\python.exe",
+    "idf.espIdfPathWin": "C:\\Users\\AKAEM\\esp\\esp-idf",
+    "idf.toolsPathWin": "C:\\Users\\AKAEM\\.espressif",
+    "idf.customExtraPaths": "C:\\Users\\AKAEM\\.espressif\\python_env\\idf4.1_py3.7_env\\Scripts;C:\\Users\\AKAEM\\AppData\\Local\\Programs\\Python\\Python37;C:\\Users\\AKAEM\\.espressif\\tools\\xtensa-esp32-elf\\esp-2020r2-8.2.0\\xtensa-esp32-elf\\bin;C:\\Users\\AKAEM\\.espressif\\tools\\xtensa-esp32s2-elf\\esp-2020r2-8.2.0\\xtensa-esp32s2-elf\\bin;C:\\Users\\AKAEM\\.espressif\\tools\\esp32ulp-elf\\2.28.51-esp-20191205\\esp32ulp-elf-binutils\\bin;C:\\Users\\AKAEM\\.espressif\\tools\\esp32s2ulp-elf\\2.28.51-esp-20191205\\esp32s2ulp-elf-binutils\\bin;C:\\Users\\AKAEM\\.espressif\\tools\\cmake\\3.13.4\\bin;C:\\Users\\AKAEM\\.espressif\\tools\\openocd-esp32\\v0.10.0-esp32-20191114\\openocd-esp32\\bin;C:\\Users\\AKAEM\\.espressif\\tools\\ninja\\1.9.0;C:\\Users\\AKAEM\\.espressif\\tools\\idf-exe\\1.0.1;C:\\Users\\AKAEM\\.espressif\\tools\\ccache\\3.7",
+    "idf.customExtraVars": "{\"IDF_CCACHE_ENABLE\":\"1\",\"OPENOCD_SCRIPTS\":\"C:\\\\Users\\\\AKAEM\\\\.espressif\\\\tools\\\\openocd-esp32\\\\v0.10.0-esp32-20191114/openocd-esp32/share/openocd/scripts\"}",
+    "idf.pythonBinPathWin": "C:\\Users\\AKAEM\\.espressif\\python_env\\idf4.1_py3.7_env\\Scripts\\python.exe",
+    "idf.showOnboardingOnInit": false,
+    "idf.portWin": "COM5",
+    "idf.baudRate": "921600",
+    "trace.poll_period": "1",
+    "terminal.external.windowsExec": "C:\\WINDOWS\\system32\\cmd.exe /k \"\"C:\\Users\\AKAEM\\.espressif\\idf_cmd_init.bat\" \"C:\\Users\\AKAEM\\AppData\\Local\\Programs\\Python\\Python37\\\" \"C:\\Program Files\\Git\\cmd\\\"\"",
+    "explorer.confirmDragAndDrop": false,
+    "editor.detectIndentation": false,
+}
