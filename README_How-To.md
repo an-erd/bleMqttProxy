@@ -35,13 +35,13 @@ git push -f
 
 To remove a submodule you need to:
 
-Delete the relevant section from the .gitmodules file.
-Stage the .gitmodules changes git add .gitmodules
-Delete the relevant section from .git/config.
-Run git rm --cached path_to_submodule (no trailing slash).
-Run rm -rf .git/modules/path_to_submodule (no trailing slash).
-Commit git commit -m "Removed submodule "
-Delete the now untracked submodule files rm -rf path_to_submodule
+1. Delete the relevant section from the `.gitmodules`file.
+2. Stage the `.gitmodules` changes `git add .gitmodules`.
+3. Delete the relevant section from `.git/config`.
+4. Run `git rm --cached path_to_submodule` (no trailing slash).
+5. Run `rm -rf .git/modules/path_to_submodule` (no trailing slash).
+6. Commit `git commit -m "Removed submodule"`.
+7. Delete the now untracked submodule files `rm -rf path_to_submodule`.
 
 
 
@@ -122,3 +122,27 @@ $ SHOW MEASUREMENTS
 $ select * from "/beac/0x0007/x0006/reboot"
 ```
 
+
+
+## Raspberry Pi https Server for OTA update process
+
+On the Raspberry Pi you can use `openssl s_server` to provide OTA images to the devices. This can be achieved by starting the server in the background and ignoring the `HUP` signal, which is send e.g. if you log off, with the following command.
+
+```
+nohup openssl s_server -WWW -key ca_key.pem -cert ca_cert.pem -port 8070 > s_server.log 2> s_server.err &
+```
+
+The directory under which the server is started is `/`, thus for the sdkconfig entries
+
+```
+#
+# OTA
+#
+CONFIG_OTA_FIRMWARE_UPG_URL="https://192.168.2.137:8070/blemqttproxy.bin"
+CONFIG_OTA_SKIP_COMMON_NAME_CHECK=y
+CONFIG_OTA_SKIP_VERSION_CHECK=y
+CONFIG_OTA_RECV_TIMEOUT=5000
+# end of OTA
+```
+
+you have to put the file `blemqttproxy.bin` in this directory. Please ensure that the `ca_key.pem` and `ca_cert.pem` correspond to the files used for compilation, and that the port (here `8070`)  match.

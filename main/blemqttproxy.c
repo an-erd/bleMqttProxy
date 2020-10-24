@@ -1479,8 +1479,6 @@ static void wdt_task(void* pvParameters)
     char buffer[32], buffer_topic[32], buffer_payload[32];
     uint32_t uptime_sec;
     int msg_id = 0; UNUSED(msg_id);
-    tcpip_adapter_ip_info_t ipinfo;
-
     periodic_wdt_timer_start();
 
     while (1) {
@@ -1489,8 +1487,6 @@ static void wdt_task(void* pvParameters)
         if(uxBits & UPDATE_ESP_MQTT_RESTART){
             ESP_LOGI(TAG, "wdt_task: reboot send mqtt flag is set -> send MQTT message");
             uptime_sec = esp_timer_get_time()/1000000;
-
-            tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ipinfo);
             sprintf(buffer, IPSTR_UL, IP2STR(&ipinfo.ip));
             snprintf_nowarn(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "reboot");
             snprintf_nowarn(buffer_payload, 128, "%d", uptime_sec);
