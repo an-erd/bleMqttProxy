@@ -108,9 +108,11 @@ EventGroupHandle_t wifi_evg;
 #define  WIFI_CONNECTED_BIT         (BIT0)
 uint16_t wifi_connections_count_connect = 0;
 uint16_t wifi_connections_count_disconnect = 0;
+tcpip_adapter_ip_info_t ipinfo;
 
 // WiFi AP
 uint16_t wifi_ap_connections = 0;
+
 
 // Watchdog timer / WDT
 static esp_timer_handle_t periodic_wdt_timer;
@@ -318,7 +320,6 @@ static __attribute__((unused)) void send_mqtt_uptime_heap_last_seen(uint8_t num_
     char buffer[32], buffer_topic[32], buffer_payload[32];
     bool wifi_connected, mqtt_connected;
     uint32_t uptime_sec;
-    tcpip_adapter_ip_info_t ipinfo;
     lv_mem_monitor_t mem_mon;
 
     // send uptime and free heap to MQTT
@@ -329,7 +330,6 @@ static __attribute__((unused)) void send_mqtt_uptime_heap_last_seen(uint8_t num_
     mqtt_connected = uxReturn & MQTT_CONNECTED_BIT;
 
     if(wifi_connected && mqtt_connected){
-        tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ipinfo);
         sprintf(buffer, IPSTR_UL, IP2STR(&ipinfo.ip));
         snprintf_nowarn(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "uptime");
         uptime_sec = esp_timer_get_time()/1000000;
@@ -451,6 +451,7 @@ static void event_handler(void* ctx, esp_event_base_t event_base,  int32_t event
             case WIFI_EVENT_STA_DISCONNECTED:
                 ESP_LOGI(TAG, "event_handler: WIFI_EVENT_STA_DISCONNECTED");
                 wifi_connections_count_disconnect++;
+                ipinfo.ip.addr = ((u32_t)0x00000000UL); // set ip addr to 0.0.0.0
                 esp_wifi_connect();
                 xEventGroupClearBits(wifi_evg, WIFI_CONNECTED_BIT);
                 break;
@@ -474,8 +475,8 @@ static void event_handler(void* ctx, esp_event_base_t event_base,  int32_t event
 
         switch(event_id){
             case IP_EVENT_STA_GOT_IP: {
-                ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
-                ESP_LOGI(TAG, "event_handler: IP_EVENT_STA_GOT_IP, IP: " IPSTR, IP2STR(&event->ip_info.ip));
+                tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ipinfo);
+                ESP_LOGI(TAG, "event_handler: IP_EVENT_STA_GOT_IP, IP: " IPSTR, IP2STR(&ipinfo.ip));
                 wifi_connections_count_connect++;
                 xEventGroupSetBits(wifi_evg, WIFI_CONNECTED_BIT);
                 }
