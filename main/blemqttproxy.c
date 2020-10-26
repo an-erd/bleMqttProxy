@@ -223,32 +223,32 @@ void handle_set_next_display_show()
 
 void handle_m5stack_button(uint8_t btn, bool long_press)
 {
-    // if((btn == 3) && !long_press){   // right button to switch to next screen
-    //     set_next_display_show();
-    //     return;
-    // }
+    if((btn == 2) && !long_press){   // right button to switch to next screen
+        set_next_display_show();
+        return;
+    }
 
-    // switch(display_status.current_screen){
-    //     case BEACON_SCREEN:
-    //         if(btn==1){
-    //             toggle_beacon_idx_active(display_status.beac_to_show);
-    //         } else if(btn==2){
-    //             clear_beacon_idx_values(display_status.beac_to_show);
-    //         }
-    //         break;
-    //     case LASTSEEN_SCREEN:
-    //         break;
-    //     case APPVERSION_SCREEN:
-    //         break;
-    //     case STATS_SCREEN:
-    //         if(btn==2){
-    //             clear_stats_values();
-    //         }
-    //         break;
-    //     default:
-    //         ESP_LOGE(TAG, "handle_long_button_push: unhandled switch-case");
-    //         break;
-    // }
+    switch(display_status.current_screen){
+        case BEACON_SCREEN:
+            if(btn==0){
+                toggle_beacon_idx_active(display_status.beac_to_show);
+            } else if(btn==1){
+                clear_beacon_idx_values(display_status.beac_to_show);
+            }
+            break;
+        case LASTSEEN_SCREEN:
+            break;
+        case APPVERSION_SCREEN:
+            break;
+        case STATS_SCREEN:
+            if(btn==1){
+                clear_stats_values();
+            }
+            break;
+        default:
+            ESP_LOGE(TAG, "handle_long_button_push: unhandled switch-case");
+            break;
+    }
 }
 
 void button_release_cb(void* arg)
@@ -256,13 +256,15 @@ void button_release_cb(void* arg)
     uint8_t btn = *((uint8_t*) arg);
     bool is_long_press;
 
+    ESP_LOGD(TAG, "Button pressed: %d", btn);
+
     if(!display_status.button_enabled){
-        ESP_LOGD(TAG, "button_release_cb: button not enabled");
+        ESP_LOGI(TAG, "button_release_cb: button not enabled");
         return;
     }
 
     if(!display_status.display_on){
-        ESP_LOGD(TAG, "button_release_cb: turn display on again");
+        ESP_LOGI(TAG, "button_release_cb: turn display on again");
         turn_display_on();
         return;
     }
@@ -302,8 +304,7 @@ void button_release_cb(void* arg)
     }
     handle_set_next_display_show();
 #elif defined CONFIG_DEVICE_M5STACK
-    // handle_m5stack_button(btn, is_long_press);
-    handle_set_next_display_show();
+    handle_m5stack_button(btn, is_long_press);
 #endif
 
     ESP_LOGD(TAG, "button_release_cb: display_status.current_screen %d screen_to_show %d <",
@@ -1610,12 +1611,6 @@ void initialize_lv()
 #endif
     static lv_disp_buf_t disp_buf;
 
-#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306
-    disp_drv.set_px_cb = ssd1306_set_px_cb;
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
-    disp_drv.set_px_cb = sh1107_set_px_cb;
-#endif
-
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_disp_buf_init(&disp_buf, buf1, buf2, DISP_BUF_SIZE);
 #else
@@ -1626,6 +1621,7 @@ void initialize_lv()
     lv_disp_drv_init(&disp_drv);
     disp_drv.flush_cb = disp_driver_flush;
     disp_drv.rounder_cb = disp_driver_rounder;
+
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306
     disp_drv.set_px_cb = ssd1306_set_px_cb;
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
@@ -1633,11 +1629,6 @@ void initialize_lv()
 #endif
     disp_drv.buffer = &disp_buf;
     lv_disp_drv_register(&disp_drv);
-
-#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
-    lv_theme_mono_init(0, NULL);
-    lv_theme_set_current(lv_theme_get_mono());
-#endif
 }
 
 static void gui_prepare()

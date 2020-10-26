@@ -163,6 +163,5 @@
 	"C_Cpp.intelliSenseEngine": "Default",
     "C_Cpp.errorSquiggles": "Disabled",
     "C_Cpp.dimInactiveRegions": false,
-    "idf.portWin": "COM4",
-    "idf.baudRate": "115200"
+    "idf.portWin": "COM8"
 }
