@@ -163,5 +163,5 @@
 	"C_Cpp.intelliSenseEngine": "Default",
     "C_Cpp.errorSquiggles": "Disabled",
     "C_Cpp.dimInactiveRegions": false,
-    "idf.portWin": "COM8"
+    "idf.portWin": "COM6"
 }
