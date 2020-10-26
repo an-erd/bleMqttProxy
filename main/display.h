@@ -5,6 +5,8 @@
 #include "freertos/event_groups.h"
 #include "lvgl/lvgl.h"
 
+#define LV_TICK_PERIOD_MS 1
+
 extern  esp_timer_handle_t display_message_timer;
 void oneshot_display_message_timer_callback(void* arg);
 void oneshot_display_message_timer_start();

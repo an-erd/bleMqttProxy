@@ -109,6 +109,7 @@ EventGroupHandle_t wifi_evg;
 uint16_t wifi_connections_count_connect = 0;
 uint16_t wifi_connections_count_disconnect = 0;
 tcpip_adapter_ip_info_t ipinfo;
+uint8_t mac[6];
 
 // WiFi AP
 uint16_t wifi_ap_connections = 0;
@@ -1685,7 +1686,7 @@ void app_main()
     // NVS initialization and beacon mask retrieval
     initialize_nvs();
     ESP_ERROR_CHECK(read_blemqttproxy_param());
-
+    ESP_ERROR_CHECK(esp_efuse_mac_get_default(mac));
     ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
     wifi_evg = xEventGroupCreate();
     mqtt_evg = xEventGroupCreate();

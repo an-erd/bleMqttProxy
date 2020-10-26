@@ -20,6 +20,7 @@ extern uint16_t wifi_connections_count_connect;
 extern uint16_t wifi_connections_count_disconnect;
 extern uint16_t wifi_ap_connections;
 extern tcpip_adapter_ip_info_t ipinfo;
+extern uint8_t mac[6];
 #define WIFI_CONNECTED_BIT          (BIT0)
 
 esp_timer_handle_t oneshot_display_message_timer;
@@ -500,8 +501,6 @@ esp_err_t lv_show_app_version_screen()
     char buffer[32], buffer2[32];
     int line = 1, col = 1;
     const esp_app_desc_t *app_desc = esp_ota_get_app_description();
-    uint8_t mac[6];
-    ESP_ERROR_CHECK(esp_efuse_mac_get_default(mac));
     lv_obj_t * table = lv_screens.app_version.table;
 
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
