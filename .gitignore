@@ -50,3 +50,4 @@ server_certs/ca_key.pem
 server_certs/blemqttproxy.bin
 .vscode/BROWSE*
 log.blemqttproxy.*.txt
+debudg_device_log.txt

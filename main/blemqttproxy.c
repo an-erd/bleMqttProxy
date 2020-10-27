@@ -1553,7 +1553,7 @@ void adjust_log_level()
     esp_log_level_set("event", ESP_LOG_INFO);
     esp_log_level_set("ble_mqtt", ESP_LOG_INFO);
     esp_log_level_set("web_file_server", ESP_LOG_INFO);
-    esp_log_level_set("BLEMQTTPROXY", ESP_LOG_INFO);
+    esp_log_level_set("BLEMQTTPROXY", ESP_LOG_DEBUG);
 }
 
 void initialize_ble()
