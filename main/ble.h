@@ -11,16 +11,29 @@
 #include "offlinebuffer.h"
 
 // BLE
+#define INVALID_HANDLE   0
+#define PROFILE_NUM      1
+
+// GATTC
+#define PROFILE_A_APP_ID                0
 extern const uint8_t REMOTE_SERVICE_UUID[];
 #define REMOTE_NOTIFY_CHAR_UUID         0x1401
 #define REMOTE_INDICATION_CHAR_UUID     0x2A52
 #define REMOTE_NOTIFY_HANDLE            0x26
 #define REMOTE_INDICATE_HANDLE          0x2B
 
-#define PROFILE_NUM      2
-#define PROFILE_A_APP_ID 0
-#define PROFILE_B_APP_ID 1
-#define INVALID_HANDLE   0
+// GATTS
+#define PROFILE_A_APP_S_ID              0
+#define TEST_DEVICE_NAME            "ESP_GATTS_DEMO"
+#define TEST_MANUFACTURER_DATA_LEN  17
+
+#define BLE_SVC_CTS_UUID16
+
+
+#define GATTS_SERVICE_UUID_CTS          0x1805
+#define GATTS_CHAR_UUID_CTS             0x2A2B      //BLE_SVC_CTS_CHR_UUID16_LOCAL_TIME_INFORMATION
+#define GATTS_DESCR_UUID_CTS            0x2222
+#define GATTS_NUM_HANDLE_CTS            4
 
 extern bool gattc_connect;
 extern bool gattc_is_connected;
