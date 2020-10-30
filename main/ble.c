@@ -41,6 +41,16 @@ esp_bt_uuid_t indication_descr_uuid = {
     .uuid = {.uuid16 = ESP_GATT_UUID_CHAR_CLIENT_CONFIG,},
 };
 
+static uint8_t char1_str[10] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, };
+
+esp_attr_value_t gatts_cts_char1_val =
+{
+    .attr_max_len = GATTS_CTS_CHAR_VAL_LEN_MAX,
+    .attr_len     = sizeof(char1_str),
+    .attr_value   = char1_str,
+};
+
+
 void alloc_offline_buffer(uint8_t idx, offline_buffer_status_t status)
 {
     ESP_LOGD(TAG, "alloc_offline_buffer free heap() %d, needed %d", esp_get_free_heap_size(), sizeof(ble_os_meas_t) * CONFIG_OFFLINE_BUFFER_SIZE);

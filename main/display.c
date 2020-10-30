@@ -20,6 +20,7 @@ extern uint16_t wifi_connections_count_connect;
 extern uint16_t wifi_connections_count_disconnect;
 extern uint16_t wifi_ap_connections;
 extern tcpip_adapter_ip_info_t ipinfo;
+extern uint8_t mac[6];
 #define WIFI_CONNECTED_BIT          (BIT0)
 
 esp_timer_handle_t oneshot_display_message_timer;
@@ -86,7 +87,7 @@ static lv_style_t modal_style_title;
 static lv_style_t modal_style_text;
 
 // Fonts
-// LV_FONT_DECLARE(oled_9_font_symbol);
+LV_FONT_DECLARE(oled_9_font_symbol);
 LV_FONT_DECLARE(lv_font_montserrat_9);
 LV_FONT_DECLARE(lv_font_montserrat_10);
 // LV_FONT_DECLARE(oled_12_font_symbol);
@@ -94,7 +95,9 @@ LV_FONT_DECLARE(lv_font_montserrat_10);
 // LV_FONT_DECLARE(m5stack_16_font_symbol);
 // LV_FONT_DECLARE(m5stack_22_font_symbol);
 // LV_FONT_DECLARE(m5stack_36_font_symbol);
-// LV_FONT_DECLARE(m5stack_48_font_symbol);
+#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
+LV_FONT_DECLARE(m5stack_48_font_symbol);
+#endif
 
 #if CONFIG_DEVICE_M5STACK==1
 #define X_BUTTON_A	    65          // display button x position (for center of button)
@@ -498,8 +501,6 @@ esp_err_t lv_show_app_version_screen()
     char buffer[32], buffer2[32];
     int line = 1, col = 1;
     const esp_app_desc_t *app_desc = esp_ota_get_app_description();
-    uint8_t mac[6];
-    ESP_ERROR_CHECK(esp_efuse_mac_get_default(mac));
     lv_obj_t * table = lv_screens.app_version.table;
 
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
@@ -642,10 +643,19 @@ esp_err_t lv_show_stats_screen()
 void lv_init_styles()
 {
     lv_style_init(&style_screen);
+
+
+#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_style_set_bg_color(&style_screen, LV_STATE_DEFAULT, LV_COLOR_WHITE);
     lv_style_set_bg_grad_color(&style_screen, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+#else
+    lv_style_set_bg_color(&style_screen, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+    lv_style_set_bg_grad_color(&style_screen, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+#endif
+
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
-    lv_style_set_text_color(&style_screen, LV_STATE_DEFAULT, LV_COLOR_GRAY); // LV_COLOR_BLACK;
+    lv_style_set_text_color(&style_screen, LV_STATE_DEFAULT, LV_COLOR_GRAY);
+    // lv_style_set_text_color(&style_screen, LV_STATE_DEFAULT, LV_COLOR_SILVER);
 #endif
 
     lv_style_copy(&style_title,             &style_screen);
@@ -656,8 +666,8 @@ void lv_init_styles()
     lv_style_copy(&style_pagenum,           &style_screen);
 
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
-    lv_style_set_text_font(&style_title,            LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_SUBTITLE);
-    lv_style_set_text_font(&style_bigvalues,        LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_TITLE);
+    lv_style_set_text_font(&style_title,            LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_TITLE);
+    lv_style_set_text_font(&style_bigvalues,        LV_STATE_DEFAULT, &m5stack_48_font_symbol);
     lv_style_set_text_font(&style_text,             LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_NORMAL);
     lv_style_set_text_font(&style_symbols_top,      LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_SMALL);
     lv_style_set_text_font(&style_symbols_bottom,   LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_SMALL);
@@ -669,32 +679,40 @@ void lv_init_styles()
     lv_style_set_text_font(&style_symbols_top,      LV_STATE_DEFAULT, &lv_font_montserrat_10);
     lv_style_set_text_font(&style_symbols_bottom,   LV_STATE_DEFAULT, &lv_font_montserrat_10);
     lv_style_set_text_font(&style_pagenum,          LV_STATE_DEFAULT, &lv_font_montserrat_10);
-#else
-    lv_style_set_text_font(&style_title,            LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_SUBTITLE);
-    lv_style_set_text_font(&style_bigvalues,        LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_TITLE);
-    lv_style_set_text_font(&style_text,             LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_NORMAL);
-    lv_style_set_text_font(&style_symbols_top,      LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_SMALL);
-    lv_style_set_text_font(&style_symbols_bottom,   LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_SMALL);
-    lv_style_set_text_font(&style_pagenum,          LV_STATE_DEFAULT, LV_THEME_DEFAULT_FONT_SMALL);
+#else   // small mono display
+    lv_style_set_text_font(&style_title,            LV_STATE_DEFAULT, &lv_font_montserrat_10);
+    lv_style_set_text_font(&style_bigvalues,        LV_STATE_DEFAULT, &lv_font_montserrat_12);
+    lv_style_set_text_font(&style_text,             LV_STATE_DEFAULT, &lv_font_montserrat_10);
+    lv_style_set_text_font(&style_symbols_top,      LV_STATE_DEFAULT, &oled_9_font_symbol);
+    lv_style_set_text_font(&style_symbols_bottom,   LV_STATE_DEFAULT, &oled_9_font_symbol);
+    lv_style_set_text_font(&style_pagenum,          LV_STATE_DEFAULT, &oled_9_font_symbol);
 #endif
 
-    lv_style_set_text_color(&style_title,       LV_STATE_DEFAULT, LV_COLOR_BLUE);
+#if !defined CONFIG_LVGL_TFT_DISPLAY_MONOCHROME
+    lv_style_set_text_color(&style_title,           LV_STATE_DEFAULT, LV_COLOR_BLUE);
+#endif
 
     lv_style_init(&style_cell_bg);
     lv_style_init(&style_cell1);
     lv_style_init(&style_cell2);
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
-    lv_style_set_border_width(&style_cell1, LV_STATE_DEFAULT, 1);
-    lv_style_set_border_color(&style_cell1, LV_STATE_DEFAULT, LV_COLOR_GRAY);
+    lv_style_set_text_color(&style_cell_bg, LV_STATE_DEFAULT, LV_COLOR_GRAY);
+    lv_style_set_text_color(&style_cell1, LV_STATE_DEFAULT, LV_COLOR_GRAY);
+    lv_style_set_text_color(&style_cell2, LV_STATE_DEFAULT, LV_COLOR_GRAY);
+    lv_style_set_border_width(&style_cell_bg, LV_STATE_DEFAULT, 0);
+    lv_style_set_bg_color(&style_cell_bg, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+    lv_style_set_bg_grad_color(&style_cell_bg, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+
+
+    lv_style_set_border_width(&style_cell1, LV_STATE_DEFAULT, 0);
     lv_style_set_pad_top(&style_cell1, LV_STATE_DEFAULT, 2);
     lv_style_set_pad_bottom(&style_cell1, LV_STATE_DEFAULT, 2);
 
     lv_style_set_border_width(&style_cell2, LV_STATE_DEFAULT, 1);
-    lv_style_set_border_color(&style_cell2, LV_STATE_DEFAULT, LV_COLOR_BLACK);
-    lv_style_set_bg_color(&style_cell2, LV_STATE_DEFAULT, LV_COLOR_SILVER);
-    lv_style_set_bg_grad_color(&style_cell2, LV_STATE_DEFAULT, LV_COLOR_SILVER);
+    lv_style_set_border_color(&style_cell2, LV_STATE_DEFAULT, LV_COLOR_GRAY);
     lv_style_set_pad_top(&style_cell2, LV_STATE_DEFAULT, 2);
     lv_style_set_pad_bottom(&style_cell2, LV_STATE_DEFAULT, 2);
+    // lv_table_set_cell_align(table, row, col, LV_LABEL_ALIGN_LEFT/CENTER/RIGHT);
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     lv_style_set_border_width(&style_cell_bg, LV_STATE_DEFAULT, 0);
     lv_style_set_pad_top(&style_cell_bg, LV_STATE_DEFAULT, 0);
@@ -716,9 +734,14 @@ void lv_init_styles()
     lv_style_set_pad_left(&style_cell2, LV_STATE_DEFAULT, 0);
     lv_style_set_pad_right(&style_cell2, LV_STATE_DEFAULT, 0);
     lv_style_set_pad_inner(&style_cell2, LV_STATE_DEFAULT, 0);
+#endif
 
+#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     lv_style_set_text_font(&style_cell1, LV_STATE_DEFAULT, &lv_font_montserrat_10);
     lv_style_set_text_font(&style_cell2, LV_STATE_DEFAULT, &lv_font_montserrat_10);
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+    lv_style_set_text_font(&style_cell1, LV_STATE_DEFAULT, &oled_9_font_symbol);
+    lv_style_set_text_font(&style_cell2, LV_STATE_DEFAULT, &oled_9_font_symbol);
 #endif
 
     // modal message box
@@ -733,6 +756,7 @@ void lv_init_styles()
     lv_style_set_bg_grad_color(&modal_style, LV_STATE_DEFAULT, LV_COLOR_BLACK);
     lv_style_set_text_color(&modal_style_title, LV_STATE_DEFAULT, LV_COLOR_WHITE);
     lv_style_set_text_color(&modal_style_text, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+    lv_style_set_text_font(&modal_style_text, LV_STATE_DEFAULT, &lv_font_montserrat_9);
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
     lv_style_set_bg_color(&modal_style, LV_STATE_DEFAULT, LV_COLOR_LIME);
     lv_style_set_bg_grad_color(&modal_style, LV_STATE_DEFAULT, LV_COLOR_LIME);
@@ -766,14 +790,14 @@ void lv_init_styles()
 #  define PAGENUM_ALINGN                    LV_ALIGN_IN_TOP_RIGHT
 #  define LAST_SEEN_TABLE_ROWS              6
 #  define LAST_SEEN_TABLE_GAP_Y             15
-#  define LAST_SEEN_TABLE_WIDTH_0           50
-#  define LAST_SEEN_TABLE_WIDTH_1           50
-#  define LAST_SEEN_TABLE_WIDTH_2           50
+#  define LAST_SEEN_TABLE_WIDTH_0           100
+#  define LAST_SEEN_TABLE_WIDTH_1           100
+#  define LAST_SEEN_TABLE_WIDTH_2           100
 #  define APP_VERSION_TABLE_COLS            2
 #  define APP_VERSION_TABLE_ROWS            7
 #  define APP_VERSION_TABLE_GAP_Y           15
-#  define APP_VERSION_TABLE_WIDTH_0         100
-// #  define APP_VERSION_TABLE_WIDTH_1         200
+#  define APP_VERSION_TABLE_WIDTH_0         140
+#  define APP_VERSION_TABLE_WIDTH_1         160
 #  define STATS_TABLE_COLS                  2
 #  define STATS_TABLE_ROWS                  7
 #  define STATS_TABLE_GAP_Y                 15
@@ -808,11 +832,11 @@ void lv_init_styles()
 #  define APP_VERSION_TABLE_COLS            1
 #  define APP_VERSION_TABLE_ROWS            5
 #  define APP_VERSION_TABLE_GAP_Y           0
-#  define APP_VERSION_TABLE_WIDTH_0         150
+#  define APP_VERSION_TABLE_WIDTH_0         128
 #  define STATS_TABLE_COLS                  1
 #  define STATS_TABLE_ROWS                  5
 #  define STATS_TABLE_GAP_Y                 0
-#  define STATS_TABLE_WIDTH_0               150
+#  define STATS_TABLE_WIDTH_0               128
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
 #  define TITLE_GAP_Y                       0
 #  define BIGVALUE_GAP_Y                    0

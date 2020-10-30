@@ -37,8 +37,9 @@
 build/
 .vscode/ipch
 Arbeitsordner/
-sdkconfig.old
 sdkconfig
+sdkconfig.old
+sdkconfig.used
 Box/blemqttproxy_3d.skb
 make.exe.stackdump
 ~*.xlsx
@@ -47,6 +48,6 @@ anyfile
 server_certs/ca_cert.pem
 server_certs/ca_key.pem
 server_certs/blemqttproxy.bin
-sdkconfig_current_test_version_M5Stack
 .vscode/BROWSE*
 log.blemqttproxy.*.txt
+debudg_device_log.txt

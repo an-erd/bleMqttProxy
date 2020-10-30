@@ -19,6 +19,7 @@
 #include "esp_bt.h"
 #include "esp_gap_ble_api.h"
 #include "esp_gattc_api.h"
+#include "esp_gatts_api.h"
 #include "esp_gatt_defs.h"
 #include "esp_bt_main.h"
 #include "esp_bt_defs.h"
@@ -55,6 +56,7 @@
 #include "ota.h"
 
 static const char* TAG = "BLEMQTTPROXY";
+static const char* GATTS_TAG = "GATTS";
 
 // IOT param
 #define PARAM_NAMESPACE "blemqttproxy"
@@ -72,6 +74,7 @@ esp_err_t save_blemqttproxy_param();
 static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
 static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param);
 static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param);
+static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param);
 static void show_bonded_devices(void);
 
 static esp_ble_scan_params_t ble_scan_params = {
@@ -95,11 +98,34 @@ struct gattc_profile_inst {
     esp_bd_addr_t remote_bda;
 };
 
+struct gatts_profile_inst {
+    esp_gatts_cb_t gatts_cb;
+    uint16_t gatts_if;
+    uint16_t app_id;
+    uint16_t conn_id;
+    uint16_t service_handle;
+    esp_gatt_srvc_id_t service_id;
+    uint16_t char_handle;
+    esp_bt_uuid_t char_uuid;
+    esp_gatt_perm_t perm;
+    esp_gatt_char_prop_t property;
+    uint16_t descr_handle;
+    esp_bt_uuid_t descr_uuid;
+};
+
 /* One gatt-based profile one app_id and one gattc_if, this array will store the gattc_if returned by ESP_GATTS_REG_EVT */
 static struct gattc_profile_inst gl_profile_tab[PROFILE_NUM] = {
     [PROFILE_A_APP_ID] = {
         .gattc_cb = gattc_profile_event_handler,
         .gattc_if = ESP_GATT_IF_NONE,       /* Not get the gatt_if, so initial is ESP_GATT_IF_NONE */
+    },
+};
+
+/* One gatt-based profile one app_id and one gatts_if, this array will store the gatts_if returned by ESP_GATTS_REG_EVT */
+static struct gatts_profile_inst gl_profile_s_tab[PROFILE_NUM] = {
+    [PROFILE_A_APP_S_ID] = {
+        .gatts_cb = gatts_profile_event_handler,
+        .gatts_if = ESP_GATT_IF_NONE,
     },
 };
 
@@ -109,6 +135,7 @@ EventGroupHandle_t wifi_evg;
 uint16_t wifi_connections_count_connect = 0;
 uint16_t wifi_connections_count_disconnect = 0;
 tcpip_adapter_ip_info_t ipinfo;
+uint8_t mac[6];
 
 // WiFi AP
 uint16_t wifi_ap_connections = 0;
@@ -223,32 +250,32 @@ void handle_set_next_display_show()
 
 void handle_m5stack_button(uint8_t btn, bool long_press)
 {
-    // if((btn == 3) && !long_press){   // right button to switch to next screen
-    //     set_next_display_show();
-    //     return;
-    // }
+    if((btn == 2) && !long_press){   // right button to switch to next screen
+        set_next_display_show();
+        return;
+    }
 
-    // switch(display_status.current_screen){
-    //     case BEACON_SCREEN:
-    //         if(btn==1){
-    //             toggle_beacon_idx_active(display_status.beac_to_show);
-    //         } else if(btn==2){
-    //             clear_beacon_idx_values(display_status.beac_to_show);
-    //         }
-    //         break;
-    //     case LASTSEEN_SCREEN:
-    //         break;
-    //     case APPVERSION_SCREEN:
-    //         break;
-    //     case STATS_SCREEN:
-    //         if(btn==2){
-    //             clear_stats_values();
-    //         }
-    //         break;
-    //     default:
-    //         ESP_LOGE(TAG, "handle_long_button_push: unhandled switch-case");
-    //         break;
-    // }
+    switch(display_status.current_screen){
+        case BEACON_SCREEN:
+            if(btn==0){
+                toggle_beacon_idx_active(display_status.beac_to_show);
+            } else if(btn==1){
+                clear_beacon_idx_values(display_status.beac_to_show);
+            }
+            break;
+        case LASTSEEN_SCREEN:
+            break;
+        case APPVERSION_SCREEN:
+            break;
+        case STATS_SCREEN:
+            if(btn==1){
+                clear_stats_values();
+            }
+            break;
+        default:
+            ESP_LOGE(TAG, "handle_long_button_push: unhandled switch-case");
+            break;
+    }
 }
 
 void button_release_cb(void* arg)
@@ -256,13 +283,15 @@ void button_release_cb(void* arg)
     uint8_t btn = *((uint8_t*) arg);
     bool is_long_press;
 
+    ESP_LOGD(TAG, "Button pressed: %d", btn);
+
     if(!display_status.button_enabled){
-        ESP_LOGD(TAG, "button_release_cb: button not enabled");
+        ESP_LOGI(TAG, "button_release_cb: button not enabled");
         return;
     }
 
     if(!display_status.display_on){
-        ESP_LOGD(TAG, "button_release_cb: turn display on again");
+        ESP_LOGI(TAG, "button_release_cb: turn display on again");
         turn_display_on();
         return;
     }
@@ -302,8 +331,7 @@ void button_release_cb(void* arg)
     }
     handle_set_next_display_show();
 #elif defined CONFIG_DEVICE_M5STACK
-    // handle_m5stack_button(btn, is_long_press);
-    handle_set_next_display_show();
+    handle_m5stack_button(btn, is_long_press);
 #endif
 
     ESP_LOGD(TAG, "button_release_cb: display_status.current_screen %d screen_to_show %d <",
@@ -1102,6 +1130,155 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
     }
 }
 
+static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param) {
+    switch (event) {
+    case ESP_GATTS_REG_EVT:
+        ESP_LOGI(GATTS_TAG, "REGISTER_APP_EVT, status %d, app_id %d\n", param->reg.status, param->reg.app_id);
+        gl_profile_s_tab[PROFILE_A_APP_S_ID].service_id.is_primary = true;
+        gl_profile_s_tab[PROFILE_A_APP_S_ID].service_id.id.inst_id = 0x00;
+        gl_profile_s_tab[PROFILE_A_APP_S_ID].service_id.id.uuid.len = ESP_UUID_LEN_16;
+        gl_profile_s_tab[PROFILE_A_APP_S_ID].service_id.id.uuid.uuid.uuid16 = GATTS_SERVICE_UUID_CTS;
+        esp_ble_gatts_create_service(gatts_if, &gl_profile_s_tab[PROFILE_A_APP_ID].service_id, GATTS_NUM_HANDLE_CTS);
+        break;
+    case ESP_GATTS_READ_EVT: {
+        ESP_LOGI(GATTS_TAG, "GATT_READ_EVT, conn_id %d, trans_id %d, handle %d\n", param->read.conn_id, param->read.trans_id, param->read.handle);
+        esp_gatt_rsp_t rsp;
+        memset(&rsp, 0, sizeof(esp_gatt_rsp_t));
+        rsp.attr_value.handle = param->read.handle;
+        rsp.attr_value.len = 10;
+
+        /**< |     Year        |Month   |Day     |Hours   |Minutes |Seconds |Weekday |Fraction|Reason  |
+             |     2 bytes     |1 byte  |1 byte  |1 byte  |1 byte  |1 byte  |1 byte  |1 byte  |1 byte  | = 10 bytes.
+
+          Example: C2 07 0B 0F 0D 25 2A 06 FE 08
+                0x07C2  1986
+                0x0B    11
+                0x0F    15
+                0x0D    13
+                0x25    37
+                0x2A    42
+                0x06    Saturday
+                0xFE    254/256
+                0x08    Daylight savings 1, Time zone 0, External update 0, Manual update 0
+        **/
+
+        rsp.attr_value.value[0] = 0xC2;
+        rsp.attr_value.value[1] = 0x07;
+        rsp.attr_value.value[2] = 0x0B;
+        rsp.attr_value.value[3] = 0x0F;
+        rsp.attr_value.value[4] = 0x0D;
+        rsp.attr_value.value[5] = 0x25;
+        rsp.attr_value.value[6] = 0x2A;
+        rsp.attr_value.value[7] = 0x06;
+        rsp.attr_value.value[8] = 0xFE;
+        rsp.attr_value.value[9] = 0x08;
+        esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id,
+                                    ESP_GATT_OK, &rsp);
+        break;
+    }
+    case ESP_GATTS_WRITE_EVT: {
+        ESP_LOGI(GATTS_TAG, "GATT_WRITE_EVT, conn_id %d, trans_id %d, handle %d", param->write.conn_id, param->write.trans_id, param->write.handle);
+        break;
+    }
+    case ESP_GATTS_EXEC_WRITE_EVT:
+        ESP_LOGI(GATTS_TAG,"ESP_GATTS_EXEC_WRITE_EVT");
+        break;
+    case ESP_GATTS_MTU_EVT:
+        ESP_LOGI(GATTS_TAG, "ESP_GATTS_MTU_EVT, MTU %d", param->mtu.mtu);
+        break;
+    case ESP_GATTS_UNREG_EVT:
+        break;
+    case ESP_GATTS_CREATE_EVT:
+        ESP_LOGI(GATTS_TAG, "CREATE_SERVICE_EVT, status %d,  service_handle %d\n", param->create.status, param->create.service_handle);
+        gl_profile_s_tab[PROFILE_A_APP_S_ID].service_handle = param->create.service_handle;
+        gl_profile_s_tab[PROFILE_A_APP_S_ID].char_uuid.len = ESP_UUID_LEN_16;
+        gl_profile_s_tab[PROFILE_A_APP_S_ID].char_uuid.uuid.uuid16 = GATTS_CHAR_UUID_CTS;
+
+        esp_ble_gatts_start_service(gl_profile_s_tab[PROFILE_A_APP_S_ID].service_handle);
+        esp_err_t add_char_ret = esp_ble_gatts_add_char(gl_profile_s_tab[PROFILE_A_APP_S_ID].service_handle, &gl_profile_s_tab[PROFILE_A_APP_S_ID].char_uuid,
+                                                        ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
+                                                        ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_WRITE | ESP_GATT_CHAR_PROP_BIT_NOTIFY,
+                                                        &gatts_cts_char1_val, NULL);
+        if (add_char_ret){
+            ESP_LOGE(GATTS_TAG, "add char failed, error code =%x",add_char_ret);
+        }
+        break;
+    case ESP_GATTS_ADD_INCL_SRVC_EVT:
+        break;
+    case ESP_GATTS_ADD_CHAR_EVT: {
+        uint16_t length = 0;
+        const uint8_t *prf_char;
+
+        ESP_LOGI(GATTS_TAG, "ADD_CHAR_EVT, status %d,  attr_handle %d, service_handle %d\n",
+                param->add_char.status, param->add_char.attr_handle, param->add_char.service_handle);
+        gl_profile_s_tab[PROFILE_A_APP_S_ID].char_handle = param->add_char.attr_handle;
+        gl_profile_s_tab[PROFILE_A_APP_S_ID].descr_uuid.len = ESP_UUID_LEN_16;
+        gl_profile_s_tab[PROFILE_A_APP_S_ID].descr_uuid.uuid.uuid16 = ESP_GATT_UUID_CHAR_CLIENT_CONFIG;
+        esp_err_t get_attr_ret = esp_ble_gatts_get_attr_value(param->add_char.attr_handle,  &length, &prf_char);
+        if (get_attr_ret == ESP_FAIL){
+            ESP_LOGE(GATTS_TAG, "ILLEGAL HANDLE");
+        }
+
+        ESP_LOGI(GATTS_TAG, "the gatts demo char length = %x\n", length);
+        for(int i = 0; i < length; i++){
+            ESP_LOGI(GATTS_TAG, "prf_char[%x] =%x\n",i,prf_char[i]);
+        }
+        esp_err_t add_descr_ret = esp_ble_gatts_add_char_descr(gl_profile_s_tab[PROFILE_A_APP_ID].service_handle, &gl_profile_s_tab[PROFILE_A_APP_ID].descr_uuid,
+                                                                ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE, NULL, NULL);
+        if (add_descr_ret){
+            ESP_LOGE(GATTS_TAG, "add char descr failed, error code =%x", add_descr_ret);
+        }
+        break;
+    }
+    case ESP_GATTS_ADD_CHAR_DESCR_EVT:
+        gl_profile_s_tab[PROFILE_A_APP_ID].descr_handle = param->add_char_descr.attr_handle;
+        ESP_LOGI(GATTS_TAG, "ADD_DESCR_EVT, status %d, attr_handle %d, service_handle %d\n",
+                 param->add_char_descr.status, param->add_char_descr.attr_handle, param->add_char_descr.service_handle);
+        break;
+    case ESP_GATTS_DELETE_EVT:
+        break;
+    case ESP_GATTS_START_EVT:
+        ESP_LOGI(GATTS_TAG, "SERVICE_START_EVT, status %d, service_handle %d\n",
+                 param->start.status, param->start.service_handle);
+        break;
+    case ESP_GATTS_STOP_EVT:
+        break;
+    case ESP_GATTS_CONNECT_EVT: {
+        esp_ble_conn_update_params_t conn_params = {0};
+        memcpy(conn_params.bda, param->connect.remote_bda, sizeof(esp_bd_addr_t));
+        /* For the IOS system, please reference the apple official documents about the ble connection parameters restrictions. */
+        conn_params.latency = 0;
+        conn_params.max_int = 0x20;    // max_int = 0x20*1.25ms = 40ms
+        conn_params.min_int = 0x10;    // min_int = 0x10*1.25ms = 20ms
+        conn_params.timeout = 400;    // timeout = 400*10ms = 4000ms
+        ESP_LOGI(GATTS_TAG, "ESP_GATTS_CONNECT_EVT, conn_id %d, remote %02x:%02x:%02x:%02x:%02x:%02x:",
+                 param->connect.conn_id,
+                 param->connect.remote_bda[0], param->connect.remote_bda[1], param->connect.remote_bda[2],
+                 param->connect.remote_bda[3], param->connect.remote_bda[4], param->connect.remote_bda[5]);
+        gl_profile_s_tab[PROFILE_A_APP_S_ID].conn_id = param->connect.conn_id;
+        //start sent the update connection parameters to the peer device.
+        esp_ble_gap_update_conn_params(&conn_params);
+        break;
+    }
+    case ESP_GATTS_DISCONNECT_EVT:
+        ESP_LOGI(GATTS_TAG, "ESP_GATTS_DISCONNECT_EVT, disconnect reason 0x%x", param->disconnect.reason);
+        break;
+    case ESP_GATTS_CONF_EVT:
+        ESP_LOGI(GATTS_TAG, "ESP_GATTS_CONF_EVT, status %d attr_handle %d", param->conf.status, param->conf.handle);
+        if (param->conf.status != ESP_GATT_OK){
+            esp_log_buffer_hex(GATTS_TAG, param->conf.value, param->conf.len);
+        }
+        break;
+    case ESP_GATTS_OPEN_EVT:
+    case ESP_GATTS_CANCEL_OPEN_EVT:
+    case ESP_GATTS_CLOSE_EVT:
+    case ESP_GATTS_LISTEN_EVT:
+    case ESP_GATTS_CONGEST_EVT:
+    default:
+        break;
+    }
+}
+
 static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
 {
     esp_err_t err;
@@ -1193,7 +1370,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         }
 
         ESP_LOGD(TAG, "esp_ble_gattc_search_service");
-        esp_ble_gattc_search_service(gl_profile_tab[PROFILE_A_APP_ID].gattc_if, gl_profile_tab[PROFILE_A_APP_ID].conn_id, &remote_filter_service_uuid);
+        // esp_ble_gattc_search_service(gl_profile_tab[PROFILE_A_APP_ID].gattc_if, gl_profile_tab[PROFILE_A_APP_ID].conn_id, &remote_filter_service_uuid);
 
         break;
     }
@@ -1317,7 +1494,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
             ESP_LOGD(TAG, "ESP_GAP_SEARCH_INQ_CMPL_EVT");
             break;
         default:
-            ESP_LOGE(TAG, "ESP_GAP_BLE_SCAN_RESULT_EVT - default");
+            ESP_LOGE(TAG, "ESP_GAP_BLE_SCAN_RESULT_EVT - default, evt %d", event);
             break;
         }
         break;
@@ -1388,6 +1565,35 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp
     } while (0);
 }
 
+static void esp_gatts_cb(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param)
+{
+    /* If event is register event, store the gatts_if for each profile */
+    if (event == ESP_GATTS_REG_EVT) {
+        if (param->reg.status == ESP_GATT_OK) {
+            gl_profile_s_tab[param->reg.app_id].gatts_if = gatts_if;
+        } else {
+            ESP_LOGI(GATTS_TAG, "Reg app failed, app_id %04x, status %d\n",
+                    param->reg.app_id,
+                    param->reg.status);
+            return;
+        }
+    }
+
+    ESP_LOGI(TAG, "esp_gatts_cb: evt %d", event);
+
+    /* If the gatts_if equal to profile A, call profile A cb handler,
+     * so here call each profile's callback */
+    do {
+        int idx;
+        for (idx = 0; idx < PROFILE_NUM; idx++) {
+            if (gatts_if == ESP_GATT_IF_NONE||gatts_if == gl_profile_s_tab[idx].gatts_if) 			{
+                if (gl_profile_s_tab[idx].gatts_cb) {
+                    gl_profile_s_tab[idx].gatts_cb(event, gatts_if, param);
+                }
+            }
+        }
+    } while (0);
+}
 
 void create_timer()
 {
@@ -1551,7 +1757,7 @@ void adjust_log_level()
     esp_log_level_set("event", ESP_LOG_INFO);
     esp_log_level_set("ble_mqtt", ESP_LOG_INFO);
     esp_log_level_set("web_file_server", ESP_LOG_INFO);
-    esp_log_level_set("BLEMQTTPROXY", ESP_LOG_INFO);
+    esp_log_level_set("BLEMQTTPROXY", ESP_LOG_DEBUG);
 }
 
 void initialize_ble()
@@ -1564,9 +1770,11 @@ void initialize_ble()
     ESP_ERROR_CHECK(esp_bt_controller_enable(ESP_BT_MODE_BLE));
     ESP_ERROR_CHECK(esp_bluedroid_init());
     ESP_ERROR_CHECK(esp_bluedroid_enable());
+    ESP_ERROR_CHECK(esp_ble_gatts_register_callback(esp_gatts_cb));
     ESP_ERROR_CHECK(esp_ble_gap_register_callback(esp_gap_cb));
     ESP_ERROR_CHECK(esp_ble_gattc_register_callback(esp_gattc_cb));
     ESP_ERROR_CHECK(esp_ble_gattc_app_register(PROFILE_A_APP_ID));
+    ESP_ERROR_CHECK(esp_ble_gatts_app_register(PROFILE_A_APP_S_ID));
     ESP_ERROR_CHECK(esp_ble_gatt_set_local_mtu(500));
 }
 
@@ -1610,12 +1818,6 @@ void initialize_lv()
 #endif
     static lv_disp_buf_t disp_buf;
 
-#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306
-    disp_drv.set_px_cb = ssd1306_set_px_cb;
-#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
-    disp_drv.set_px_cb = sh1107_set_px_cb;
-#endif
-
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
     lv_disp_buf_init(&disp_buf, buf1, buf2, DISP_BUF_SIZE);
 #else
@@ -1626,6 +1828,7 @@ void initialize_lv()
     lv_disp_drv_init(&disp_drv);
     disp_drv.flush_cb = disp_driver_flush;
     disp_drv.rounder_cb = disp_driver_rounder;
+
 #if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306
     disp_drv.set_px_cb = ssd1306_set_px_cb;
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
@@ -1633,11 +1836,6 @@ void initialize_lv()
 #endif
     disp_drv.buffer = &disp_buf;
     lv_disp_drv_register(&disp_drv);
-
-#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
-    lv_theme_mono_init(0, NULL);
-    lv_theme_set_current(lv_theme_get_mono());
-#endif
 }
 
 static void gui_prepare()
@@ -1694,7 +1892,7 @@ void app_main()
     // NVS initialization and beacon mask retrieval
     initialize_nvs();
     ESP_ERROR_CHECK(read_blemqttproxy_param());
-
+    ESP_ERROR_CHECK(esp_efuse_mac_get_default(mac));
     ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
     wifi_evg = xEventGroupCreate();
     mqtt_evg = xEventGroupCreate();
@@ -1712,10 +1910,12 @@ void app_main()
     ESP_LOGI(TAG, "app_main, start oneshot timer, %d", SPLASH_SCREEN_TIMER_DURATION);
     ESP_ERROR_CHECK(esp_timer_start_once(oneshot_timer, SPLASH_SCREEN_TIMER_DURATION));
 
-    xTaskCreate(&wifi_mqtt_task, "wifi_mqtt_task", 2048 * 2, NULL, 5, NULL);
-
     initialize_ble();
     initialize_ble_security();
+
+    vTaskDelay(pdMS_TO_TICKS(10));
+
+    xTaskCreate(&wifi_mqtt_task, "wifi_mqtt_task", 2048 * 2, NULL, 5, NULL);
 
 #if (CONFIG_WDT_REBOOT_LAST_SEEN_THRESHOLD==1 || CONFIG_WDT_SEND_MQTT_BEFORE_REBOOT==1)
     xTaskCreate(&wdt_task, "wdt_task", 2048 * 2, NULL, 5, NULL);
