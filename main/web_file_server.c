@@ -23,6 +23,7 @@
 
 static const char *TAG = "web_file_server";
 extern void remove_bonded_devices_num(uint8_t num_bond_device);
+extern bool sntp_time_available;
 
 bool web_file_server_running;
 
@@ -267,6 +268,26 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>uptime</td><td>");
     httpd_resp_sendstr_chunk(req, buffer);
     httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+    if(sntp_time_available){
+        time_t now;
+        struct tm timeinfo;
+        time(&now);
+        setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);  // see: https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
+        tzset();
+        localtime_r(&now, &timeinfo);
+
+        strftime(buffer, sizeof(buffer), "%c", &timeinfo);
+
+        ESP_LOGI(TAG, "The current date/time in New York is: %s", buffer);
+    } else {
+        snprintf_nowarn(buffer, 128, "no sntp time availalbe");
+    }
+    httpd_resp_sendstr_chunk(req, "<tr>\n<td>time</td><td>");
+    httpd_resp_sendstr_chunk(req, buffer);
+    httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+
+
 
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>gattc_connect</td><td>");
     httpd_resp_sendstr_chunk(req, (gattc_connect == true ? "true":"false"));

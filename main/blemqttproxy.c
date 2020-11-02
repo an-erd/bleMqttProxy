@@ -37,11 +37,13 @@
 #include <inttypes.h>
 #include <esp_http_server.h>
 #include "esp_http_client.h"
+#include "esp_sntp.h"
 
 /* Littlevgl specific */
 #include "lvgl/lvgl.h"
 #include "lvgl_helpers.h"
 
+/* bleMqttProxy specific */
 #include "mqtt_client.h"
 #include "iot_button.h"
 #include "iot_param.h"
@@ -158,7 +160,30 @@ static int8_t btn[MAX_BUTTON_COUNT][2] = { {0, CONFIG_BUTTON_1_PIN}, {1, CONFIG_
 static button_handle_t btn_handle[MAX_BUTTON_COUNT];
 static int64_t time_button_long_press[MAX_BUTTON_COUNT] = { 0 };
 
-// TODO put to different position
+// SNTP Time
+static void initialize_sntp(void);
+bool sntp_time_available = false;
+
+void time_sync_notification_cb(struct timeval *tv)
+{
+    ESP_LOGI(TAG, "Notification of a time synchronization event");
+    sntp_time_available = true;
+}
+
+static void initialize_sntp(void)
+{
+    static bool sntp_initialized = false;
+    if(sntp_initialized)
+        return;
+
+    ESP_LOGI(TAG, "Initializing SNTP");
+    sntp_setoperatingmode(SNTP_OPMODE_POLL);
+    sntp_setservername(0, "pool.ntp.org");
+    sntp_set_time_sync_notification_cb(time_sync_notification_cb);
+    sntp_init();
+    sntp_initialized = true;
+}
+
 void clear_stats_values()
 {
     wifi_connections_count_connect = 0;
@@ -507,6 +532,7 @@ static void event_handler(void* ctx, esp_event_base_t event_base,  int32_t event
                 ESP_LOGI(TAG, "event_handler: IP_EVENT_STA_GOT_IP, IP: " IPSTR, IP2STR(&ipinfo.ip));
                 wifi_connections_count_connect++;
                 xEventGroupSetBits(wifi_evg, WIFI_CONNECTED_BIT);
+                initialize_sntp();
                 }
                 break;
             default:
@@ -1141,7 +1167,7 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         esp_ble_gatts_create_service(gatts_if, &gl_profile_s_tab[PROFILE_A_APP_ID].service_id, GATTS_NUM_HANDLE_CTS);
         break;
     case ESP_GATTS_READ_EVT: {
-        ESP_LOGI(GATTS_TAG, "GATT_READ_EVT, conn_id %d, trans_id %d, handle %d\n", param->read.conn_id, param->read.trans_id, param->read.handle);
+        ESP_LOGI(GATTS_TAG, "GATT_READ_EVT, conn_id %d, trans_id %d, handle %d", param->read.conn_id, param->read.trans_id, param->read.handle);
         esp_gatt_rsp_t rsp;
         memset(&rsp, 0, sizeof(esp_gatt_rsp_t));
         rsp.attr_value.handle = param->read.handle;
@@ -1714,14 +1740,10 @@ static void wdt_task(void* pvParameters)
 static void wifi_mqtt_task(void* pvParameters)
 {
     static httpd_handle_t server = NULL;
-    // EventBits_t uxBits;
 
     wifi_init(&server);
     mqtt_init();
 
-    // while (1) {
-    //     uxBits = xEventGroupWaitBits(s_wdt_evg, ... , pdTRUE, pdFALSE, portMAX_DELAY);
-    // }
     vTaskDelete(NULL);
 }
 
