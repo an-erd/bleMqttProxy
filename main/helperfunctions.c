@@ -2,14 +2,30 @@
 
 uint16_t uint16_decode(const uint8_t * p_encoded_data)
 {
-        return ( (((uint16_t)((uint8_t *)p_encoded_data)[0])) |
-                 (((uint16_t)((uint8_t *)p_encoded_data)[1]) << 8 ));
+    return ( (((uint16_t)((uint8_t *)p_encoded_data)[0])) |
+                (((uint16_t)((uint8_t *)p_encoded_data)[1]) << 8 ));
 }
 
 uint16_t uint16_decode_r(const uint8_t * p_encoded_data)
 {
-        return ( (((uint16_t)((uint8_t *)p_encoded_data)[0]) << 8 ) |
-                 (((uint16_t)((uint8_t *)p_encoded_data)[1])));
+    return ( (((uint16_t)((uint8_t *)p_encoded_data)[0]) << 8 ) |
+                (((uint16_t)((uint8_t *)p_encoded_data)[1])));
+}
+
+uint8_t uint16_encode(uint16_t value, uint8_t * p_encoded_data)
+{
+    p_encoded_data[0] = (uint8_t) ((value & 0x00FF) >> 0);
+    p_encoded_data[1] = (uint8_t) ((value & 0xFF00) >> 8);
+
+    return sizeof(uint16_t);
+}
+
+uint8_t uint16_encode_r(uint16_t value, uint8_t * p_encoded_data)
+{
+    p_encoded_data[0] = (uint8_t) ((value & 0xFF00) >> 8);
+    p_encoded_data[1] = (uint8_t) ((value & 0x00FF) >> 0);
+
+    return sizeof(uint16_t);
 }
 
 uint32_t uint32_decode(const uint8_t * p_encoded_data)

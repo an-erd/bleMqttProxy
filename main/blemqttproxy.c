@@ -181,6 +181,8 @@ static void initialize_sntp(void)
     sntp_setservername(0, "pool.ntp.org");
     sntp_set_time_sync_notification_cb(time_sync_notification_cb);
     sntp_init();
+    setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);  // see: https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
+    tzset();
     sntp_initialized = true;
 }
 
@@ -1168,6 +1170,13 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         break;
     case ESP_GATTS_READ_EVT: {
         ESP_LOGI(GATTS_TAG, "GATT_READ_EVT, conn_id %d, trans_id %d, handle %d", param->read.conn_id, param->read.trans_id, param->read.handle);
+
+        struct tm timeinfo;
+        struct timeval tv_now;
+
+        gettimeofday(&tv_now, NULL);
+        localtime_r(&tv_now.tv_sec, &timeinfo);
+
         esp_gatt_rsp_t rsp;
         memset(&rsp, 0, sizeof(esp_gatt_rsp_t));
         rsp.attr_value.handle = param->read.handle;
@@ -1187,19 +1196,30 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
                 0xFE    254/256
                 0x08    Daylight savings 1, Time zone 0, External update 0, Manual update 0
         **/
+       if(sntp_time_available){
+            uint8_t len = uint16_encode(timeinfo.tm_year + 1900, rsp.attr_value.value);
+            rsp.attr_value.value[len++] =  timeinfo.tm_mon + 1;
+            rsp.attr_value.value[len++] =  timeinfo.tm_mday;
+            rsp.attr_value.value[len++] =  timeinfo.tm_hour;
+            rsp.attr_value.value[len++] =  timeinfo.tm_min;
+            rsp.attr_value.value[len++] =  timeinfo.tm_sec;
+            rsp.attr_value.value[len++] =  timeinfo.tm_wday;
 
-        rsp.attr_value.value[0] = 0xC2;
-        rsp.attr_value.value[1] = 0x07;
-        rsp.attr_value.value[2] = 0x0B;
-        rsp.attr_value.value[3] = 0x0F;
-        rsp.attr_value.value[4] = 0x0D;
-        rsp.attr_value.value[5] = 0x25;
-        rsp.attr_value.value[6] = 0x2A;
-        rsp.attr_value.value[7] = 0x06;
-        rsp.attr_value.value[8] = 0xFE;
-        rsp.attr_value.value[9] = 0x08;
+            int16_t time_ms = (int16_t) (tv_now.tv_usec / 1000);
+            rsp.attr_value.value[len++] =  (time_ms * 256 / 999)%256;     // Fractions of a second.
+
+            // // Reason for updating the time.
+            // p_time->adjust_reason.manual_time_update              = (p_data[index] >> 0) & 0x01;
+            // p_time->adjust_reason.external_reference_time_update  = (p_data[index] >> 1) & 0x01;
+            // p_time->adjust_reason.change_of_time_zone             = (p_data[index] >> 2) & 0x01;
+            // p_time->adjust_reason.change_of_daylight_savings_time = (p_data[index] >> 3) & 0x01;
+       } else {
+           // send only "0" which will give an error on the peripheral side
+       }
         esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id,
                                     ESP_GATT_OK, &rsp);
+        ESP_LOGI(TAG, "sntp year %d, week day: %d", timeinfo.tm_year + 1900, timeinfo.tm_wday);
+        ESP_LOG_BUFFER_HEX_LEVEL(TAG, (void *)rsp.attr_value.value, 10* sizeof(uint8_t), ESP_LOG_INFO);
         break;
     }
     case ESP_GATTS_WRITE_EVT: {

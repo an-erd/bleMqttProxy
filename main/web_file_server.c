@@ -3,6 +3,7 @@
 #include <sys/param.h>
 #include <sys/unistd.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <dirent.h>
 
 #include "esp_err.h"
@@ -270,16 +271,14 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
     httpd_resp_sendstr_chunk(req, "</td></tr>\n");
 
     if(sntp_time_available){
-        time_t now;
         struct tm timeinfo;
-        time(&now);
-        setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);  // see: https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
-        tzset();
-        localtime_r(&now, &timeinfo);
+        struct timeval tv_now;
 
+        gettimeofday(&tv_now, NULL);
+        localtime_r(&tv_now.tv_sec, &timeinfo);
         strftime(buffer, sizeof(buffer), "%c", &timeinfo);
 
-        ESP_LOGI(TAG, "The current date/time in New York is: %s", buffer);
+        ESP_LOGI(TAG, "The current date/time is: %s", buffer);
     } else {
         snprintf_nowarn(buffer, 128, "no sntp time availalbe");
     }
