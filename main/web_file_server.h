@@ -17,7 +17,9 @@ typedef enum
 } web_file_server_cmd_t;
 #define WEBFILESERVER_NUM_ENTRIES   8
 
+extern httpd_handle_t web_server;
 extern bool web_file_server_running;
+extern bool web_file_server_temporarily_stopped;
 
 httpd_handle_t start_webserver(void);
 void stop_webserver(httpd_handle_t server);

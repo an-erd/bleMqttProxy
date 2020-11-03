@@ -26,7 +26,10 @@ static const char *TAG = "web_file_server";
 extern void remove_bonded_devices_num(uint8_t num_bond_device);
 extern bool sntp_time_available;
 
+httpd_handle_t web_server = NULL;
 bool web_file_server_running;
+bool web_file_server_temporarily_stopped = false;;
+
 
 static const char *web_file_server_commands[WEBFILESERVER_NUM_ENTRIES] = {
     "stat",
@@ -129,6 +132,17 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
     uint8_t num_devices = CONFIG_BLE_DEVICE_COUNT_CONFIGURED;
     offline_buffer_status_t status;
     const esp_app_desc_t *app_desc = esp_ota_get_app_description();
+
+
+    if(gattc_offline_buffer_downloading){
+        httpd_resp_sendstr_chunk(req, "<!DOCTYPE html><html><head>\n");
+        httpd_resp_sendstr_chunk(req, "<title>Download in progress</title>\n");
+        httpd_resp_sendstr_chunk(req, "<meta http-equiv=\"refresh\" content=\"30\">\n");
+        httpd_resp_sendstr_chunk(req, "<body style=\"font-family:Arial\">\n");
+        httpd_resp_sendstr_chunk(req, "<h1 style=\"text-align: center;\">Offline buffer download in progress, refresh in 30 sec.</h1>\n");
+        httpd_resp_sendstr_chunk(req, NULL);
+        return ESP_OK;
+    }
 
     httpd_resp_sendstr_chunk(req, "<!DOCTYPE html><html><head>\n");
     httpd_resp_sendstr_chunk(req, "<title>Beacon List</title>\n");
@@ -285,8 +299,6 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>time</td><td>");
     httpd_resp_sendstr_chunk(req, buffer);
     httpd_resp_sendstr_chunk(req, "</td></tr>\n");
-
-
 
     httpd_resp_sendstr_chunk(req, "<tr>\n<td>gattc_connect</td><td>");
     httpd_resp_sendstr_chunk(req, (gattc_connect == true ? "true":"false"));
@@ -610,6 +622,8 @@ httpd_handle_t start_webserver(void)
 void stop_webserver(httpd_handle_t server)
 {
     // Stop the httpd server
+    ESP_LOGI(TAG, "stop_webserver >");
     httpd_stop(server);
+    ESP_LOGI(TAG, "stop_webserver <");
     web_file_server_running = false;
 }

@@ -860,7 +860,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
             ESP_LOGE(TAG,"config mtu failed, error status = %x", param->cfg_mtu.status);
         }
         ESP_LOGD(TAG, "ESP_GATTC_CFG_MTU_EVT, Status %d, MTU %d, conn_id %d", param->cfg_mtu.status, param->cfg_mtu.mtu, param->cfg_mtu.conn_id);
-        ESP_LOGD(TAG, "wait now until ESP_GAP_BLE_AUTH_CMPL_EVT");
+        ESP_LOGD(TAG, "wait now until ESP_GATTS_RESPONSE_EVT");
         break;
     case ESP_GATTC_SEARCH_RES_EVT: {
         ESP_LOGD(TAG, "ESP_GATTC_SEARCH_RES_EVT");
@@ -1048,7 +1048,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         if (p_data->notify.is_notify){
             count = ble_beacons[idx].offline_buffer_count;
             if(!count){
-                ESP_LOGD(TAG, "ESP_GATTC_NOTIFY_EVT, first, idx %d, ble_beacons[idx] %d, ble_beacons[idx].p_buffer_download[count] %d",
+                ESP_LOGI(TAG, "ESP_GATTC_NOTIFY_EVT, first, idx %d, ble_beacons[idx] %d, ble_beacons[idx].p_buffer_download[count] %d",
                     idx, (&ble_beacons[idx] != NULL),  (ble_beacons[idx].p_buffer_download != NULL) );
                 time_measure = esp_timer_get_time();
             } else {
@@ -1066,8 +1066,8 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
             ble_beacons[idx].offline_buffer_count++;
         } else {
             ESP_LOGD(TAG, "ESP_GATTC_NOTIFY_EVT, receive indicate value:");
-            ESP_LOGI(TAG, "ESP_GATTC_NOTIFY_EVT done, received %d, time difference %d",
-                ble_beacons[idx].offline_buffer_count, (uint16_t) (esp_timer_get_time() - time_measure));
+            ESP_LOGI(TAG, "ESP_GATTC_NOTIFY_EVT done, received %d, time difference %d ms",
+                ble_beacons[idx].offline_buffer_count, (uint16_t) ((esp_timer_get_time() - time_measure)/1000.));
         }
 
         if (!p_data->notify.is_notify){
@@ -1161,7 +1161,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
 static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param) {
     switch (event) {
     case ESP_GATTS_REG_EVT:
-        ESP_LOGI(GATTS_TAG, "REGISTER_APP_EVT, status %d, app_id %d\n", param->reg.status, param->reg.app_id);
+        ESP_LOGI(GATTS_TAG, "ESP_GATTS_REG_EVT, status %d, app_id %d\n", param->reg.status, param->reg.app_id);
         gl_profile_s_tab[PROFILE_A_APP_S_ID].service_id.is_primary = true;
         gl_profile_s_tab[PROFILE_A_APP_S_ID].service_id.id.inst_id = 0x00;
         gl_profile_s_tab[PROFILE_A_APP_S_ID].service_id.id.uuid.len = ESP_UUID_LEN_16;
@@ -1169,7 +1169,7 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         esp_ble_gatts_create_service(gatts_if, &gl_profile_s_tab[PROFILE_A_APP_ID].service_id, GATTS_NUM_HANDLE_CTS);
         break;
     case ESP_GATTS_READ_EVT: {
-        ESP_LOGI(GATTS_TAG, "GATT_READ_EVT, conn_id %d, trans_id %d, handle %d", param->read.conn_id, param->read.trans_id, param->read.handle);
+        ESP_LOGI(GATTS_TAG, "ESP_GATTS_READ_EVT, conn_id %d, trans_id %d, handle %d", param->read.conn_id, param->read.trans_id, param->read.handle);
 
         struct tm timeinfo;
         struct timeval tv_now;
@@ -1222,8 +1222,16 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         ESP_LOG_BUFFER_HEX_LEVEL(TAG, (void *)rsp.attr_value.value, 10* sizeof(uint8_t), ESP_LOG_INFO);
         break;
     }
+    case ESP_GATTS_RESPONSE_EVT: {
+        ESP_LOGI(GATTS_TAG, "ESP_GATTS_RESPONSE_EVT, status %d, handle %d", param->rsp.status, param->rsp.handle);
+
+        ESP_LOGD(TAG, "esp_ble_gattc_search_service to continue bulk download");
+        esp_ble_gattc_search_service(gl_profile_tab[PROFILE_A_APP_ID].gattc_if, gl_profile_tab[PROFILE_A_APP_ID].conn_id, &remote_filter_service_uuid);
+
+        break;
+    }
     case ESP_GATTS_WRITE_EVT: {
-        ESP_LOGI(GATTS_TAG, "GATT_WRITE_EVT, conn_id %d, trans_id %d, handle %d", param->write.conn_id, param->write.trans_id, param->write.handle);
+        ESP_LOGI(GATTS_TAG, "ESP_GATTS_WRITE_EVT, conn_id %d, trans_id %d, handle %d", param->write.conn_id, param->write.trans_id, param->write.handle);
         break;
     }
     case ESP_GATTS_EXEC_WRITE_EVT:
@@ -1233,9 +1241,10 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         ESP_LOGI(GATTS_TAG, "ESP_GATTS_MTU_EVT, MTU %d", param->mtu.mtu);
         break;
     case ESP_GATTS_UNREG_EVT:
+        ESP_LOGI(GATTS_TAG, "ESP_GATTS_UNREG_EVT");
         break;
     case ESP_GATTS_CREATE_EVT:
-        ESP_LOGI(GATTS_TAG, "CREATE_SERVICE_EVT, status %d,  service_handle %d\n", param->create.status, param->create.service_handle);
+        ESP_LOGI(GATTS_TAG, "ESP_GATTS_CREATE_EVT, status %d,  service_handle %d\n", param->create.status, param->create.service_handle);
         gl_profile_s_tab[PROFILE_A_APP_S_ID].service_handle = param->create.service_handle;
         gl_profile_s_tab[PROFILE_A_APP_S_ID].char_uuid.len = ESP_UUID_LEN_16;
         gl_profile_s_tab[PROFILE_A_APP_S_ID].char_uuid.uuid.uuid16 = GATTS_CHAR_UUID_CTS;
@@ -1250,12 +1259,13 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         }
         break;
     case ESP_GATTS_ADD_INCL_SRVC_EVT:
+        ESP_LOGI(GATTS_TAG, "ESP_GATTS_ADD_INCL_SRVC_EVT");
         break;
     case ESP_GATTS_ADD_CHAR_EVT: {
         uint16_t length = 0;
         const uint8_t *prf_char;
 
-        ESP_LOGI(GATTS_TAG, "ADD_CHAR_EVT, status %d,  attr_handle %d, service_handle %d\n",
+        ESP_LOGI(GATTS_TAG, "ESP_GATTS_ADD_CHAR_EVT, status %d,  attr_handle %d, service_handle %d\n",
                 param->add_char.status, param->add_char.attr_handle, param->add_char.service_handle);
         gl_profile_s_tab[PROFILE_A_APP_S_ID].char_handle = param->add_char.attr_handle;
         gl_profile_s_tab[PROFILE_A_APP_S_ID].descr_uuid.len = ESP_UUID_LEN_16;
@@ -1277,17 +1287,19 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         break;
     }
     case ESP_GATTS_ADD_CHAR_DESCR_EVT:
-        gl_profile_s_tab[PROFILE_A_APP_ID].descr_handle = param->add_char_descr.attr_handle;
-        ESP_LOGI(GATTS_TAG, "ADD_DESCR_EVT, status %d, attr_handle %d, service_handle %d\n",
+        gl_profile_s_tab[PROFILE_A_APP_S_ID].descr_handle = param->add_char_descr.attr_handle;
+        ESP_LOGI(GATTS_TAG, "ESP_GATTS_ADD_CHAR_DESCR_EVT, status %d, attr_handle %d, service_handle %d\n",
                  param->add_char_descr.status, param->add_char_descr.attr_handle, param->add_char_descr.service_handle);
         break;
     case ESP_GATTS_DELETE_EVT:
+        ESP_LOGI(GATTS_TAG, "ESP_GATTS_DELETE_EVT");
         break;
     case ESP_GATTS_START_EVT:
-        ESP_LOGI(GATTS_TAG, "SERVICE_START_EVT, status %d, service_handle %d\n",
+        ESP_LOGI(GATTS_TAG, "ESP_GATTS_START_EVT, status %d, service_handle %d\n",
                  param->start.status, param->start.service_handle);
         break;
     case ESP_GATTS_STOP_EVT:
+        ESP_LOGI(GATTS_TAG, "ESP_GATTS_STOP_EVT");
         break;
     case ESP_GATTS_CONNECT_EVT: {
         esp_ble_conn_update_params_t conn_params = {0};
@@ -1316,10 +1328,20 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         }
         break;
     case ESP_GATTS_OPEN_EVT:
+        ESP_LOGI(GATTS_TAG, "ESP_GATTS_OPEN_EVT");
+        break;
     case ESP_GATTS_CANCEL_OPEN_EVT:
+        ESP_LOGI(GATTS_TAG, "ESP_GATTS_CANCEL_OPEN_EVT");
+        break;
     case ESP_GATTS_CLOSE_EVT:
+        ESP_LOGI(GATTS_TAG, "ESP_GATTS_CLOSE_EVT");
+        break;
     case ESP_GATTS_LISTEN_EVT:
+        ESP_LOGI(GATTS_TAG, "ESP_GATTS_LISTEN_EVT");
+        break;
     case ESP_GATTS_CONGEST_EVT:
+        ESP_LOGI(GATTS_TAG, "ESP_GATTS_CONGEST_EVT");
+        break;
     default:
         break;
     }
@@ -1359,6 +1381,12 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         }
         ESP_LOGD(TAG, "scan start success");
         gattc_scanning = true;
+
+        // if(web_file_server_temporarily_stopped){
+        //     ESP_LOGD(TAG, "restart temporarily stopped web server");
+        //     web_server = start_webserver();
+        // }
+
         break;
     case ESP_GAP_BLE_PASSKEY_REQ_EVT:                           /* passkey request event */
         /* Call the following function to input the passkey which is displayed on the remote device */
@@ -1414,9 +1442,6 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         } else {
             ESP_LOGI(TAG, "auth mode = %s",esp_auth_req_to_str(param->ble_security.auth_cmpl.auth_mode));
         }
-
-        ESP_LOGD(TAG, "esp_ble_gattc_search_service");
-        // esp_ble_gattc_search_service(gl_profile_tab[PROFILE_A_APP_ID].gattc_if, gl_profile_tab[PROFILE_A_APP_ID].conn_id, &remote_filter_service_uuid);
 
         break;
     }
@@ -1555,6 +1580,13 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
             ESP_LOGD(TAG, "Stop scan successfully");
         }
         gattc_scanning = false;
+
+        // if(web_file_server_running){
+        //     ESP_LOGD(TAG, "temporarily stop the web server");
+        //     stop_webserver(web_server);
+        //     web_file_server_temporarily_stopped = true;
+        // }
+
         break;
     case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT:
         ESP_LOGD(TAG, "ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT");
@@ -1613,8 +1645,11 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp
 
 static void esp_gatts_cb(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param)
 {
+    ESP_LOGI(TAG, "esp_gatts_cb: evt %d, gatt_if %d", event, gatts_if);
+
     /* If event is register event, store the gatts_if for each profile */
     if (event == ESP_GATTS_REG_EVT) {
+        ESP_LOGI(GATTS_TAG, "ESP_GATTS_REG_EVT");
         if (param->reg.status == ESP_GATT_OK) {
             gl_profile_s_tab[param->reg.app_id].gatts_if = gatts_if;
         } else {
@@ -1625,8 +1660,6 @@ static void esp_gatts_cb(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp
         }
     }
 
-    ESP_LOGI(TAG, "esp_gatts_cb: evt %d", event);
-
     /* If the gatts_if equal to profile A, call profile A cb handler,
      * so here call each profile's callback */
     do {
@@ -1634,6 +1667,7 @@ static void esp_gatts_cb(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp
         for (idx = 0; idx < PROFILE_NUM; idx++) {
             if (gatts_if == ESP_GATT_IF_NONE||gatts_if == gl_profile_s_tab[idx].gatts_if) 			{
                 if (gl_profile_s_tab[idx].gatts_cb) {
+                    ESP_LOGI(TAG, "esp_gatts_cb: forward evt %d", event);
                     gl_profile_s_tab[idx].gatts_cb(event, gatts_if, param);
                 }
             }
@@ -1759,9 +1793,9 @@ static void wdt_task(void* pvParameters)
 
 static void wifi_mqtt_task(void* pvParameters)
 {
-    static httpd_handle_t server = NULL;
 
-    wifi_init(&server);
+
+    wifi_init(&web_server);
     mqtt_init();
 
     vTaskDelete(NULL);
