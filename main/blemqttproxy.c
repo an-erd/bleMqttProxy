@@ -389,29 +389,29 @@ static __attribute__((unused)) void send_mqtt_uptime_heap_last_seen(uint8_t num_
         snprintf_nowarn(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "uptime");
         uptime_sec = esp_timer_get_time()/1000000;
         snprintf_nowarn(buffer_payload, 32, "%d", uptime_sec);
-        ESP_LOGD(TAG, "MQTT %s -> uptime %s", buffer_topic, buffer_payload);
+        // ESP_LOGD(TAG, "MQTT %s -> uptime %s", buffer_topic, buffer_payload);
         msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
 
         snprintf_nowarn(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "free_heap");
         snprintf_nowarn(buffer_payload, 32, "%d", esp_get_free_heap_size());
-        ESP_LOGD(TAG, "MQTT %s -> free_heap %s", buffer_topic, buffer_payload);
+        // ESP_LOGD(TAG, "MQTT %s -> free_heap %s", buffer_topic, buffer_payload);
         msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
 
         // LV Memory Monitor
-        lv_mem_monitor(&mem_mon);
-        ESP_LOGD(TAG, "lv_mem_monitor: Memory %d %%, Total %d bytes, used %d bytes, free %d bytes, frag %d %%",
-            (int) mem_mon.used_pct, (int) mem_mon.total_size,
-            (int) mem_mon.total_size - mem_mon.free_size, mem_mon.free_size, mem_mon.frag_pct);
+        // lv_mem_monitor(&mem_mon);
+        // ESP_LOGD(TAG, "lv_mem_monitor: Memory %d %%, Total %d bytes, used %d bytes, free %d bytes, frag %d %%",
+        //     (int) mem_mon.used_pct, (int) mem_mon.total_size,
+        //     (int) mem_mon.total_size - mem_mon.free_size, mem_mon.free_size, mem_mon.frag_pct);
 
         if(num_act_beacon > 0){
             snprintf_nowarn(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "last_seen");
             snprintf_nowarn(buffer_payload, 32, "%d", lowest_last_seen_sec);
-            ESP_LOGD(TAG, "MQTT %s -> lowest_last_seen_sec %s", buffer_topic, buffer_payload);
+            // ESP_LOGD(TAG, "MQTT %s -> lowest_last_seen_sec %s", buffer_topic, buffer_payload);
             msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
 
             snprintf_nowarn(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "last_send");
             snprintf_nowarn(buffer_payload, 32, "%d", lowest_last_send_sec);
-            ESP_LOGD(TAG, "MQTT %s -> lowest_last_send_sec %s", buffer_topic, buffer_payload);
+            // ESP_LOGD(TAG, "MQTT %s -> lowest_last_send_sec %s", buffer_topic, buffer_payload);
             msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
         }
     }
@@ -1508,8 +1508,8 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     break;
                 }
 
-                ESP_LOGD(TAG, "(0x%04x%04x) rssi %3d, found, is_beacon_close %d, display_message_is_shown %d, idx %d",
-                    maj, min, scan_result->scan_rst.rssi, is_beacon_close, display_status.display_message_is_shown, idx);
+                // ESP_LOGD(TAG, "(0x%04x%04x) rssi %3d, found, is_beacon_close %d, display_message_is_shown %d, idx %d",
+                //     maj, min, scan_result->scan_rst.rssi, is_beacon_close, display_status.display_message_is_shown, idx);
 
                 if(is_beacon_close){
                     if(display_status.display_message_is_shown){
@@ -1770,6 +1770,8 @@ static void wdt_task(void* pvParameters)
     while (1) {
         uxBits = xEventGroupWaitBits(s_wdt_evg, UPDATE_ESP_RESTART | UPDATE_ESP_MQTT_RESTART, pdTRUE, pdFALSE, portMAX_DELAY);
 
+        ESP_LOGD(TAG, "ota_task uxTaskGetStackHighWaterMark '%d'", uxTaskGetStackHighWaterMark(NULL));
+
         if(uxBits & UPDATE_ESP_MQTT_RESTART){
             ESP_LOGI(TAG, "wdt_task: reboot send mqtt flag is set -> send MQTT message");
             uptime_sec = esp_timer_get_time()/1000000;
@@ -1797,6 +1799,8 @@ static void wifi_mqtt_task(void* pvParameters)
 
     wifi_init(&web_server);
     mqtt_init();
+
+    ESP_LOGD(TAG, "wifi_mqtt_task uxTaskGetStackHighWaterMark '%d'", uxTaskGetStackHighWaterMark(NULL));
 
     vTaskDelete(NULL);
 }
@@ -1939,7 +1943,9 @@ static void gui_task(void* pvParameters)
     gui_prepare();
     ESP_LOGD(TAG, "gui_task, gui_prepare() done"); fflush(stdout);
 
+    ESP_LOGI(TAG, "gui_task > uxTaskGetStackHighWaterMark '%d'", uxTaskGetStackHighWaterMark(NULL));
     lv_task_create(update_display_task, 100, LV_TASK_PRIO_MID, NULL);
+    ESP_LOGI(TAG, "gui_task < uxTaskGetStackHighWaterMark '%d'", uxTaskGetStackHighWaterMark(NULL));
 
     while (1) {
         vTaskDelay(1);
@@ -1977,7 +1983,7 @@ void app_main()
 
     initialize_buttons();
 
-    xTaskCreatePinnedToCore(gui_task, "gui_task", 4096*2, NULL, 0, NULL, 1);
+    xTaskCreatePinnedToCore(gui_task, "gui_task", 5 * 512, NULL, 0, NULL, 1);
 
     create_timer();
 
@@ -1991,11 +1997,11 @@ void app_main()
 
     vTaskDelay(pdMS_TO_TICKS(10));
 
-    xTaskCreate(&wifi_mqtt_task, "wifi_mqtt_task", 2048 * 2, NULL, 5, NULL);
+    xTaskCreate(&wifi_mqtt_task, "wifi_mqtt_task", 5 * 512, NULL, 5, NULL);
 
 #if (CONFIG_WDT_REBOOT_LAST_SEEN_THRESHOLD==1 || CONFIG_WDT_SEND_MQTT_BEFORE_REBOOT==1)
-    xTaskCreate(&wdt_task, "wdt_task", 2048 * 2, NULL, 5, NULL);
+    xTaskCreate(&wdt_task, "wdt_task", 3 * 256, NULL, 5, NULL);
 #endif
 
-    xTaskCreate(&ota_task, "ota_task", 8192, NULL, 5, NULL);
+    xTaskCreate(&ota_task, "ota_task", 4096, NULL, 5, NULL);
 }

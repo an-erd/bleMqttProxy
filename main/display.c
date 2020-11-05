@@ -64,7 +64,7 @@ LV_IMG_DECLARE(splash);
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
 LV_IMG_DECLARE(splash_oled);
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
-LV_IMG_DECLARE(splash_160x80);
+// LV_IMG_DECLARE(splash_160x80)
 #endif
 
 // Styles for the screens
@@ -90,6 +90,7 @@ static lv_style_t modal_style_text;
 LV_FONT_DECLARE(oled_9_font_symbol);
 LV_FONT_DECLARE(lv_font_montserrat_9);
 LV_FONT_DECLARE(lv_font_montserrat_10);
+LV_FONT_DECLARE(lv_font_montserrat_24);
 // LV_FONT_DECLARE(oled_12_font_symbol);
 // LV_FONT_DECLARE(oled_16_font_symbol);
 // LV_FONT_DECLARE(m5stack_16_font_symbol);
@@ -885,7 +886,7 @@ void lv_init_screens()
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
     lv_img_set_src(lv_screens.splash.scr, &splash_oled);
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
-    lv_img_set_src(lv_screens.splash.scr, &splash_160x80);
+    // lv_img_set_src(lv_screens.splash.scr, &splash_160x80);
 #endif
     lv_img_cache_invalidate_src(NULL);
 
@@ -1179,6 +1180,6 @@ void update_display_task(lv_task_t * task)
     lv_mem_monitor(&mem_mon);
     ESP_LOGD(TAG, "memory: total %d, free %d, free_biggest %d, used_cnd %d, used_pct %d, frag_pct %d",
         mem_mon.total_size, mem_mon.free_size, mem_mon.free_biggest_size, mem_mon.used_cnt, mem_mon.used_pct, mem_mon.frag_pct);
-
+    // ESP_LOGI(TAG, "update_display_task uxTaskGetStackHighWaterMark '%d'", uxTaskGetStackHighWaterMark(NULL));
     display_update();
 }

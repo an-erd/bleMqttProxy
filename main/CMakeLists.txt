@@ -2,7 +2,7 @@ set(SOURCES "blemqttproxy.c" "beacon.c" "ble.c" "ble_mqtt.c" "display.c" "helper
 
 idf_component_register(SRCS ${SOURCES}
     INCLUDE_DIRS .
-    REQUIRES lvgl_esp32_drivers lvgl lv_examples lvgl_tft lvgl_touch nvs_flash bt app_update button esp_http_server esp_http_client mqtt param button
+    REQUIRES lvgl_esp32_drivers lvgl lvgl_tft lvgl_touch nvs_flash bt app_update button esp_http_server esp_http_client mqtt param button
     EMBED_TXTFILES ${project_dir}/server_certs/ca_cert.pem)
 
 # register_component()

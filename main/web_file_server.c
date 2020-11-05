@@ -28,7 +28,7 @@ extern bool sntp_time_available;
 
 httpd_handle_t web_server = NULL;
 bool web_file_server_running;
-bool web_file_server_temporarily_stopped = false;;
+bool web_file_server_temporarily_stopped = false;
 
 
 static const char *web_file_server_commands[WEBFILESERVER_NUM_ENTRIES] = {
@@ -291,8 +291,7 @@ static esp_err_t http_resp_list_devices(httpd_req_t *req)
         gettimeofday(&tv_now, NULL);
         localtime_r(&tv_now.tv_sec, &timeinfo);
         strftime(buffer, sizeof(buffer), "%c", &timeinfo);
-
-        ESP_LOGI(TAG, "The current date/time is: %s", buffer);
+        // ESP_LOGD(TAG, "The current date/time is: %s", buffer);
     } else {
         snprintf_nowarn(buffer, 128, "no sntp time availalbe");
     }

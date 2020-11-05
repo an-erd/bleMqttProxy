@@ -12,6 +12,7 @@
 #include "errno.h"
 
 #include "ota.h"
+#include "web_file_server.h"
 
 EventGroupHandle_t ota_evg;
 
@@ -70,6 +71,14 @@ void ota_update()
     const esp_partition_t *update_partition = NULL;
 
     ESP_LOGI(TAG, "ota_update() >");
+
+// Stop the web server first
+        if(web_file_server_running){
+            ESP_LOGI(TAG, "temporarily stop the web server");
+            stop_webserver(web_server);
+            web_file_server_temporarily_stopped = true;
+        }
+// Stop MQTT connection -> already stopped from main
 
     const esp_partition_t *configured = esp_ota_get_boot_partition();
     const esp_partition_t *running = esp_ota_get_running_partition();
@@ -201,6 +210,9 @@ void ota_update()
         task_fatal_error();
     }
     ESP_LOGI(TAG, "Prepare to restart system!");
+
+    ESP_LOGI(TAG, "ota_update uxTaskGetStackHighWaterMark '%d'", uxTaskGetStackHighWaterMark(NULL));
+
     esp_restart();
     return ;
 }
