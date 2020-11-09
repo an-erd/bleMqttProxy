@@ -7,7 +7,7 @@
 #include "wifi.h"
 #include "stats.h"
 
-static const char *TAG = "ble_mqtt";
+static const char* TAG = "BLE_MQTT";
 
 esp_mqtt_client_handle_t mqtt_client;
 EventGroupHandle_t mqtt_evg;

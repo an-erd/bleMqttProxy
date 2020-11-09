@@ -4,7 +4,7 @@
 #include "display.h"
 #include "watchdog.h"
 
-static const char* TAG = "timer";
+static const char* TAG = "TIMER";
 
 esp_timer_handle_t periodic_timer;
 esp_timer_handle_t oneshot_timer;

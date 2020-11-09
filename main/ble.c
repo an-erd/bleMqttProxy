@@ -11,7 +11,7 @@
 #include "display.h"
 #include "ble_mqtt.h"
 
-static const char *TAG = "BLE";
+static const char* TAG = "BLE";
 
 static esp_ble_scan_params_t ble_scan_params = {
     .scan_type              = BLE_SCAN_TYPE_ACTIVE,
@@ -342,8 +342,7 @@ void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
 
                         ESP_LOGD(TAG, "connect to the remote device.");
                         esp_ble_gap_stop_scanning();
-                        // expose to client
-                        // esp_ble_gattc_open(gl_profile_tab[PROFILE_A_APP_ID].gattc_if, scan_result->scan_rst.bda, scan_result->scan_rst.ble_addr_type, true);
+                        gattc_open_beacon(scan_result);    // ble_scan_result_evt_param *scan_rst
                     } else {
                         free_offline_buffer(idx, OFFLINE_BUFFER_STATUS_NONE);
                         gattc_give_up_now = false;

@@ -4,6 +4,7 @@
 #include "esp_bt_defs.h"
 #include "esp_gatt_defs.h"
 #include "esp_gattc_api.h"
+#include "esp_gap_ble_api.h"
 
 #include "ble.h"
 #define PROFILE_ID_BEACON                       0
@@ -33,6 +34,6 @@ void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_ga
 
 /* Link the gatts, gap and gattc functions */
 void gattc_search_service_beacon();
-void gattc_open_beacon();
+void gattc_open_beacon(esp_ble_gap_cb_param_t *rst);
 
 #endif // __BLE_MYCLIENT_H__

@@ -11,10 +11,7 @@
 #include "ble_myclient.h"
 #include "ble_sntp.h"
 
-static const char *TAG = "web_file_server";
-
-// extern void remove_bonded_devices_num(uint8_t num_bond_device);
-// extern bool sntp_time_available;
+static const char* TAG = "WEB_FILE_SERVER";
 
 httpd_handle_t web_server = NULL;
 bool web_file_server_running;
@@ -73,7 +70,6 @@ static esp_err_t print_bond_devices(httpd_req_t *req)
 
     return ESP_OK;
 }
-
 
 static esp_err_t http_resp_csv_download(httpd_req_t *req, uint8_t idx)
 {
@@ -575,6 +571,8 @@ esp_err_t csv_get_handler(httpd_req_t *req)
         default:
             break;
     }
+
+    ESP_LOGD(TAG, "csv_get_handler <");
 
     return ESP_OK;
 }

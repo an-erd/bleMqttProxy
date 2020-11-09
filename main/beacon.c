@@ -3,7 +3,8 @@
 #include "helperfunctions.h"
 #include "display.h"
 
-static const char *TAG = "beacon";
+static const char* TAG = "BEACON";
+
 extern esp_err_t save_blemqttproxy_param();
 
 esp_ble_mybeacon_head_t mybeacon_common_head_v3 = {

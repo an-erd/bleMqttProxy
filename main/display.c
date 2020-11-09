@@ -11,7 +11,7 @@
 #include "lvgl/lvgl.h"
 #include "lvgl_tft/disp_driver.h"
 
-static const char *TAG = "DISPLAY";
+static const char* TAG = "DISPLAY";
 
 esp_timer_handle_t oneshot_display_message_timer;
 #define DISPLAY_MESSAGE_TIME_DURATION       (CONFIG_DISPLAY_MESSAGE_TIME * 1000000)
@@ -54,7 +54,7 @@ LV_IMG_DECLARE(splash);
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
 LV_IMG_DECLARE(splash_oled);
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
-// LV_IMG_DECLARE(splash_160x80)
+LV_IMG_DECLARE(splash_160x80)
 #endif
 
 // Styles for the screens
@@ -876,7 +876,7 @@ void lv_init_screens()
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306 || defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
     lv_img_set_src(lv_screens.splash.scr, &splash_oled);
 #elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7735S
-    // lv_img_set_src(lv_screens.splash.scr, &splash_160x80);
+    lv_img_set_src(lv_screens.splash.scr, &splash_160x80);
 #endif
     lv_img_cache_invalidate_src(NULL);
 

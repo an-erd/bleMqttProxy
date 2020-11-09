@@ -5,7 +5,7 @@
 #include "wifi.h"
 #include "helperfunctions.h"
 
-static const char *TAG = "WATCHDOG";
+static const char* TAG = "WATCHDOG";
 
 uint8_t esp_restart_mqtt_beacon_to_take = UNKNOWN_BEACON;
 EventGroupHandle_t wdt_evg;

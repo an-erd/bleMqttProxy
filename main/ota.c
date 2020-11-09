@@ -14,12 +14,13 @@
 #include "ota.h"
 #include "web_file_server.h"
 
+static const char* TAG = "OTA";
+
 EventGroupHandle_t ota_evg;
 
 #define BUFFSIZE 2048
 #define HASH_LEN 32 /* SHA-256 digest length */
 
-static const char *TAG = "native_ota";
 /*an ota data write buffer ready to write to the flash*/
 static char ota_write_data[BUFFSIZE + 1] = { 0 };
 extern const uint8_t server_cert_pem_start[] asm("_binary_ca_cert_pem_start");

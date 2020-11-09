@@ -4,7 +4,7 @@
 #include "helperfunctions.h"
 #include "beacon.h"
 
-static const char *TAG = "offlinebuffer";
+static const char* TAG = "OFFLINEBUFFER";
 
 EventGroupHandle_t offlinebuffer_evg;
 

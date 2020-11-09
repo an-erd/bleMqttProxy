@@ -2,7 +2,7 @@
 #include <lwip/apps/sntp.h>
 #include "ble_sntp.h"
 
-static const char* TAG = "SNTP";
+static const char* TAG = "BLE_SNTP";
 
 bool sntp_time_available = false;
 

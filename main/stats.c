@@ -3,6 +3,8 @@
 #include "stats.h"
 #include "ble_mqtt.h"
 
+static const char* TAG = "STATS";
+
 /* Wifi */
 uint16_t wifi_connections_count_connect = 0;
 uint16_t wifi_connections_count_disconnect = 0;

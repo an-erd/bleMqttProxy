@@ -18,7 +18,6 @@
 #include "gui.h"
 #include "buttons.h"
 
-/* Tag for log files */
 static const char* TAG = "BLEMQTTPROXY";
 
 static void initialize_nvs()
@@ -60,13 +59,26 @@ void adjust_log_level()
     esp_log_level_set("wifi",               ESP_LOG_INFO);
     esp_log_level_set("BT_BTM",             ESP_LOG_INFO);
     esp_log_level_set("MQTT_CLIENT",        ESP_LOG_INFO);
-    esp_log_level_set("timer",              ESP_LOG_INFO);
-    esp_log_level_set("beacon",             ESP_LOG_INFO);
-    esp_log_level_set("display",            ESP_LOG_INFO);
     esp_log_level_set("event",              ESP_LOG_INFO);
-    esp_log_level_set("ble_mqtt",           ESP_LOG_INFO);
-    esp_log_level_set("web_file_server",    ESP_LOG_INFO);
-    esp_log_level_set("BLEMQTTPROXY",       ESP_LOG_DEBUG);
+
+    esp_log_level_set("BEACON",             ESP_LOG_INFO);
+    esp_log_level_set("BLE_MQTT",           ESP_LOG_INFO);
+    esp_log_level_set("BLE_MYCLIENT",       ESP_LOG_INFO);
+    esp_log_level_set("BLE_MYSERVER",       ESP_LOG_INFO);
+    esp_log_level_set("BLE_SNTP",           ESP_LOG_INFO);
+    esp_log_level_set("BLE",                ESP_LOG_INFO);
+    esp_log_level_set("BLEMQTTPROXY",       ESP_LOG_INFO);
+    esp_log_level_set("BUTTONS",            ESP_LOG_INFO);
+    esp_log_level_set("DISPLAY",            ESP_LOG_INFO);
+    esp_log_level_set("GUI",                ESP_LOG_INFO);
+    esp_log_level_set("ONLINECUFFER",       ESP_LOG_INFO);
+    esp_log_level_set("OTA",                ESP_LOG_INFO);
+    esp_log_level_set("PARAMS",             ESP_LOG_INFO);
+    esp_log_level_set("STATS",              ESP_LOG_INFO);
+    esp_log_level_set("TIMER",              ESP_LOG_INFO);
+    esp_log_level_set("WATCHDOG",           ESP_LOG_INFO);
+    esp_log_level_set("WEB_FILE_SERVER",    ESP_LOG_INFO);
+    esp_log_level_set("WIFI",               ESP_LOG_INFO);
 }
 
 void create_eventgroups()

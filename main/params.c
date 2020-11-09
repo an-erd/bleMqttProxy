@@ -3,7 +3,7 @@
 #include "params.h"
 #include "beacon.h"
 
-static const char *TAG = "PARAMS";
+static const char* TAG = "PARAMS";
 
 /* The active (selected) beacons are given in this mask, stored as a param */
 param_t blemqttproxy_param = { 0 };

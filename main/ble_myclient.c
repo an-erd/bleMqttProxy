@@ -5,7 +5,6 @@
 #include "ble_myclient.h"
 #include "beacon.h"
 
-/* Tag for log files */
 static const char* TAG = "BLE_MYCLIENT";
 
 // We're connecting only to one device type, the ble_beacon
@@ -441,8 +440,7 @@ void gattc_search_service_beacon()
     esp_ble_gattc_search_service(gl_profile_client_tab[PROFILE_ID_BEACON].gattc_if, gl_profile_client_tab[PROFILE_ID_BEACON].conn_id, &remote_filter_service_uuid);
 }
 
-void gattc_open_beacon()
+void gattc_open_beacon(esp_ble_gap_cb_param_t *rst)
 {
-    // expose
-    // esp_ble_gattc_open(gl_profile_client_tab[PROFILE_ID_BEACON].gattc_if, scan_result->scan_rst.bda, scan_result->scan_rst.ble_addr_type, true);
+    esp_ble_gattc_open(gl_profile_client_tab[PROFILE_ID_BEACON].gattc_if, rst->scan_rst.bda, rst->scan_rst.ble_addr_type, true);
 }
