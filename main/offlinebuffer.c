@@ -1,7 +1,8 @@
-#include "esp_log.h"
+#include "blemqttproxy.h"
+
 #include "offlinebuffer.h"
 #include "helperfunctions.h"
-
+#include "beacon.h"
 
 static const char *TAG = "offlinebuffer";
 
@@ -60,4 +61,26 @@ char *offline_buffer_descr_status_to_str(offline_buffer_status_t status)
     }
 
     return status_str;
+}
+
+void alloc_offline_buffer(uint8_t idx, offline_buffer_status_t status)
+{
+    ESP_LOGD(TAG, "alloc_offline_buffer free heap() %d, needed %d", esp_get_free_heap_size(), sizeof(ble_os_meas_t) * CONFIG_OFFLINE_BUFFER_SIZE);
+    ble_beacons[idx].p_buffer_download = (ble_os_meas_t *) malloc(sizeof(ble_os_meas_t) * CONFIG_OFFLINE_BUFFER_SIZE);
+    ESP_LOGD(TAG, "alloc_offline_buffer p_buffer_download %d ", ble_beacons[idx].p_buffer_download != NULL);
+    ble_beacons[idx].offline_buffer_count = 0;
+    ble_beacons[idx].offline_buffer_status = status;
+}
+
+void free_offline_buffer(uint8_t idx, offline_buffer_status_t status)
+{
+    ble_beacons[idx].offline_buffer_status = status;
+    ble_beacons[idx].offline_buffer_count = 0;
+    free(ble_beacons[idx].p_buffer_download);
+}
+
+void reset_offline_buffer(uint8_t idx, offline_buffer_status_t status)
+{
+    ble_beacons[idx].offline_buffer_status = status;
+    ble_beacons[idx].offline_buffer_count = 0;
 }

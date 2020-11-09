@@ -96,4 +96,10 @@ bool toggle_beacon_idx_active(uint16_t idx);
 void persist_active_beacon_mask();
 void clear_beacon_idx_values(uint16_t idx);
 
+void update_adv_data(uint16_t maj, uint16_t min, int8_t measured_power,
+    float temp, float humidity, uint16_t battery, bool mqtt_send);
+
+bool is_beacon_bd_addr_set(uint16_t maj, uint16_t min);
+void set_beaconaddress(uint16_t maj, uint16_t min, esp_bd_addr_t *p_bd_addr);
+
 #endif // __BEACON_H__

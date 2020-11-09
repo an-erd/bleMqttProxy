@@ -1,10 +1,8 @@
-#include "freertos/FreeRTOS.h"
-#include "freertos/event_groups.h"
-#include "esp_assert.h"
-#include "esp_log.h"
+#include "blemqttproxy.h"
 
 #include "timer.h"
 #include "display.h"
+#include "watchdog.h"
 
 static const char* TAG = "timer";
 
@@ -45,6 +43,7 @@ bool periodic_timer_is_running()
 
 void periodic_timer_callback(void* arg)
 {
+    // obsolete? refactor
 }
 
 void set_run_idle_timer(bool stat) { run_idle_timer = stat;}
@@ -140,5 +139,29 @@ void oneshot_timer_callback(void* arg)
     }
 
     oneshot_timer_usage = TIMER_NO_USAGE;
+}
+
+
+void create_timer()
+{
+    const esp_timer_create_args_t oneshot_timer_args = {
+            .callback = &oneshot_timer_callback,
+            .arg      = &oneshot_timer_usage,
+            .name     = "oneshot"
+    };
+
+    const esp_timer_create_args_t periodic_timer_args = {
+            .callback = &periodic_timer_callback,
+            .name     = "periodic"
+    };
+
+    const esp_timer_create_args_t periodic_wdt_timer_args = {
+            .callback = &periodic_wdt_timer_callback,
+            .name     = "periodic_wdt"
+    };
+
+    ESP_ERROR_CHECK(esp_timer_create(&oneshot_timer_args, &oneshot_timer));
+    ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
+    ESP_ERROR_CHECK(esp_timer_create(&periodic_wdt_timer_args, &periodic_wdt_timer));
 }
 

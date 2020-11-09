@@ -1,7 +1,4 @@
-#include "esp_log.h"
-#include "esp_ota_ops.h"
-#include "esp_timer.h"
-#include <sys/param.h>
+#include "blemqttproxy.h"
 
 #include "display.h"
 #include "beacon.h"
@@ -9,19 +6,12 @@
 #include "helperfunctions.h"
 #include "ble_mqtt.h"
 #include "web_file_server.h"
-
+#include "wifi.h"
+#include "stats.h"
 #include "lvgl/lvgl.h"
 #include "lvgl_tft/disp_driver.h"
 
-static const char *TAG = "display";
-
-extern EventGroupHandle_t wifi_evg;
-extern uint16_t wifi_connections_count_connect;
-extern uint16_t wifi_connections_count_disconnect;
-extern uint16_t wifi_ap_connections;
-extern tcpip_adapter_ip_info_t ipinfo;
-extern uint8_t mac[6];
-#define WIFI_CONNECTED_BIT          (BIT0)
+static const char *TAG = "DISPLAY";
 
 esp_timer_handle_t oneshot_display_message_timer;
 #define DISPLAY_MESSAGE_TIME_DURATION       (CONFIG_DISPLAY_MESSAGE_TIME * 1000000)
@@ -1182,4 +1172,61 @@ void update_display_task(lv_task_t * task)
         mem_mon.total_size, mem_mon.free_size, mem_mon.free_biggest_size, mem_mon.used_cnt, mem_mon.used_pct, mem_mon.frag_pct);
     // ESP_LOGI(TAG, "update_display_task uxTaskGetStackHighWaterMark '%d'", uxTaskGetStackHighWaterMark(NULL));
     display_update();
+}
+
+
+void turn_display_on()
+{
+    set_run_idle_timer(true);
+    if( (display_status.current_screen == LASTSEEN_SCREEN)
+        || (display_status.current_screen == APPVERSION_SCREEN)
+        || (display_status.current_screen == STATS_SCREEN) ){
+        set_run_periodic_timer(true);
+    }
+    turn_display_off = false;
+}
+
+
+void handle_button_display_message()
+{
+    oneshot_display_message_timer_touch();
+    toggle_beacon_idx_active(display_message_content.beac);
+    snprintf(display_message_content.comment, 128, "Activated: %c", (is_beacon_idx_active(display_message_content.beac)? 'y':'n'));
+    display_message_content.need_refresh = true;
+}
+
+
+void handle_set_next_display_show()
+{
+    switch(display_status.screen_to_show){
+        case BEACON_SCREEN:
+            set_run_periodic_timer(false);
+            break;
+        case LASTSEEN_SCREEN:
+            set_run_periodic_timer(true);
+            break;
+        case APPVERSION_SCREEN:
+            set_run_periodic_timer(true);
+            break;
+        case STATS_SCREEN:
+            set_run_periodic_timer(true);
+            break;
+        default:
+            ESP_LOGE(TAG, "handle_long_button_push: unhandled switch-case");
+            break;
+    }
+
+}
+
+
+void check_update_display(uint16_t maj, uint16_t min)
+{
+    uint8_t idx = beacon_maj_min_to_idx(maj, min);
+
+    if( (display_status.current_screen == BEACON_SCREEN) && (display_status.current_beac == idx) ){
+        display_status.current_beac = UNKNOWN_BEACON; // invalidate beacon to force update
+        return;
+    } else if ( (display_status.current_screen == LASTSEEN_SCREEN) ){
+        return;
+    }
 }

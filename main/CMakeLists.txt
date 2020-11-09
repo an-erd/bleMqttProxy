@@ -1,4 +1,37 @@
-set(SOURCES "blemqttproxy.c" "beacon.c" "ble.c" "ble_mqtt.c" "display.c" "helperfunctions.c" "offlinebuffer.c" "ota.c" "timer.c" "web_file_server.c" "splash.c" "splash_oled.c" "splash_160x80.c" "oled_9_font_symbol.c" "lv_font_montserrat_9.c" "lv_font_montserrat_10.c" "m5stack_48_font_symbol.c")
+set(SOURCES
+    beacon.c
+    ble_mqtt.c
+    ble_myclient.c
+    ble_myserver.c
+    ble.c
+    blemqttproxy.c
+    buttons.c
+    display.c
+    gui.c
+    helperfunctions.c
+    offlinebuffer.c
+    ota.c
+    params.c
+    ble_sntp.c
+    splash.c
+    stats.c
+    timer.c
+    watchdog.c
+    web_file_server.c
+    wifi.c
+    lv_font_montserrat_9.c
+    lv_font_montserrat_10.c
+    lv_font_montserrat_11.c
+    m5stack_16_font_symbol.c
+    m5stack_22_font_symbol.c
+    m5stack_36_font_symbol.c
+    m5stack_48_font_symbol.c
+    oled_9_font_symbol.c
+    oled_12_font_symbol.c
+    oled_16_font_symbol.c
+    splash_160x80.c
+    splash_oled.c
+)
 
 idf_component_register(SRCS ${SOURCES}
     INCLUDE_DIRS .

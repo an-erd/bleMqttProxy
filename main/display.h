@@ -15,6 +15,10 @@ void oneshot_display_message_timer_touch();
 void display_message_show();
 void display_message_stop_show();
 void display_create_timer();
+void check_update_display(uint16_t maj, uint16_t min);
+void turn_display_on();
+void handle_button_display_message();
+void handle_set_next_display_show();
 
 #define BEAC_PER_PAGE_LASTSEEN  5
 
@@ -143,5 +147,6 @@ typedef struct {
 extern lv_screens_t lv_screens;
 
 void lv_init_screens();
+
 
 #endif // __DISPLAY_H__

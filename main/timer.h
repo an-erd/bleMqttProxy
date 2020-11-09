@@ -26,6 +26,8 @@ typedef enum {
 
 extern oneshot_timer_usage_t oneshot_timer_usage;
 
+void create_timer();
+
 void set_run_periodic_timer(bool stat);
 bool get_run_periodic_timer();
 void periodic_timer_start();

@@ -1,10 +1,4 @@
-
-#include <stdint.h>
-#include <string.h>
-#include <stdbool.h>
-#include "esp_timer.h"
-#include "esp_log.h"
-
+#include "blemqttproxy.h"
 #include "beacon.h"
 #include "helperfunctions.h"
 #include "display.h"
@@ -254,4 +248,42 @@ void decode_mybeacon_packet_v4(esp_ble_mybeacon_payload_t *mybeacon_payload, uin
 void clear_beacon_idx_values(uint16_t idx)
 {
     ble_beacons[idx].adv_data.last_seen = 0;
+}
+
+bool is_beacon_bd_addr_set(uint16_t maj, uint16_t min)
+{
+    uint8_t idx = beacon_maj_min_to_idx(maj, min);
+
+    return ble_beacons[idx].beacon_data.bd_addr_set;
+}
+
+void set_beaconaddress(uint16_t maj, uint16_t min, esp_bd_addr_t *p_bd_addr)
+{
+    uint8_t idx = beacon_maj_min_to_idx(maj, min);
+
+    if ((ble_beacons[idx].beacon_data.bd_addr_set) || (idx == UNKNOWN_BEACON)){
+        return;
+    }
+
+    memcpy(ble_beacons[idx].beacon_data.bd_addr, *p_bd_addr, sizeof(esp_bd_addr_t));
+    ble_beacons[idx].beacon_data.bd_addr_set = true;
+}
+
+void update_adv_data(uint16_t maj, uint16_t min, int8_t measured_power,
+    float temp, float humidity, uint16_t battery, bool mqtt_send)
+{
+    uint8_t idx = beacon_maj_min_to_idx(maj, min);
+
+    ble_beacons[idx].adv_data.measured_power = measured_power;
+    ble_beacons[idx].adv_data.temp           = temp;
+    ble_beacons[idx].adv_data.humidity       = humidity;
+    ble_beacons[idx].adv_data.battery        = battery;
+    ble_beacons[idx].adv_data.last_seen      = esp_timer_get_time();
+
+    if(mqtt_send){
+        ESP_LOGD(TAG, "update_adv_data, update mqtt_last_send");
+        ble_beacons[idx].adv_data.mqtt_last_send = esp_timer_get_time();
+    }
+
+    display_status.current_beac = UNKNOWN_BEACON;
 }

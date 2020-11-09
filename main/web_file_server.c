@@ -1,17 +1,4 @@
-#include <stdio.h>
-#include <string.h>
-#include <sys/param.h>
-#include <sys/unistd.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-#include <dirent.h>
-
-#include "esp_err.h"
-#include "esp_log.h"
-#include "esp_ota_ops.h"
-#include "esp_http_server.h"
-#include "esp_gap_ble_api.h"
-#include "esp_bt_defs.h"
+#include "blemqttproxy.h"
 
 #include "web_file_server.h"
 #include "beacon.h"
@@ -21,15 +8,17 @@
 #include "ota.h"
 #include "timer.h"
 #include "display.h"
+#include "ble_myclient.h"
+#include "ble_sntp.h"
 
 static const char *TAG = "web_file_server";
-extern void remove_bonded_devices_num(uint8_t num_bond_device);
-extern bool sntp_time_available;
+
+// extern void remove_bonded_devices_num(uint8_t num_bond_device);
+// extern bool sntp_time_available;
 
 httpd_handle_t web_server = NULL;
 bool web_file_server_running;
 bool web_file_server_temporarily_stopped = false;
-
 
 static const char *web_file_server_commands[WEBFILESERVER_NUM_ENTRIES] = {
     "stat",
