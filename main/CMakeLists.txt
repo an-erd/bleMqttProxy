@@ -1,4 +1,5 @@
 set(SOURCES
+    axp192.c
     beacon.c
     ble_mqtt.c
     ble_myclient.c

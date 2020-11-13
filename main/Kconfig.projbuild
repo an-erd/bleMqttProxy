@@ -13,6 +13,7 @@ menu "BLE-MQTT Proxy"
             bool "M5Stick (gray) device with OLED display (SH1107)"
         config DEVICE_M5STICKC
             bool "M5StickC (orange) device with OLED display (ST7735S)"
+            select AXP192_PRESENT
     endchoice #PROXY_DEVICE
 
     menu "Wifi Configuration"
@@ -452,11 +453,14 @@ menu "BLE-MQTT Proxy"
                 Maximum time for reception
     endmenu
 
-    menu "Test functions"
+    menu "AXP192"
 
-        config DISPLAY_TIME_TEST
-            bool "Add extra display screen with tests (currently not in use!)"
+        config AXP192_PRESENT
+            bool "AXP192 Power Management available"
             default n
+            help
+                If the AXP192 is present, this can be used for battery level retrieval.
+                It is assumed that I2C is initialized with the display LVGL functions.
 
     endmenu
 

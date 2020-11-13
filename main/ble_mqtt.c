@@ -6,6 +6,7 @@
 #include "lvgl.h"
 #include "wifi.h"
 #include "stats.h"
+#include "axp192.h"
 
 static const char* TAG = "BLE_MQTT";
 
@@ -132,6 +133,12 @@ void send_mqtt_uptime_heap_last_seen(uint8_t num_act_beacon, uint16_t lowest_las
         snprintf_nowarn(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "free_heap");
         snprintf_nowarn(buffer_payload, 32, "%d", esp_get_free_heap_size());
         msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
+
+#ifdef CONFIG_AXP192_PRESENT
+        snprintf_nowarn(buffer_topic, 32,  CONFIG_WDT_MQTT_FORMAT, buffer, "battery");
+        snprintf_nowarn(buffer_payload, 32, "%d", (uint16_t) (axp192_get_battery_voltage()*1000));
+        msg_id = mqtt_client_publish(mqtt_client, buffer_topic, buffer_payload, 0, 1, 0);
+#endif
 
         // LV Memory Monitor
         // lv_mem_monitor(&mem_mon);
