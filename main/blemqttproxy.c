@@ -63,10 +63,10 @@ void adjust_log_level()
 
     esp_log_level_set("BEACON",             ESP_LOG_INFO);
     esp_log_level_set("BLE_MQTT",           ESP_LOG_INFO);
-    esp_log_level_set("BLE_MYCLIENT",       ESP_LOG_INFO);
-    esp_log_level_set("BLE_MYSERVER",       ESP_LOG_INFO);
+    esp_log_level_set("BLE_MYCLIENT",       ESP_LOG_DEBUG);
+    esp_log_level_set("BLE_MYSERVER",       ESP_LOG_DEBUG);
     esp_log_level_set("BLE_SNTP",           ESP_LOG_INFO);
-    esp_log_level_set("BLE",                ESP_LOG_INFO);
+    esp_log_level_set("BLE",                ESP_LOG_DEBUG);
     esp_log_level_set("BLEMQTTPROXY",       ESP_LOG_INFO);
     esp_log_level_set("BUTTONS",            ESP_LOG_INFO);
     esp_log_level_set("DISPLAY",            ESP_LOG_INFO);
@@ -76,7 +76,7 @@ void adjust_log_level()
     esp_log_level_set("PARAMS",             ESP_LOG_INFO);
     esp_log_level_set("STATS",              ESP_LOG_INFO);
     esp_log_level_set("TIMER",              ESP_LOG_INFO);
-    esp_log_level_set("WATCHDOG",           ESP_LOG_INFO);
+    esp_log_level_set("WATCHDOG",           ESP_LOG_DEBUG);
     esp_log_level_set("WEB_FILE_SERVER",    ESP_LOG_INFO);
     esp_log_level_set("WIFI",               ESP_LOG_INFO);
 }
